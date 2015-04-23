@@ -9,7 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   calibration
   dynamic_reconfigure
   geometry_msgs
-  pcl_conversion
+  pcl_conversions
   pcl_ros
   roscpp
   roslib
@@ -90,7 +90,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES vision_node
-  CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversion pcl_ros roscpp roslib sensor_msgs tf vision_communications
+  CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversions pcl_ros roscpp roslib sensor_msgs tf vision_communications
 #  DEPENDS system_lib
 )
 
