@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   roslib
   sensor_msgs
   tf
+  vision_communications
 )
 
 ## System dependencies are found with CMake's conventions
@@ -89,7 +90,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES vision_node
-#  CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversion pcl_ros roscpp roslib sensor_msgs tf
+  CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversion pcl_ros roscpp roslib sensor_msgs tf vision_communications
 #  DEPENDS system_lib
 )
 

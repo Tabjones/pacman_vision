@@ -1,5 +1,5 @@
 // ROS headers
-#include <ros/ros.h>
+#include "scene_processing/scene_processing.h"
 #include <ros/console.h>
 #include <pcl_ros/point_cloud.h>
 #include <std_srvs/Empty.h>
