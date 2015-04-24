@@ -1,104 +1,60 @@
-// ROS headers
-#include "scene_processing/scene_processing.h"
-#include <ros/console.h>
-#include <pcl_ros/point_cloud.h>
-#include <std_srvs/Empty.h>
-#include <sensor_msgs/PointCloud.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/point_cloud_conversion.h>
-//PCL
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/filters/voxel_grid.h>
-// ROS generated headers
-#include "scene_filter_node/acquire_scene.h" 
+#include "pacman_vision/modules.h"
 
-//general utilities
-#include <string>
-#include <stdlib.h>
-
-class sceneAcquirer
-{
-  public:
-    sceneAcquirer();
-    //Node handle
-    ros::NodeHandle nh;
-  private:
-
-    //Service Server
-    ros::ServiceServer srv_acquire_;
-    
-    //Message Subscriber
-    ros::Subscriber sub_stream_;
-    
-    //Message Publisher
-    ros::Publisher pub_stream_;
-    
-    //Service callback, gets executed when service is called
-    bool acquireScene(scene_filter_node::acquire_scene::Request& req, scene_filter_node::acquire_scene::Response& res);
-
-    //Message callback, gets executed when a new message is available on topic
-    void new_cloud_in_stream(const sensor_msgs::PointCloud2::ConstPtr& message);
-
-    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr scene_stream_;
-
-    //parameters
-    bool filter_, downsample_, keep_organized_;
-    double xmin,xmax,ymin,ymax,zmin,zmax,leaf_;
-};
+//Processor Class//
+///////////////////
 
 //Constructor
-sceneAcquirer::sceneAcquirer()
+Processor::Processor(NHPtr nhptr)
 {
-  nh = ros::NodeHandle("scene_filter_node");
-  pcl::PointCloud<pcl::PointXYZRGBA> a;
-  scene_stream_ = a.makeShared();
+  this->nh_ptr.reset();
+  this->nh_ptr = nhptr;
+  PointCloud<PointXYZRGBA> a;
+  scene_processed = a.makeShared();
 
   //service callbacks
-  srv_acquire_ = nh.advertiseService("acquire_scene", &sceneAcquirer::acquireScene, this);
-  
-  //subscribe to depth_registered pointclouds topic
-  std::string topic = nh.resolveName("/camera/depth_registered/points");
-  sub_stream_ = nh.subscribe(topic, 1, &sceneAcquirer::new_cloud_in_stream, this);
+  srv_get_scene = nh_ptr->advertiseService("get_scene", &Processor::cb_get_scene, this);
 
-  pub_stream_ = nh.advertise<pcl::PointCloud<pcl::PointXYZRGBA> > ("/scene_filter/scene",1);
+  //subscribe to depth_registered pointclouds topic
+  std::string topic = nh_ptr->resolveName("/camera/depth_registered/points");
+  sub_openni = nh_ptr->subscribe(topic, 10, &Processor::cb_openni, this);
+  pub_scene = nh_ptr->advertise<sensor_msgs::PointCloud2> ("/pacman_vision/processor/scene", 10);
 
   //load parameters
-  nh.param<bool>("/scene_filter/filter", filter_, "false");
-  nh.param<bool>("/scene_filter/downsample", downsample_, "false");
-  nh.param<bool>("/scene_filter/keep_organized", keep_organized_, "false");
-  nh.param<double>("/scene_filter/xmin", xmin, -100);
-  nh.param<double>("/scene_filter/xmax", xmax, 100);
-  nh.param<double>("/scene_filter/ymin", ymin, -100);
-  nh.param<double>("/scene_filter/ymax", ymax, 100);
-  nh.param<double>("/scene_filter/zmin", zmin, -100);
-  nh.param<double>("/scene_filter/zmax", zmax, 100);
-  nh.param<double>("/scene_filter/leaf_s", leaf_, 0.005);
+  nh_ptr->param<bool>("/pacman_vision/processor/perform_filtering", filter, "false");
+  nh_ptr->param<bool>("/pacman_vision/processor/perform_downsampling", downsample, "false");
+  nh_ptr->param<bool>("/pacman_vision/processor/keep_organized", keep_organized, "false");
+  nh_ptr->param<double>("/pacman_vision/processor/filter_xmin", xmin, -100);
+  nh_ptr->param<double>("/pacman_vision/processor/filter_xmax", xmax, 100);
+  nh_ptr->param<double>("/pacman_vision/processor/filter_ymin", ymin, -100);
+  nh_ptr->param<double>("/pacman_vision/processor/filter_ymax", ymax, 100);
+  nh_ptr->param<double>("/pacman_vision/processor/filter_zmin", zmin, -100);
+  nh_ptr->param<double>("/pacman_vision/processor/filter_zmax", zmax, 100);
+  nh_ptr->param<double>("/pacman_vision/processor/downsampling_leaf_size", leaf, 0.005);
 }
 
-void sceneAcquirer::new_cloud_in_stream(const sensor_msgs::PointCloud2::ConstPtr& message)
+bool Processor::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res)
 {
-  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp (new pcl::PointCloud<pcl::PointXYZRGBA>);
-  //constantly copy cloud from stream into class scene_stream_ to be accessible for service callback
-  pcl::fromROSMsg (*message, *tmp);
+  sensor_msgs::PointCloud2 msg;
+  pcl::toROSMsg(*scene_processed, msg);
+  res.scene = msg; 
+  ROS_INFO("[Processor][%s] Sent processed scene to service response", __func__);
+  return true;
+}
 
-  //check if we need to filter stream
-  nh.getParam("/scene_filter/filter", filter_);
-  if (filter_)
+void Processor::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
+{
+  PointCloud<PointXYZRGBA>::Ptr tmp (new PointCloud<PointXYZRGBA>);
+  fromROSMsg (*message, *tmp);
+
+  //check if we need to filter scene
+  if (filter)
   {
-    nh.getParam("/scene_filter/xmin", xmin);
-    nh.getParam("/scene_filter/xmax", xmax);
-    nh.getParam("/scene_filter/ymin", ymin);
-    nh.getParam("/scene_filter/zmin", zmin);
-    nh.getParam("/scene_filter/ymax", ymax);
-    nh.getParam("/scene_filter/zmax", zmax);
-    nh.getParam("/scene_filter/keep_organized", keep_organized_);
-    pcl::PassThrough<pcl::PointXYZRGBA> pass;
-    if (keep_organized_)
-    {
+    PassThrough<PointXYZRGBA> pass;
+    //check if we need to maintain scene organized
+    if (keep_organized)
       pass.setKeepOrganized(true);
-    }
+    else
+      pass.setKeepOrganized(false);
     pass.setInputCloud (tmp);
     pass.setFilterFieldName ("z");
     pass.setFilterLimits (zmin, zmax);
@@ -110,50 +66,15 @@ void sceneAcquirer::new_cloud_in_stream(const sensor_msgs::PointCloud2::ConstPtr
     pass.setInputCloud (tmp);
     pass.setFilterFieldName ("x");
     pass.setFilterLimits (xmin, xmax);
-    pass.filter (*scene_stream_);
-    pcl::copyPointCloud(*scene_stream_ , *tmp);
+    pass.filter (*scene_processed);
+    pcl::copyPointCloud(*scene_processed , *tmp);
   }
-  //check if we need to downsample stream
-  nh.getParam("/scene_filter/downsample", downsample_);
-  if (downsample_)
+  //check if we need to downsample scene
+  if (downsample) //cannot keep organized cloud after voxelgrid
   {
-    nh.getParam("/scene_filter/leaf_s", leaf_);
-    pcl::VoxelGrid<pcl::PointXYZRGBA> vg;
+    VoxelGrid<PointXYZRGBA> vg;
     vg.setInputCloud (tmp);
-    vg.setLeafSize(leaf_, leaf_, leaf_);
-    vg.filter (*scene_stream_);
+    vg.setLeafSize(leaf, leaf, leaf);
+    vg.filter (*scene_processed);
   }
-  pub_stream_.publish( *scene_stream_ ); //republish the modified scene
-}
-
-bool sceneAcquirer::acquireScene (scene_filter_node::acquire_scene::Request& req, scene_filter_node::acquire_scene::Response& res)
-{
-  if (req.save.compare("false") != 0)
-  {
-    //user requested the scene to be saved on disk, lets comply him
-    std::string home = std::getenv( "HOME" );
-    pcl::PCDWriter writer;
-    writer.writeBinaryCompressed ((home + "/" + req.save + ".pcd").c_str(), *scene_stream_);
-    ROS_INFO("[sceneFilter] Scene saved to %s", (home + "/" + req.save + ".pcd").c_str() );
-  }
-  //also send it to service response
-  sensor_msgs::PointCloud2 msg;
-  pcl::toROSMsg(*scene_stream_, msg);
-  res.cloud = msg; 
-  ROS_INFO("[sceneFilter] Sent scene to service response");
-  return true;
-}
-
-int main(int argc, char **argv)
-{
-    ros::init(argc, argv, "scene_filter_node");
-    sceneAcquirer node;
-    ROS_INFO("[sceneAcquirer] Node is ready");
-    ros::Rate rate(50); //go at 50hz
-    while (node.nh.ok())
-    {
-      ros::spinOnce(); 
-      rate.sleep();
-    }
-    return 0;
 }

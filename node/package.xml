@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>vision_node</name>
+  <name>pacman_vision</name>
   <version>0.0.1</version>
   <description>The PaCMan vision node</description>
 
@@ -15,24 +15,24 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>dynamic_reconfigure</build_depend>
   <build_depend>geometry_msgs</build_depend>
-  <build_depend>pcl_conversion</build_depend>
+  <build_depend>pcl_conversions</build_depend>
   <build_depend>pcl_ros</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>roslib</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>tf</build_depend>
-  <build_depend>vision_communications</build_depend>
+  <build_depend>pacman_vision_comm</build_depend>
   <run_depend>asus_scanner_models</run_depend>
   <run_depend>calibration</run_depend>
   <run_depend>dynamic_reconfigure</run_depend>
   <run_depend>geometry_msgs</run_depend>
-  <run_depend>pcl_conversion</run_depend>
+  <run_depend>pcl_conversions</run_depend>
   <run_depend>pcl_ros</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>roslib</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>tf</run_depend>
-  <run_depend>vision_communications</run_depend>
+  <run_depend>pacman_vision_comm</run_depend>
 
   <export>
   </export>
