@@ -1,3 +1,6 @@
 [submodule "communications"]
 	path = communications
 	url = git@bitbucket.org:Tabjones/vision_communications.git
+[submodule "pel"]
+	path = pel
+	url = https://Tabjones@bitbucket.org/Tabjones/pel.git
