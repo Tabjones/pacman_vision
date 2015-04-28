@@ -5,20 +5,20 @@
 ///////////////////
 
 //Constructor
-Estimator::Estimator(NHPtr nhptr)
+Estimator::Estimator(ros::NodeHandle &n)
 {
   PointCloud<PointXYZRGBA> a;
   this->scene = a.makeShared();
-  this->nh_ptr = nhptr;
+  this->nh = ros::NodeHandle (n, "estimator");
   this->db_path = (ros::package::getPath("pacman_vision") + "/database" );
   if (!boost::filesystem::exists(db_path) || !boost::filesystem::is_directory(db_path))
     ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
-  this->srv_estimate = nh_ptr->advertiseService("estimate", &Estimator::cb_estimate, this);
+  this->srv_estimate = nh.advertiseService("estimate", &Estimator::cb_estimate, this);
   //init params
-  nh_ptr->param<bool>("/pacman_vision/estimator/object_calibration", calibration, false);
-  nh_ptr->param<int>("/pacman_vision/estimator/iterations", iterations, 10);
-  nh_ptr->param<int>("/pacman_vision/estimator/neighbors", neighbors, 10);
-  nh_ptr->param<double>("/pacman_vision/estimator/clus_tol", clus_tol, 0.05);
+  calibration = false;
+  iterations = 10;
+  neighbors = 10;
+  clus_tol = 0.05;
   pe.setParam("verbosity",2);
   pe.setParam("progItera",iterations);
   pe.setParam("icpReciprocal",1);

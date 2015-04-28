@@ -4,34 +4,39 @@
 ///////////////////
 
 //Constructor
-Processor::Processor(NHPtr nhptr)
+Processor::Processor(ros::NodeHandle &n)
 {
-  this->nh_ptr.reset();
-  this->nh_ptr = nhptr;
+  this->nh = ros::NodeHandle(n,"processor");
   PointCloud<PointXYZRGBA> a;
   scene_processed = a.makeShared();
 
   //service callbacks
-  srv_get_scene = nh_ptr->advertiseService("get_scene", &Processor::cb_get_scene, this);
+  srv_get_scene = nh.advertiseService("get_scene", &Processor::cb_get_scene, this);
 
   //subscribe to depth_registered pointclouds topic
-  std::string topic = nh_ptr->resolveName("/camera/depth_registered/points");
-  sub_openni = nh_ptr->subscribe(topic, 10, &Processor::cb_openni, this);
-  pub_scene = nh_ptr->advertise<sensor_msgs::PointCloud2> ("/pacman_vision/processor/scene", 10);
+  std::string topic = "/camera/depth_registered/points";
+  sub_openni = nh.subscribe(topic, 10, &Processor::cb_openni, this);
+  pub_scene = nh.advertise<sensor_msgs::PointCloud2> ("scene", 10);
 
-  //load parameters
-  nh_ptr->param<bool>("/pacman_vision/processor/perform_filtering", filter, "false");
-  nh_ptr->param<bool>("/pacman_vision/processor/perform_downsampling", downsample, "false");
-  nh_ptr->param<bool>("/pacman_vision/processor/keep_organized", keep_organized, "false");
-  nh_ptr->param<double>("/pacman_vision/processor/filter_xmin", xmin, -100);
-  nh_ptr->param<double>("/pacman_vision/processor/filter_xmax", xmax, 100);
-  nh_ptr->param<double>("/pacman_vision/processor/filter_ymin", ymin, -100);
-  nh_ptr->param<double>("/pacman_vision/processor/filter_ymax", ymax, 100);
-  nh_ptr->param<double>("/pacman_vision/processor/filter_zmin", zmin, -100);
-  nh_ptr->param<double>("/pacman_vision/processor/filter_zmax", zmax, 100);
-  nh_ptr->param<double>("/pacman_vision/processor/downsampling_leaf_size", leaf, 0.005);
+  //init filter params
+  filter = downsample = keep_organized = false;
+  xmin = ymin = zmin = -0.5;
+  xmax = ymax = zmax = 0.5;
+  leaf = 0.005;
+  //dynamic reconfigure
+  //this->dyn_srv.setCallback(boost::bind(&Processor::cb_reconfigure, this, _1, _2));
 }
 
+Processor::~Processor()
+{
+}
+/*
+void Processor::cb_reconfigure(pacman_vision::processorConfig &config, uint32_t level)
+{
+  ROS_WARN("Processor dyn recon callback!!");
+  filter = config.filter;
+}
+*/
 bool Processor::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res)
 {
   sensor_msgs::PointCloud2 msg;
@@ -43,6 +48,7 @@ bool Processor::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman
 
 void Processor::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
 {
+  std::cout<<"cb "<<std::endl;
   PointCloud<PointXYZRGBA>::Ptr tmp (new PointCloud<PointXYZRGBA>);
   fromROSMsg (*message, *tmp);
 
@@ -76,6 +82,7 @@ void Processor::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     vg.setLeafSize(leaf, leaf, leaf);
     vg.filter (*tmp);
   }
-  pcl::copyPointCloud(*tmp, *scene_processed);
+  copyPointCloud(*tmp, *scene_processed);
+  std::cout<<"cb end"<< std::endl;
 }
 

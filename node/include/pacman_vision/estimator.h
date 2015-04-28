@@ -45,7 +45,6 @@
 
 using namespace pcl;
 
-typedef boost::shared_ptr<ros::NodeHandle> NHPtr;
 
 class VisionNode;
 
@@ -54,10 +53,9 @@ class Estimator
   friend class VisionNode;
 
   public:
-    Estimator(NHPtr nhptr);
+    Estimator(ros::NodeHandle &n);
   private:
-    //passed shared node handle ptr
-    NHPtr nh_ptr;
+    ros::NodeHandle nh;
     //Service Server
     ros::ServiceServer srv_estimate;
     //estimated transforms

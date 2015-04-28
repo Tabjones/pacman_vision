@@ -45,7 +45,14 @@ if (NOT PEL_FOUND)
   set(PEL_LIBRARIES pel)
 endif(NOT PEL_FOUND)
 
+######################
+## catkin generated ##
+######################
+generate_dynamic_reconfigure_options( cfg/pacman_vision.cfg )
 
+##generate_messages(
+##  dynamic_reconfigure
+##  )
 
 ###################################
 ## catkin specific configuration ##
@@ -59,7 +66,7 @@ endif(NOT PEL_FOUND)
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES vision_node
-  CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversions pcl_ros roscpp roslib sensor_msgs tf pacman_vision_comm
+  CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversions pcl_ros roscpp roslib sensor_msgs tf pacman_vision_comm message_runtime
   DEPENDS PCL Boost
 )
 
@@ -86,7 +93,9 @@ add_executable(pacman_vision src/vision_node.cpp
                              src/scene_processing.cpp
                              src/pose_estimation.cpp)
 
-add_dependencies(pacman_vision pacman_vision_comm_generate_messages_cpp)
+add_dependencies(pacman_vision 
+  pacman_vision_comm_generate_messages_cpp 
+  pacman_vision_gencfg)
 
 target_link_libraries(pacman_vision
    ${catkin_LIBRARIES}

@@ -7,6 +7,7 @@
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud_conversion.h>
+//#include <dynamic_reconfigure/server.h>
 //PCL
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
@@ -23,6 +24,7 @@
 #include <pcl/filters/passthrough.h>
 // ROS generated headers
 #include "pacman_vision_comm/get_scene.h"
+//#include "pacman_vision/processorConfig.h"
 
 //general utilities
 #include <cmath>
@@ -37,7 +39,6 @@
 
 using namespace pcl;
 
-typedef boost::shared_ptr<ros::NodeHandle> NHPtr;
 
 class VisionNode;
 
@@ -46,11 +47,10 @@ class Processor
   friend class VisionNode;
   
   public:
-    Processor(NHPtr nhptr);
-    PointCloud<PointXYZRGBA>::Ptr get_processed_scene() {return this->scene_processed;}
+    Processor(ros::NodeHandle &n);
+    ~Processor();
   private:
-    //passed shared node handle ptr
-    NHPtr nh_ptr;
+    ros::NodeHandle nh;
     //Service Server
     ros::ServiceServer srv_get_scene;
     //Message Subscriber
@@ -68,6 +68,10 @@ class Processor
     //filter parameters
     bool filter, downsample, keep_organized;
     double xmin,xmax,ymin,ymax,zmin,zmax,leaf;
+
+    //dynamic reconfigure
+   // dynamic_reconfigure::Server<pacman_vision::processorConfig> dyn_srv;
+   // void cb_reconfigure(pacman_vision::processorConfig &config, uint32_t level);
 };
 #define _INCL_PROCESSOR
 #endif

@@ -33,6 +33,7 @@
   <run_depend>sensor_msgs</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>pacman_vision_comm</run_depend>
+  <run_depend>message_runtime</run_depend>
 
   <export>
   </export>
