@@ -10,9 +10,9 @@
 #include <stdlib.h>
 #include <boost/smart_ptr.hpp>
 
-#include "pacman_vision/modules.h"
+#include "pacman_vision/processor.h"
+#include "pacman_vision/estimator.h"
 
-using namespace pcl;
 
 class VisionNode
 {
@@ -26,6 +26,7 @@ class VisionNode
     
     //Scoped pointers of modules
     boost::scoped_ptr<Processor> processor_module; 
+    boost::scoped_ptr<Estimator> estimator_module; 
 };
 
 #define _INCL_NODE

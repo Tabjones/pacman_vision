@@ -1,5 +1,5 @@
-#include "pacman_vision/modules.h"
-
+#include "pacman_vision/processor.h"
+///////////////////
 //Processor Class//
 ///////////////////
 
@@ -66,8 +66,7 @@ void Processor::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     pass.setInputCloud (tmp);
     pass.setFilterFieldName ("x");
     pass.setFilterLimits (xmin, xmax);
-    pass.filter (*scene_processed);
-    pcl::copyPointCloud(*scene_processed , *tmp);
+    pass.filter (*tmp);
   }
   //check if we need to downsample scene
   if (downsample) //cannot keep organized cloud after voxelgrid
@@ -75,6 +74,8 @@ void Processor::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     VoxelGrid<PointXYZRGBA> vg;
     vg.setInputCloud (tmp);
     vg.setLeafSize(leaf, leaf, leaf);
-    vg.filter (*scene_processed);
+    vg.filter (*tmp);
   }
+  pcl::copyPointCloud(*tmp, *scene_processed);
 }
+

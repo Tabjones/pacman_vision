@@ -1,4 +1,3 @@
-#include "pacman_vision/modules.h"
 #include "pacman_vision/vision_node.h"
 
 VisionNode::VisionNode(ros::NodeHandle &nh)
@@ -6,6 +5,7 @@ VisionNode::VisionNode(ros::NodeHandle &nh)
   this->nh = nh;
   nh_ptr = boost::make_shared<ros::NodeHandle> ( nh );
   processor_module.reset();
+  estimator_module.reset();
 }
 
 int main (int argc, char *argv[])
