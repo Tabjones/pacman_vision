@@ -4,6 +4,10 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <ros/package.h>
+#include <ros/callback_queue.h>
+#include <ros/callback_queue_interface.h>
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/TransformStamped.h>
 //PCL
 #include <pcl/common/centroid.h>
 #include <pcl/common/eigen.h>
@@ -26,7 +30,6 @@
 #include "pacman_vision_comm/estimate.h"
 #include "pacman_vision_comm/pe.h"
 #include "pacman_vision_comm/peArray.h"
-
 //general utilities
 #include <cmath>
 #include <fstream>
@@ -54,8 +57,10 @@ class Estimator
 
   public:
     Estimator(ros::NodeHandle &n);
+    ~Estimator();
   private:
     ros::NodeHandle nh;
+    boost::shared_ptr<ros::CallbackQueue> queue_ptr;
     //Service Server
     ros::ServiceServer srv_estimate;
     //estimated transforms
@@ -74,6 +79,7 @@ class Estimator
     bool calibration;
     int iterations, neighbors;
     double clus_tol;
+    int downsampling;
 
     //PEL object
     PoseEstimation pe;
@@ -83,10 +89,8 @@ class Estimator
     //estimate service callback  
     bool cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res);
     
-    //threading
-    boost::thread estimator;
-    boost::mutex mtx;
-    void estimator_thread();
+    //custom spin method
+    void spin_once();
 };
 #define _INCL_ESTIMATOR
 #endif

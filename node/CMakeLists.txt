@@ -90,7 +90,6 @@ link_directories(
   )
 
 add_executable(pacman_vision src/vision_node.cpp 
-                             src/scene_processing.cpp
                              src/pose_estimation.cpp)
 
 add_dependencies(pacman_vision 
