@@ -1,0 +1,4 @@
+pacman_vision: {downsampling: false, enable_estimator: false, enable_tracker: false,
+  estimator_clus_tol: 0.05, estimator_iterations: 5, estimator_neighbors: 10, estimator_object_calibration: false,
+  filtering: true, keep_organized: false, leaf_size: 0.03, pass_xmax: 0.55, pass_xmin: -0.5,
+  pass_ymax: 0.5, pass_ymin: -0.5, pass_zmax: 1.2, pass_zmin: 0.0}
