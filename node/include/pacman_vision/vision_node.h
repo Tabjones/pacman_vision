@@ -38,8 +38,12 @@
 #include <boost/date_time.hpp>
 
 #include "pacman_vision/estimator.h"
+#include "pacman_vision/broadcaster.h"
 
 using namespace pcl;
+
+typedef pcl::PointXYZRGBA PT; //default point type
+typedef pcl::PointCloud<PT> PC; //default point cloud with default point type
 
 class VisionNode
 {
@@ -51,7 +55,7 @@ class VisionNode
     ros::NodeHandle nh;
   private:
     //bools to control modules
-    bool en_estimator, en_tracker;
+    bool en_estimator, en_tracker, en_broadcaster;
     //bool to initialize rqt_reconfigure with user parameters
     bool rqt_init;
     
@@ -62,16 +66,20 @@ class VisionNode
     //Message Publisher to republish processed scene
     ros::Publisher pub_scene;
     //pointer to processed and acquired point cloud
-    PointCloud<PointXYZRGBA>::Ptr scene_processed;
-    PointCloud<PointXYZRGBA>::Ptr scene;
-    PointCloud<PointXYZRGBA>::Ptr scene_filtered;
+    PC::Ptr scene_processed;
+    PC::Ptr scene;
+    PC::Ptr scene_filtered;
 
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module; 
+    boost::shared_ptr<Broadcaster> broadcaster_module; 
     //slave spinner threads for modules
     //estimator
     boost::thread estimator_driver;
     void spin_estimator();
+    //broadcaster
+    boost::thread broadcaster_driver;
+    void spin_broadcaster();
     
     //Service callback for srv_get_scene
     bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
@@ -87,8 +95,11 @@ class VisionNode
     dynamic_reconfigure::Server<pacman_vision::pacman_visionConfig> dyn_srv;
     //Callback
     void cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t level);
-    //boost mutex
-    boost::mutex mtx;
+    
+    //boost mutexes to protect intra-module copy
+    boost::mutex mtx_scene;
+    boost::mutex mtx_estimator;
+    boost::mutex mtx_broadcaster;
 };
 
 #define _INCL_NODE

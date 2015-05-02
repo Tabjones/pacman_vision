@@ -42,12 +42,9 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 //PEL
-#include <pel.h>
+#include <pel.h> //also gets typedefs of PEL
 
 #define D2R 0.017453293  //deg to rad conversion
-
-using namespace pcl;
-
 
 class VisionNode;
 
@@ -66,12 +63,12 @@ class Estimator
     //estimated transforms
     std::vector<Eigen::Matrix4f> estimations;
     //object clusters found on scene
-    std::vector<PointCloud<PointXYZRGBA> > clusters;
+    std::vector<PC> clusters;
     //naming and id-ing of estimated objects
     std::vector<std::string> names;
     std::vector<std::string> ids;
     //actual scene
-    PointCloud<PointXYZRGBA>::Ptr scene;
+    PC::Ptr scene;
     //path to pel database
     boost::filesystem::path db_path;
 
@@ -80,6 +77,7 @@ class Estimator
     int iterations, neighbors;
     double clus_tol;
     int downsampling;
+    bool busy, new_estimations;
 
     //PEL object
     PoseEstimation pe;

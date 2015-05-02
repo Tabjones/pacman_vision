@@ -21,7 +21,9 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED)
 find_package(PCL 1.7.2 REQUIRED)
 find_package(HDF5 REQUIRED)
- 
+
+include_directories(BEFORE ${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(-std=c++11 ${PCL_DEFINITIONS})
 
 find_package(PEL)
@@ -31,7 +33,6 @@ if (NOT PEL_FOUND)
   set(PEL_INCLUDE_DIRS ../pel/pel)
   include_directories(
     ${HDF5_INCLUDE_DIRS}
-    ${PCL_INCLUDE_DIRS}
     ${PEL_INCLUDE_DIRS}
     )
   add_library(pel SHARED
@@ -76,7 +77,6 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${pcl_INCLUDE_DIRS}
   ${boost_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIRS}
   ${PEL_INCLUDE_DIRS}
@@ -90,7 +90,9 @@ link_directories(
   )
 
 add_executable(pacman_vision src/vision_node.cpp 
-                             src/pose_estimation.cpp)
+                             src/pose_estimation.cpp
+                             src/broadcaster.cpp
+                             src/utility.cpp)
 
 add_dependencies(pacman_vision 
   pacman_vision_comm_generate_messages_cpp 
