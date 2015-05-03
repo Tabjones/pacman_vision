@@ -92,6 +92,7 @@ link_directories(
 add_executable(pacman_vision src/vision_node.cpp 
                              src/estimator.cpp
                              src/broadcaster.cpp
+                             src/tracker.cpp
                              src/utility.cpp)
 
 add_dependencies(pacman_vision 
