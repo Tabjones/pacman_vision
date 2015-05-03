@@ -123,46 +123,54 @@ void ObjectTracker::tracker_thread_body_v2()
 bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res)
 {
   std::string models_path (ros::package::getPath("asus_scanner_models"));
-  tracked_name = (req.initial_pose.name);
-  if (req.tracker_version >=1)
-    version = req.tracker_version;
-  else
-    version = 1;
-  boost::filesystem::path model_path (models_path + "/" + tracked_name + "/" + tracked_name + ".pcd");
-  if (version == 1) //only version1 uses model
+  int j = -1;
+  for (int i=0; i<names.size(); ++i)
   {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr tmp (new pcl::PointCloud<pcl::PointXYZ>);
-    if (boost::filesystem::exists(model_path) && boost::filesystem::is_regular_file(model_path))
+    if (names[i].compare(req.name) == 0)
     {
-      if (pcl::io::loadPCDFile(model_path.string(), *tmp))
-      {
-        ROS_ERROR("Error loading model %s", model_path.c_str());
-        res.started = false;
-        return false;
-      }
+      j = i;
+      break;
     }
-    else
+  }
+  if (j == -1)
+  {
+    ROS_ERROR("[Tracker][%s] Cannot find %s from the pool of already estimated objects, check spelling or run an estimation first!", __func__, req.name.c_str());
+    return false;
+  }
+  name = (req.name);
+  std::vector<std::string> vst;
+  boost::split(vst, name, boost::is_any_of("_"), boost::token_compress_on);
+  id = vst.at(0);
+  transform = estimations[j];
+  boost::filesystem::path model_path (models_path + "/" + id + "/" + id + ".pcd");
+  PC::Ptr tmp (new PC);
+  if (boost::filesystem::exists(model_path) && boost::filesystem::is_regular_file(model_path))
+  {
+    if (pcl::io::loadPCDFile(model_path.string(), *tmp))
     {
-      ROS_ERROR("Request model %s does not exists", model_path.c_str());
-      res.started=false;
+      ROS_ERROR("[Tracker][%s] Error loading model %s",__func__, model_path.c_str());
       return false;
     }
-    pcl::VoxelGrid<pcl::PointXYZ> vg;
-    vg.setInputCloud (tmp);
-    vg.setLeafSize(0.015f, 0.015f, 0.015f);
-    vg.filter (*model);
   }
-  pose2eigen(req.initial_pose.pose, transform);
-  // start tracking /////
-  start_tracker_thread();
-  ///////////////////////
-  if (thread_started)
+  else
   {
-    res.started = true;
+    ROS_ERROR("[Tracker][%s] Request model %s does not exists in asus_scanner_models",__func__, model_path.c_str());
+    return false;
+  }
+  pcl::VoxelGrid<PT> vg;
+  vg.setInputCloud (tmp);
+  vg.setLeafSize(0.02f, 0.02f, 0.02f);
+  vg.filter (*model);
+   
     return true;
   }
   else
     return false;
+}
+
+void Tracker::spin_once()
+{
+  this->queue_ptr->callAvailable(ros::WallDuration(0, 10000));
 }
 
 int main(int argc, char **argv)

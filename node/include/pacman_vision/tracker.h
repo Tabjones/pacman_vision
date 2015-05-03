@@ -53,10 +53,15 @@ class Tracker
     //tracker transform
     Eigen::Matrix4f transform;
     //name and id of object to be tracked
-    std::string names;
-    std::string ids;
+    std::string name;
+    std::string id;
+    //pool of estimated objects from estimator
+    std::vector<std::string> names;
+    std::vector<Eigen::Matrix4f> estimations;
     //actual scene
     PC::Ptr scene;
+    //actual model
+    PC::Ptr model;
     //TODO add params
     
     //track_object service callback  
