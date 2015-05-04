@@ -137,6 +137,6 @@ void Tracker::broadcast_tracked_object()
 void Tracker::spin_once()
 {
   //process this module callbacks
-  this->queue_ptr->callAvailable(ros::WallDuration(0, 100000));
+  this->queue_ptr->callAvailable(ros::WallDuration(0));
 }
 

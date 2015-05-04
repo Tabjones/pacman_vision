@@ -69,10 +69,10 @@ int Estimator::extract_clusters()
   ec.setSearchMethod(tree);
   ec.setClusterTolerance(clus_tol);
   ec.setMinClusterSize(100);
-  ec.setMaxClusterSize(25000);
+  ec.setMaxClusterSize(table_top->points.size());
   ec.extract(cluster_indices);
   int size = (int)cluster_indices.size();
-  cout<<"size "<<size<<std::endl;
+  //cout<<"size "<<size<<std::endl;
  // cluster_indices.resize((int)cluster_indices.size()-1); //TODO TMP FIX
   clusters.clear();
   clusters.resize(size);
@@ -86,9 +86,10 @@ int Estimator::extract_clusters()
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it, ++j)
   {
     PC::Ptr object (new PC);
-  //  extract.setInputCloud(table_top);
-  //  extract.setIndices(boost::make_shared<PointIndices>(*it));
-  //  extract.setNegative(false);
+    extract.setInputCloud(table_top);
+    extract.setIndices(boost::make_shared<PointIndices>(*it));
+    extract.setNegative(false);
+  /*  
     for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit)
     {
       object->points.push_back(table_top->points[*pit]);
@@ -97,7 +98,8 @@ int Estimator::extract_clusters()
     object->height = 1;
     object->is_dense = true;
     pcl::copyPointCloud(*object, clusters[j]);
-    //extract.filter(clusters[j]);
+    */
+    extract.filter(clusters[j]);
   }
   ROS_INFO("[Estimator][%s] Found %d clusters of possible objects.",__func__,size);
   return size;
@@ -175,6 +177,6 @@ void Estimator::estimate()
 void Estimator::spin_once()
 {
   //process this module callbacks
-  this->queue_ptr->callAvailable(ros::WallDuration(0, 10000));
+  this->queue_ptr->callAvailable(ros::WallDuration(0));
 }
 

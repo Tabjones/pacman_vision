@@ -169,8 +169,10 @@ void VisionNode::spin_estimator()
     //spin
     this->estimator_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //estimator could try to go at 20Hz (no need to process those services faster)
+    ROS_WARN("Estimator Spin"); //TODO remove
   }
   //estimator got stopped
+  ROS_ERROR("Estimator Died!"); //TODO remove
   return;
 }
 
@@ -289,7 +291,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("broadcaster_rviz_markers", config.broadcaster_rviz_markers);
     nh.getParam("tracker_window", config.tracker_window);
     this->rqt_init = false;
-    ROS_WARN("[PaCMaN Vision] rqt-reconfigure default values initialized");
+    ROS_WARN("[PaCMaN Vision] Rqt-Reconfigure Default Values Initialized");
   }
   this->en_estimator = config.enable_estimator;
   this->en_tracker = config.enable_tracker;
@@ -321,7 +323,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   {
     this->tracker_module->window = config.tracker_window;
   }
-  ROS_WARN("[PaCMaN Vision] Reconfigure request accepted");
+  ROS_INFO("[PaCMaN Vision] Reconfigure request accepted");
 }
 
 int main (int argc, char *argv[])

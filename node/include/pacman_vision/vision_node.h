@@ -103,11 +103,11 @@ class VisionNode
     void cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t level);
     
     //boost mutexes to protect intra-module copy
-   /* boost::mutex mtx_scene;
+    boost::mutex mtx_scene;
     boost::mutex mtx_estimator;
     boost::mutex mtx_broadcaster;
     boost::mutex mtx_tracker;
-    */
+   
 };
 
 #define _INCL_NODE

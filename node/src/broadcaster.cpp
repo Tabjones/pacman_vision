@@ -75,5 +75,5 @@ void Broadcaster::broadcast_once()
 
 void Broadcaster::spin_once()
 {
-  this->queue_ptr->callAvailable(ros::WallDuration(0, 10000));
+  this->queue_ptr->callAvailable(ros::WallDuration(0));
 }
