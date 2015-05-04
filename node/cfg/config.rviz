@@ -7,6 +7,8 @@ Panels:
         - /Global Options1
         - /Status1
         - /PointCloud21
+        - /TF1
+        - /TF1/Frames1
       Splitter Ratio: 0.657718
     Tree Height: 715
   - Class: rviz/Selection
@@ -34,8 +36,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.310815
-        Min Value: -0.442617
+        Max Value: 0.30388
+        Min Value: -0.0077975
         Value: true
       Axis: Y
       Channel Name: intensity
@@ -59,6 +61,36 @@ Visualization Manager:
       Topic: /pacman_vision/scene_processed
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Class: rviz/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+        camera_depth_frame:
+          Value: false
+        camera_depth_optical_frame:
+          Value: false
+        camera_link:
+          Value: false
+        camera_rgb_frame:
+          Value: false
+        camera_rgb_optical_frame:
+          Value: true
+      Marker Scale: 0.5
+      Name: TF
+      Show Arrows: false
+      Show Axes: true
+      Show Names: true
+      Tree:
+        camera_link:
+          camera_depth_frame:
+            camera_depth_optical_frame:
+              {}
+          camera_rgb_frame:
+            camera_rgb_optical_frame:
+              {}
+      Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
@@ -84,7 +116,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.04638
+      Distance: 1.20226
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -96,10 +128,10 @@ Visualization Manager:
         Z: 0.985779
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -1.11517
+      Pitch: -1.2498
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.78524
+      Yaw: 4.72024
     Saved: ~
 Window Geometry:
   Displays:

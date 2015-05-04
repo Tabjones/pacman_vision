@@ -8,6 +8,8 @@
 #include <ros/callback_queue_interface.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <tf/transform_broadcaster.h>
+#include <visualization_msgs/Marker.h>
 //PCL
 #include <pcl/common/centroid.h>
 #include <pcl/common/eigen.h>
@@ -62,11 +64,26 @@ class Tracker
     PC::Ptr scene;
     //actual model
     PC::Ptr model;
-    //TODO add params
     
+    //config
+    bool started;
+    float window;
+    
+    //rviz marker
+    visualization_msgs::Marker marker;
+    //tf and marker broadcaster
+    tf::TransformBroadcaster tf_broadcaster;
+    ros::Publisher rviz_marker_pub;
+
     //track_object service callback  
     bool cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res);
     
+    //method to publish transform and marker of tracked object
+    void broadcast_tracked_object();
+
+    //tracker methods
+    void track_v1();
+
     //custom spin method
     void spin_once();
 };

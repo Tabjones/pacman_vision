@@ -77,13 +77,15 @@ class Estimator
     int iterations, neighbors;
     double clus_tol;
     int downsampling;
-    bool busy, new_estimations;
+    bool busy, up_broadcaster, up_tracker;
 
     //PEL object
     PoseEstimation pe;
 
     //method to extract clusters of objects in a table top scenario
     int extract_clusters();
+    //perform estimation
+    void estimate();
     //estimate service callback  
     bool cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res);
     

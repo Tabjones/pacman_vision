@@ -66,7 +66,11 @@ void Broadcaster::broadcast_once()
       tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), "/camera_rgb_optical_frame", names[i].c_str()));
   }
   if (rviz_markers)
+  {
+    for (int i = 0; i< markers.markers.size(); ++i)
+      markers.markers[i].header.stamp = ros::Time();
     rviz_markers_pub.publish(markers);
+  }
 }
 
 void Broadcaster::spin_once()

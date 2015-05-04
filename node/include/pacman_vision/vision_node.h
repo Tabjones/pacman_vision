@@ -36,9 +36,11 @@
 #include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/date_time.hpp>
+#include <boost/timer.hpp>
 
 #include "pacman_vision/estimator.h"
 #include "pacman_vision/broadcaster.h"
+#include "pacman_vision/tracker.h"
 
 using namespace pcl;
 
@@ -73,6 +75,7 @@ class VisionNode
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module; 
     boost::shared_ptr<Broadcaster> broadcaster_module; 
+    boost::shared_ptr<Tracker> tracker_module; 
     //slave spinner threads for modules
     //estimator
     boost::thread estimator_driver;
@@ -80,6 +83,9 @@ class VisionNode
     //broadcaster
     boost::thread broadcaster_driver;
     void spin_broadcaster();
+    //tracker
+    boost::thread tracker_driver;
+    void spin_tracker();
     
     //Service callback for srv_get_scene
     bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
@@ -97,9 +103,11 @@ class VisionNode
     void cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t level);
     
     //boost mutexes to protect intra-module copy
-    boost::mutex mtx_scene;
+   /* boost::mutex mtx_scene;
     boost::mutex mtx_estimator;
     boost::mutex mtx_broadcaster;
+    boost::mutex mtx_tracker;
+    */
 };
 
 #define _INCL_NODE

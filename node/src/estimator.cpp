@@ -105,13 +105,34 @@ int Estimator::extract_clusters()
 
 bool Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res)
 {
+  estimate();
+  geometry_msgs::Pose pose;
+  tf::Transform trans;
+  for (int i=0; i<estimations.size(); ++i)
+  {
+    fromEigen(estimations[i], pose, trans);
+    pacman_vision_comm::pe pose_est;
+    pose_est.pose = pose;
+    pose_est.name = names[i];
+    pose_est.id = ids[i];
+    res.estimated.poses.push_back(pose_est);
+  }
+  this->busy = false;
+  this->up_broadcaster = true;
+  this->up_tracker = true;
+  ROS_INFO("[Estimator][%s] Pose Estimation complete!", __func__);
+  return true;
+}
+
+void Estimator::estimate()
+{
   this->busy = true; //tell other modules that estimator is computing new estimations
   int size = this->extract_clusters();
   if (size < 1)
   {
     ROS_ERROR("[Estimator][%s] No object clusters found in scene, aborting pose estimation...",__func__);
     this->busy = false;
-    return false;
+    return;
   }
   pe.setDatabase(db_path);
   for (int i=0; i<size; ++i)
@@ -149,21 +170,6 @@ bool Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_v
       }
     }
   }
-  geometry_msgs::Pose pose;
-  tf::Transform trans;
-  for (int i=0; i<estimations.size(); ++i)
-  {
-    fromEigen(estimations[i], pose, trans);
-    pacman_vision_comm::pe pose_est;
-    pose_est.pose = pose;
-    pose_est.name = names[i];
-    pose_est.id = ids[i];
-    res.estimated.poses.push_back(pose_est);
-  }
-  this->busy = false;
-  this->new_estimations = true;
-  ROS_INFO("[Estimator][%s] Pose Estimation complete!", __func__);
-  return true;
 }
 
 void Estimator::spin_once()

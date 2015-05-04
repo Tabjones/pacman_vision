@@ -1,4 +1,5 @@
 #include "pacman_vision/tracker.h"
+#include "pacman_vision/utility.h"
 
 ///////////////////
 //Tracker Class//
@@ -12,112 +13,52 @@ Tracker::Tracker(ros::NodeHandle &n)
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
   this->srv_track_object = nh.advertiseService("track_object", &Tracker::cb_track_object, this);
-  //TODO add params
+  this->rviz_marker_pub = nh.advertise<visualization_msgs::Marker>("tracked_object", 1);
+  started = false;
+  window = 0.6;
 }
 Tracker::~Tracker()
 {
   this->nh.shutdown();
 }
 
-//tracker v1
-void ObjectTracker::tracker_thread_body_v1()
+//tracker v1 icp 
+void Tracker::track_v1()
 {
-  pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ, float> icp;
-  icp.setUseReciprocalCorrespondences(false);
-  icp.setMaximumIterations(10);
-  icp.setTransformationEpsilon(1e-4);
-  icp.setEuclideanFitnessEpsilon(1e-9);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr tmp (new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr acquired (new pcl::PointCloud<pcl::PointXYZ>);
-  while (nh.ok() && !stop_thread)
-  {
-    if (!acquire_scene(acquired))
-    {
-      boost::this_thread::sleep(boost::posix_time::microseconds(1000));
-      continue;
-    }
-    internal_lock.lock();
-    icp.setInputTarget(acquired);
-    icp.setInputSource(model);
-    icp.align(*tmp, transform);
-   /* 
-    pcl::io::savePCDFile("/home/tabjones/target" + std::to_string(i)+ ".pcd", *actual); //TODO REMOVE
-    pcl::io::savePCDFile("/home/tabjones/source"+std::to_string(i)+".pcd", *model); //TODO REMOVE
-    pcl::io::savePCDFile("/home/tabjones/result"+std::to_string(i)+".pcd", *tmp); //TODO REMOVE
-    */
-    transform = icp.getFinalTransformation();
-    internal_lock.unlock();
-    broadcast_thread = boost::thread(&ObjectTracker::broadcast_thread_body, this);
-    boost::this_thread::sleep(boost::posix_time::microseconds(1000));
-  }
-}
-//tracker v2 ultra slow (TODO find correspondences, maybe with features)
-void ObjectTracker::tracker_thread_body_v2()
-{
-  pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ, float> icp;
-  pcl::PassThrough<pcl::PointXYZ> pass;
-  pcl::VoxelGrid<pcl::PointXYZ> vg;
+  pcl::IterativeClosestPoint<PT, PT, float> icp;
+  pcl::PassThrough<PT> pass;
+  pcl::VoxelGrid<PT> vg;
   icp.setUseReciprocalCorrespondences(false);
   icp.setMaximumIterations(5);
-  icp.setTransformationEpsilon(1e-4);
+  icp.setTransformationEpsilon(1e-9);
   icp.setEuclideanFitnessEpsilon(1e-9);
-  Eigen::Matrix4f temp_t, inv_trans;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr target (new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr source (new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr tmp (new pcl::PointCloud<pcl::PointXYZ>);
-  while (nh.ok() && !stop_thread)
-  {
-    inv_trans = transform.inverse();
-    temp_t = transform;
-    internal_lock.lock();
-    pcl::transformPointCloud(*actual, *tmp, inv_trans);
-    internal_lock.unlock();
-    pass.setInputCloud(tmp);
-    pass.setFilterFieldName("x");
-    pass.setFilterLimits(-window/2, +window/2);
-    pass.filter(*tmp);
-    pass.setInputCloud(tmp);
-    pass.setFilterFieldName("y");
-    pass.setFilterLimits(-window/2, +window/2);
-    pass.filter(*tmp);
-    pass.setInputCloud(tmp);
-    pass.setFilterFieldName("z");
-    pass.setFilterLimits(-window/2, +window/2);
-    pass.filter(*tmp);
-    vg.setInputCloud (tmp);
-    vg.setLeafSize(0.01f, 0.01f, 0.01f);
-    vg.filter (*tmp);
-    pcl::transformPointCloud(*tmp, *target, temp_t);
-    icp.setInputTarget(target);
-
-    internal_lock.lock();
-    pcl::transformPointCloud(*past, *tmp, inv_trans);
-    internal_lock.unlock();
-    pass.setInputCloud(tmp);
-    pass.setFilterFieldName("x");
-    pass.setFilterLimits(-window/2, +window/2);
-    pass.filter(*tmp);
-    pass.setInputCloud(tmp);
-    pass.setFilterFieldName("y");
-    pass.setFilterLimits(-window/2, +window/2);
-    pass.filter(*tmp);
-    pass.setInputCloud(tmp);
-    pass.setFilterFieldName("z");
-    pass.setFilterLimits(-window/2, +window/2);
-    pass.filter(*tmp);
-    vg.setInputCloud (tmp);
-    vg.setLeafSize(0.01f, 0.01f, 0.01f);
-    vg.filter (*source);
-    icp.setInputSource(source);
-    icp.align(*tmp, temp_t);
-    
-    internal_lock.lock();
-    transform = icp.getFinalTransformation();
-    internal_lock.unlock();
-    
-    broadcast_thread = boost::thread(&ObjectTracker::broadcast_thread_body, this);
-    boost::this_thread::sleep(boost::posix_time::microseconds(1000));
-  }
+  Eigen::Matrix4f inv_trans;
+  pcl::PointCloud<PT>::Ptr target (new pcl::PointCloud<PT>);
+  pcl::PointCloud<PT>::Ptr tmp (new pcl::PointCloud<PT>);
+  inv_trans = transform.inverse();
+  //filter
+  pcl::transformPointCloud(*scene, *tmp, inv_trans);
+  pass.setInputCloud(tmp);
+  pass.setFilterFieldName("x");
+  pass.setFilterLimits(-window/2, +window/2);
+  pass.filter(*tmp);
+  pass.setInputCloud(tmp);
+  pass.setFilterFieldName("y");
+  pass.setFilterLimits(-window/2, +window/2);
+  pass.filter(*tmp);
+  pass.setInputCloud(tmp);
+  pass.setFilterFieldName("z");
+  pass.setFilterLimits(-window/2, +window/2);
+  pass.filter(*tmp);
+  vg.setInputCloud (tmp);
+  vg.setLeafSize(0.02f, 0.02f, 0.02f);
+  vg.filter (*tmp);
+  pcl::transformPointCloud(*tmp, *target, transform);
+  //align
+  icp.setInputTarget(target);
+  icp.setInputSource(model);
+  icp.align(*tmp, transform);
+  transform = icp.getFinalTransformation();
 }
 
 bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res)
@@ -161,32 +102,37 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   vg.setInputCloud (tmp);
   vg.setLeafSize(0.02f, 0.02f, 0.02f);
   vg.filter (*model);
-   
-    return true;
-  }
-  else
-    return false;
+  //init rviz marker
+  marker.header.frame_id = "/camera_rgb_optical_frame";
+  marker.ns = std::string(id + "_tracked").c_str();
+  marker.id = 0;
+  marker.scale.x=1;
+  marker.scale.y=1;
+  marker.scale.z=1;
+  marker.type = visualization_msgs::Marker::MESH_RESOURCE;
+  std::string mesh_path ("package://asus_scanner_models/" + id + "/" + id + ".stl");
+  marker.mesh_resource = mesh_path.c_str();
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.color.r = 1.0f;
+  marker.color.g = 0.0f;
+  marker.color.b = 0.3f;
+  marker.color.a = 1.0f;
+  marker.lifetime = ros::Duration(1);
+  //we are ready to start
+  started = true;
+  return true;
 }
 
-void Tracker::spin_once()
+void Tracker::broadcast_tracked_object()
 {
-  this->queue_ptr->callAvailable(ros::WallDuration(0, 10000));
+  geometry_msgs::Pose pose;
+  tf::Transform trans;
+  fromEigen(transform, pose, trans);
+  marker.header.stamp = ros::Time();
+  marker.pose = pose;
+  rviz_marker_pub.publish(marker);
+  tf_broadcaster.sendTransform(tf::StampedTransform(trans, ros::Time::now(), "/camera_rgb_optical_frame", std::string(name + "_tracked").c_str()));
 }
-
-int main(int argc, char **argv)
-{
-    ros::init(argc, argv, "object_tracker");
-    ObjectTracker node;
-    ros::Rate rate(50); //go at 50 hz
-    ROS_INFO("object_tracker node started, call service to actually start tracking");
-    while (node.nh.ok())
-    {
-      ros::spinOnce();
-      rate.sleep();
-    }
-    return 0;
-}
-///
 
 void Tracker::spin_once()
 {
