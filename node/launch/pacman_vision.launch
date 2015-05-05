@@ -1,17 +1,24 @@
 <launch>
 
   <!-- Configurations -->
+  
   <!-- launch_openni: true if you want to include openni2_launch with custom parameters, if set to false make sure you enable depth_registration and set intrinsics parameters correctly -->
-  <arg name="launch_openni" default="true" />
+  <arg name="launch_openni" default="true" doc="true if you want to include openni2_launch with custom parameters, if set to false make sure you enable depth_registration and set intrinsics parameters correctly, when you launch openni2." />
+  
   <!-- asus: which asus to use. Currently there are 2 asus sensors. 'asus1' is the one at CP, 'asus2' is the one at PhaseSpace lab. This argument is needed to
        correctly load intrinsic calibrations from calibration package -->
-  <arg name="asus" default="asus1" />
+  <arg name="asus" default="asus1" doc="which asus to use. Currently there are 2 asus sensors. 'asus1' is the one at CP, 'asus2' is the one at PhaseSpace lab. This argument is needed to correctly load intrinsic calibrations from calibration package. So either set it 'asus1' or 'asus2'." />
+  
   <!-- run_reconfigure:  If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters.-->
-  <arg name="run_reconfigure" default="true" />
+  <arg name="run_reconfigure" default="true" doc="If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters." />
+  
   <!-- run_rviz:  If true runs rviz gui.-->
-  <arg name="run_rviz" default="true" />
+  <arg name="run_rviz" default="true" doc="If true runs rviz gui with config stored under cfg directory."/>
+  
   <!-- load:  Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder).-->
-  <arg name="load" default="default" />
+  <arg name="load" default="default" doc="Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder of this node)."/>
+
+  <!-- Implementation -->
 
   <group if="$(arg launch_openni)">
     <!-- Launch openni2 with custom driver parameters -->
