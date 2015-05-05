@@ -36,9 +36,17 @@ VisionNode::VisionNode()
 bool VisionNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res)
 {
   sensor_msgs::PointCloud2 msg;
-  //mtx_scene.lock();
+  if (req.save.compare("false") != 0)
+  {
+    std::string home = std::getenv("HOME");
+    mtx_scene.lock();
+    pcl::io::savePCDFile( (home + "/" + req.save + ".pcd").c_str(), *scene_processed);
+    mtx_scene.unlock();
+    ROS_INFO("[PaCMaN Vision][%s] Processed scene saved to %s",__func__, (home + "/" + req.save + ".pcd").c_str() );
+  }
+  mtx_scene.lock();
   pcl::toROSMsg(*scene_processed, msg);
-  //mtx_scene.unlock();
+  mtx_scene.unlock();
   res.scene = msg; 
   ROS_INFO("[PaCMaN Vision][%s] Sent processed scene to service response.", __func__);
   return true;
@@ -46,15 +54,15 @@ bool VisionNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacma
 
 void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
 {
-  //mtx_scene.lock();
+  mtx_scene.lock();
   pcl::fromROSMsg (*message, *(this->scene));
-  //mtx_scene.unlock();
   PC::Ptr tmp (new PC);
   //filters
   //check if we need to filter scene
   if (filter)
   {
     PassThrough<PT> pass;
+    PC::Ptr t (new PC);
     //check if we need to maintain scene organized
     if (keep_organized)
       pass.setKeepOrganized(true);
@@ -67,32 +75,28 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     pass.setInputCloud (tmp);
     pass.setFilterFieldName ("y");
     pass.setFilterLimits (ymin, ymax);
-    pass.filter (*tmp);
-    pass.setInputCloud (tmp);
+    pass.filter (*t);
+    pass.setInputCloud (t);
     pass.setFilterFieldName ("x");
     pass.setFilterLimits (xmin, xmax);
-  //  mtx_scene.lock();
     pass.filter (*(this->scene_processed));
+    //keep a copy of filtered scene for tracker/estimator
     copyPointCloud(*(this->scene_processed), *(this->scene_filtered));
-   // mtx_scene.unlock();
   }
   //check if we need to downsample scene
   if (downsample) //cannot keep organized cloud after voxelgrid
   {
     VoxelGrid<PT> vg;
     vg.setLeafSize(leaf, leaf, leaf);
-   // mtx_scene.lock();
     vg.setInputCloud (this->scene_filtered);
     vg.filter (*(this->scene_processed));
-   // mtx_scene.unlock();
   }
   //republish processed cloud
-  //mtx_scene.lock();
   if (filter || downsample)
     pub_scene.publish(*scene_processed);
   else
     pub_scene.publish(*scene);
-  //mtx_scene.unlock();
+  mtx_scene.unlock();
 }
 
 void VisionNode::check_modules()
@@ -157,22 +161,19 @@ void VisionNode::spin_estimator()
   {
     //push down filtered cloud to estimator (never pass downsampled one, cause estimator will autodownsample cluster of objects with its own leaf size)
     //lock variables so no-one else can touch what is copied
-    //mtx_scene.lock();
-    //mtx_estimator.lock();
-    if(filter)
+    mtx_scene.lock();
+    mtx_estimator.lock();
+    if(this->filter)
       copyPointCloud(*scene_filtered, *(this->estimator_module->scene));
     else
       copyPointCloud(*scene, *(this->estimator_module->scene));
     //release lock
-    //mtx_estimator.unlock();
-    //mtx_scene.unlock();
-    //spin
+    mtx_estimator.unlock();
+    mtx_scene.unlock();
     this->estimator_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //estimator could try to go at 20Hz (no need to process those services faster)
-    ROS_WARN("Estimator Spin"); //TODO remove
+    boost::this_thread::sleep(boost::posix_time::milliseconds(200)); //estimator could try to go at 5Hz (no need to process those services faster)
   }
   //estimator got stopped
-  ROS_ERROR("Estimator Died!"); //TODO remove
   return;
 }
 
@@ -187,17 +188,17 @@ void VisionNode::spin_broadcaster()
       //check if it is not busy computing and it has some new estimations to upload
       if (!this->estimator_module->busy && this->estimator_module->up_broadcaster)
       {
-        //mtx_estimator.lock();
-        //mtx_broadcaster.lock();
+        mtx_estimator.lock();
+        mtx_broadcaster.lock();
         broadcaster_module->estimated.clear();
         broadcaster_module->names.clear();
         broadcaster_module->ids.clear();
         boost::copy(estimator_module->estimations, back_inserter(broadcaster_module->estimated));
         boost::copy(estimator_module->names, back_inserter(broadcaster_module->names));
         boost::copy(estimator_module->ids, back_inserter(broadcaster_module->ids));
-        //mtx_broadcaster.unlock();
+        mtx_broadcaster.unlock();
         estimator_module->up_broadcaster = false;
-        //mtx_estimator.unlock();
+        mtx_estimator.unlock();
         //process new data
         broadcaster_module->compute_transforms();
       }
@@ -219,15 +220,15 @@ void VisionNode::spin_tracker()
   {
     //push down filtered cloud to tracker (never pass downsampled one, cause tracker has its own downsampling)
     //lock variables so no-one else can touch what is copied
-    //mtx_scene.lock();
-    //mtx_tracker.lock();
+    mtx_scene.lock();
+    mtx_tracker.lock();
     if(filter)
       copyPointCloud(*scene_filtered, *(this->tracker_module->scene));
     else
       copyPointCloud(*scene, *(this->tracker_module->scene));
     //release lock
-    //mtx_tracker.unlock();
-    //mtx_scene.unlock();
+    mtx_tracker.unlock();
+    mtx_scene.unlock();
     //check if we have an estimator running
     if (this->en_estimator && this->estimator_module)
     { //we have an estimator module running
@@ -236,14 +237,14 @@ void VisionNode::spin_tracker()
       {
         if (!tracker_module->started)
         { //we copy only if tracker is not started already
-         // mtx_estimator.lock();
-         // mtx_tracker.lock();
+          mtx_estimator.lock();
+          mtx_tracker.lock();
           tracker_module->estimations.clear();
           tracker_module->names.clear();
           boost::copy(estimator_module->estimations, back_inserter(tracker_module->estimations));
           boost::copy(estimator_module->names, back_inserter(tracker_module->names));
-         // mtx_tracker.unlock();
-         // mtx_estimator.unlock();
+          mtx_tracker.unlock();
+          mtx_estimator.unlock();
         }
         estimator_module->up_tracker=false;
       }
@@ -252,15 +253,17 @@ void VisionNode::spin_tracker()
     //TODO tmp timer
     if (this->tracker_module->started)
     {
+      mtx_tracker.lock();
       boost::timer t;
       this->tracker_module->track_v1();
       cout<<"Tracker Step: "<<t.elapsed()<<std::endl;
       this->tracker_module->broadcast_tracked_object();
+      mtx_tracker.unlock();
     }
     this->tracker_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //tracker could try to go at 20Hz
   }
-  //estimator got stopped
+  //tracker got stopped
   return;
 }
 
@@ -295,6 +298,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   }
   this->en_estimator = config.enable_estimator;
   this->en_tracker = config.enable_tracker;
+  this->en_broadcaster = config.enable_broadcaster;
   this->filter = config.filtering;
   this->downsample = config.downsampling;
   this->keep_organized = config.keep_organized;
@@ -312,7 +316,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->estimator_module->pe.setParam("progItera",estimator_module->iterations);
     this->estimator_module->neighbors = config.estimator_neighbors;
     this->estimator_module->pe.setParam("kNeighbors",estimator_module->neighbors);
-    this->estimator_module->clus_tol = config.estimator_clus_tol;
+    this->estimator_module->clus_tol = static_cast<double>(config.estimator_clus_tol);
   }
   if (this->broadcaster_module && this->en_broadcaster)
   {
@@ -326,16 +330,20 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   ROS_INFO("[PaCMaN Vision] Reconfigure request accepted");
 }
 
+void VisionNode::spin_once()
+{
+    ros::spinOnce();
+    this->check_modules();
+}
+
 int main (int argc, char *argv[])
 {
   ros::init(argc, argv, "pacman_vision");
   VisionNode node;
-  ros::Rate rate(50); //try to go at 50hz
+  ros::Rate rate(30); //try to go at 30hz
   while (node.nh.ok())
   {
-    ros::spinOnce(); 
-    //check if we need to enable/disable other modules
-    node.check_modules();
+    node.spin_once(); 
     rate.sleep();
   }
   return 0;

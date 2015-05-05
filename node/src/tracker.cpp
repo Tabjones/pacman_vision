@@ -9,6 +9,7 @@
 Tracker::Tracker(ros::NodeHandle &n)
 {
   this->scene.reset(new PC);
+  this->model.reset(new PC);
   this->nh = ros::NodeHandle (n, "tracker");
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
@@ -63,6 +64,11 @@ void Tracker::track_v1()
 
 bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res)
 {
+  if (req.name.empty())
+  {
+    ROS_ERROR("[Tracker][%s] You need to provide the name of the object you want to track!", __func__);
+    return false;
+  }
   std::string models_path (ros::package::getPath("asus_scanner_models"));
   int j = -1;
   for (int i=0; i<names.size(); ++i)
@@ -87,7 +93,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   PC::Ptr tmp (new PC);
   if (boost::filesystem::exists(model_path) && boost::filesystem::is_regular_file(model_path))
   {
-    if (pcl::io::loadPCDFile(model_path.string(), *tmp))
+    if (pcl::io::loadPCDFile(model_path.c_str(), *tmp))
     {
       ROS_ERROR("[Tracker][%s] Error loading model %s",__func__, model_path.c_str());
       return false;
@@ -95,7 +101,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   }
   else
   {
-    ROS_ERROR("[Tracker][%s] Request model %s does not exists in asus_scanner_models",__func__, model_path.c_str());
+    ROS_ERROR("[Tracker][%s] Request model (%s) does not exists in asus_scanner_models package",__func__, model_path.stem().c_str());
     return false;
   }
   pcl::VoxelGrid<PT> vg;

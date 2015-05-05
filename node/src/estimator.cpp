@@ -23,7 +23,7 @@ Estimator::Estimator(ros::NodeHandle &n)
   clus_tol = 0.05;
   downsampling = 1;
   busy = false;
-  pe.setParam("verbosity",1);
+  pe.setParam("verbosity",2);
   pe.setParam("progItera",iterations);
   pe.setParam("icpReciprocal",1);
   pe.setParam("kNeighbors",neighbors);
@@ -69,11 +69,9 @@ int Estimator::extract_clusters()
   ec.setSearchMethod(tree);
   ec.setClusterTolerance(clus_tol);
   ec.setMinClusterSize(100);
-  ec.setMaxClusterSize(table_top->points.size());
+  ec.setMaxClusterSize(30000);
   ec.extract(cluster_indices);
   int size = (int)cluster_indices.size();
-  //cout<<"size "<<size<<std::endl;
- // cluster_indices.resize((int)cluster_indices.size()-1); //TODO TMP FIX
   clusters.clear();
   clusters.resize(size);
   names.clear();
@@ -107,7 +105,7 @@ int Estimator::extract_clusters()
 
 bool Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res)
 {
-  estimate();
+  this->estimate();
   geometry_msgs::Pose pose;
   tf::Transform trans;
   for (int i=0; i<estimations.size(); ++i)

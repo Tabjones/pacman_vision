@@ -4,6 +4,7 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <ros/package.h>
+#include <ros/spinner.h>
 #include <dynamic_reconfigure/server.h>
 #include <pcl_ros/point_cloud.h>
 #include <sensor_msgs/PointCloud.h>
@@ -51,8 +52,8 @@ class VisionNode
 {
   public:
     VisionNode();
-    //method to enable/disable modules
-    void check_modules();
+    //custom spin method
+    void spin_once();
     //node handle
     ros::NodeHandle nh;
   private:
@@ -107,7 +108,9 @@ class VisionNode
     boost::mutex mtx_estimator;
     boost::mutex mtx_broadcaster;
     boost::mutex mtx_tracker;
-   
+
+    //method to enable/disable modules
+    void check_modules();
 };
 
 #define _INCL_NODE

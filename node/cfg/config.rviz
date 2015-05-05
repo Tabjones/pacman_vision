@@ -9,6 +9,8 @@ Panels:
         - /PointCloud21
         - /TF1
         - /TF1/Frames1
+        - /MarkerArray1
+        - /Marker1
       Splitter Ratio: 0.657718
     Tree Height: 715
   - Class: rviz/Selection
@@ -36,8 +38,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.30388
-        Min Value: -0.0077975
+        Max Value: 0.0999459
+        Min Value: -0.0868897
         Value: true
       Axis: Y
       Channel Name: intensity
@@ -76,6 +78,8 @@ Visualization Manager:
         camera_rgb_frame:
           Value: false
         camera_rgb_optical_frame:
+          Value: false
+        pot:
           Value: true
       Marker Scale: 0.5
       Name: TF
@@ -89,8 +93,25 @@ Visualization Manager:
               {}
           camera_rgb_frame:
             camera_rgb_optical_frame:
-              {}
+              pot:
+                {}
       Update Interval: 0
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /pacman_vision/broadcaster/objects
+      Name: MarkerArray
+      Namespaces:
+        pot: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /pacman_vision/tracker/tracked_object
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
@@ -116,7 +137,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.20226
+      Distance: 1.13449
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -128,10 +149,10 @@ Visualization Manager:
         Z: 0.985779
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -1.2498
+      Pitch: -1.1448
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.72024
+      Yaw: 4.73524
     Saved: ~
 Window Geometry:
   Displays:
