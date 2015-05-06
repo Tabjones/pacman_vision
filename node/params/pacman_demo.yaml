@@ -1,0 +1,6 @@
+pacman_vision: {broadcaster_rviz_markers: true, broadcaster_tf: true, downsampling: true, enable_broadcaster: true,
+  enable_estimator: true, enable_tracker: false, estimator_clus_tol: 0.1, estimator_iterations: 5,
+  estimator_neighbors: 10, estimator_object_calibration: false, filtering: true, keep_organized: false,
+  leaf_size: 0.005, pass_xmax: 0.55, pass_xmin: -0.5, pass_ymax: 0.5, pass_ymin: -0.5,
+  pass_zmax: 1.2, pass_zmin: 0.2, passthrough: true, plane_segmentation: true, plane_tolerance: 0.01,
+  tracker_bounding_factor: 1.1, tracker_leaf_size: 0.02, tracker_type: 0, tracker_window: 0.6}
