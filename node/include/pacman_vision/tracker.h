@@ -13,14 +13,23 @@
 //PCL
 #include <pcl/common/centroid.h>
 #include <pcl/common/eigen.h>
+#include <pcl/common/common.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/ModelCoefficients.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/registration/icp.h>
+#include <pcl/registration/icp_nl.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/sample_consensus/ransac.h>
+#include <pcl/sample_consensus/sac_model_plane.h>
+#include <pcl/segmentation/sac_segmentation.h>
 // ROS generated headers
 #include "pacman_vision_comm/track_object.h"
 //general utilities
@@ -35,14 +44,14 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
-typedef pcl::PointXYZRGBA PT;
-typedef pcl::PointCloud<PT> PC;
-
 class VisionNode;
 
 class Tracker
 {
   friend class VisionNode;
+  //preferred point type and cloud for tracker
+  typedef pcl::PointXYZ PTT;
+  typedef pcl::PointCloud<pcl::PointXYZ> PTC;
 
   public:
     Tracker(ros::NodeHandle &n);
@@ -61,13 +70,31 @@ class Tracker
     std::vector<std::string> names;
     std::vector<Eigen::Matrix4f> estimations;
     //actual scene
-    PC::Ptr scene;
+    PTC::Ptr scene;
     //actual model
-    PC::Ptr model;
+    PTC::Ptr model;
     
-    //config
-    bool started;
-    float window;
+    //config//
+    bool started, downsample;
+    //factor to bounding box dimensions
+    float factor;
+    float leaf;
+    //tracker type
+    // 0 ICP
+    // 1 GICP
+    // 2 ICPNL
+    int type;
+    //boundingbox of object computed from model
+    float x1,x2,y1,y2,z1,z2;
+   
+    //icp members
+    pcl::IterativeClosestPoint<PTT, PTT,float> icp;
+    pcl::GeneralizedIterativeClosestPoint<PTT, PTT> gicp;
+    pcl::IterativeClosestPoint<PTT, PTT,float> icp_nl;
+
+    //filters
+    pcl::PassThrough<PTT> pass;
+    pcl::VoxelGrid<PTT> vg;
     
     //rviz marker
     visualization_msgs::Marker marker;
@@ -82,7 +109,7 @@ class Tracker
     void broadcast_tracked_object();
 
     //tracker methods
-    void track_v1();
+    void track();
 
     //custom spin method
     void spin_once();

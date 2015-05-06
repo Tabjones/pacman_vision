@@ -8,7 +8,7 @@
 //Constructor
 Estimator::Estimator(ros::NodeHandle &n)
 {
-  this->scene.reset(new PC);
+  this->scene.reset(new PEC);
   this->nh = ros::NodeHandle (n, "estimator");
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
@@ -22,12 +22,13 @@ Estimator::Estimator(ros::NodeHandle &n)
   neighbors = 10;
   clus_tol = 0.05;
   downsampling = 1;
+  no_segment=false;
   busy = false;
   pe.setParam("verbosity",2);
   pe.setParam("progItera",iterations);
   pe.setParam("icpReciprocal",1);
   pe.setParam("kNeighbors",neighbors);
-  pe.setParam("downsampling",1);
+  pe.setParam("downsampling",downsampling);
   pe.setDatabase(db_path);
 }
 Estimator::~Estimator()
@@ -41,35 +42,44 @@ int Estimator::extract_clusters()
     return -1;
   ROS_INFO("[Estimator][%s] Extracting object clusters with cluster tolerance of %g",__func__,clus_tol);
   //objects
-  pcl::SACSegmentation<PT> seg;
-  pcl::ExtractIndices<PT> extract;
-  pcl::EuclideanClusterExtraction<PT> ec;
-  pcl::search::KdTree<PT>::Ptr tree (new pcl::search::KdTree<PT>);
+  pcl::SACSegmentation<PET> seg;
+  pcl::ExtractIndices<PET> extract;
+  pcl::EuclideanClusterExtraction<PET> ec;
+  pcl::search::KdTree<PET>::Ptr tree (new pcl::search::KdTree<PET>);
+  PEC::Ptr table_top (new PEC);
   //coefficients
   pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
   pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
   std::vector<pcl::PointIndices> cluster_indices;
   //plane segmentation
-  seg.setInputCloud(scene);
-  seg.setOptimizeCoefficients (true);
-  seg.setModelType (pcl::SACMODEL_PLANE);
-  seg.setMethodType (pcl::SAC_RANSAC);
-  seg.setMaxIterations (200);
-  seg.setDistanceThreshold (0.02);
-  seg.segment(*inliers, *coefficients);
-  //extract what's on top of plane
-  extract.setInputCloud(scene);
-  extract.setIndices(inliers);
-  PC::Ptr table_top (new PC);
-  extract.setNegative(true); 
-  extract.filter(*table_top);
+  //disable interruption during clustering, will be restored when di is destroyed
+  boost::this_thread::disable_interruption di;
+  if (!no_segment)
+  {
+    seg.setInputCloud(scene);
+    seg.setOptimizeCoefficients (true);
+    seg.setModelType (pcl::SACMODEL_PLANE);
+    seg.setMethodType (pcl::SAC_RANSAC);
+    seg.setMaxIterations (100);
+    seg.setDistanceThreshold (0.02);
+    seg.segment(*inliers, *coefficients);
+    //extract what's on top of plane
+    extract.setInputCloud(scene);
+    extract.setIndices(inliers);
+    extract.setNegative(true); 
+    extract.filter(*table_top);
+  }
+  else
+  {
+    pcl::copyPointCloud(*scene,*table_top);
+  }
   //cluster extraction
   tree->setInputCloud(table_top);
   ec.setInputCloud(table_top);
   ec.setSearchMethod(tree);
   ec.setClusterTolerance(clus_tol);
   ec.setMinClusterSize(100);
-  ec.setMaxClusterSize(30000);
+  ec.setMaxClusterSize(table_top->points.size());
   ec.extract(cluster_indices);
   int size = (int)cluster_indices.size();
   clusters.clear();
@@ -83,7 +93,7 @@ int Estimator::extract_clusters()
   int j=0;
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it, ++j)
   {
-    PC::Ptr object (new PC);
+    PEC::Ptr object (new PEC);
     extract.setInputCloud(table_top);
     extract.setIndices(boost::make_shared<PointIndices>(*it));
     extract.setNegative(false);
@@ -115,6 +125,7 @@ bool Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_v
     pose_est.pose = pose;
     pose_est.name = names[i];
     pose_est.id = ids[i];
+    pose_est.parent_frame = "/camera_rgb_optical_frame";
     res.estimated.poses.push_back(pose_est);
   }
   this->busy = false;
@@ -134,10 +145,13 @@ void Estimator::estimate()
     this->busy = false;
     return;
   }
+  pe.setParam("downsampling",this->downsampling);
   pe.setDatabase(db_path);
   for (int i=0; i<size; ++i)
   {
-    pe.setQuery("object", clusters[i]);
+    pcl::PointCloud<pcl::PointXYZRGBA> query;
+    pcl::copyPointCloud(clusters[i], query);
+    pe.setQuery("object", query);
     pe.generateLists();
     pe.refineCandidates();
     boost::shared_ptr<Candidate> pest (new Candidate);

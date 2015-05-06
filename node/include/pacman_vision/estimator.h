@@ -50,6 +50,9 @@ class VisionNode;
 
 class Estimator
 {
+  typedef pcl::PointXYZ PET; //default point type
+  typedef pcl::PointCloud<PET> PEC; //default point cloud with default point type
+  
   friend class VisionNode;
 
   public:
@@ -63,12 +66,12 @@ class Estimator
     //estimated transforms
     std::vector<Eigen::Matrix4f> estimations;
     //object clusters found on scene
-    std::vector<PC> clusters;
+    std::vector<PEC> clusters;
     //naming and id-ing of estimated objects
     std::vector<std::string> names;
     std::vector<std::string> ids;
     //actual scene
-    PC::Ptr scene;
+    PEC::Ptr scene;
     //path to pel database
     boost::filesystem::path db_path;
 
@@ -77,6 +80,7 @@ class Estimator
     int iterations, neighbors;
     double clus_tol;
     int downsampling;
+    bool no_segment;
     bool busy, up_broadcaster, up_tracker;
 
     //PEL object

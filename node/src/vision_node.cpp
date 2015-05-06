@@ -5,7 +5,6 @@ VisionNode::VisionNode()
   this->nh = ros::NodeHandle("pacman_vision");
   this->scene.reset(new PC);
   this->scene_processed.reset(new PC);
-  this->scene_filtered.reset(new PC);
   //first call of dynamic reconfigure callback will only set gui to loaded parameters
   rqt_init = true;
   //service callback init
@@ -20,9 +19,11 @@ VisionNode::VisionNode()
   nh.param<bool>("enable_estimator", en_estimator, false);
   nh.param<bool>("enable_tracker", en_tracker, false);
   nh.param<bool>("enable_broadcaster", en_broadcaster, false);
-  nh.param<bool>("filtering", filter, true);
+  nh.param<bool>("passthrough", filter, true);
+  nh.param<bool>("plane_segmentation", plane, false);
   nh.param<bool>("keep_organized", keep_organized, false);
   nh.param<double>("leaf_size", leaf, 0.01);
+  nh.param<double>("plane_tolerance", plane_tol, 0.004);
   nh.param<double>("pass_xmax", xmax, 0.5);
   nh.param<double>("pass_xmin", xmin, -0.5);
   nh.param<double>("pass_ymax", ymax, 0.5);
@@ -80,19 +81,50 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     pass.setFilterFieldName ("x");
     pass.setFilterLimits (xmin, xmax);
     pass.filter (*(this->scene_processed));
-    //keep a copy of filtered scene for tracker/estimator
-    copyPointCloud(*(this->scene_processed), *(this->scene_filtered));
+  }
+  if (plane)
+  {
+    pcl::SACSegmentation<PT> seg;
+    pcl::ExtractIndices<PT> extract;
+    //coefficients
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    //plane segmentation
+    if (filter)
+      seg.setInputCloud(this->scene_processed);
+    else
+      seg.setInputCloud(this->scene);
+    seg.setOptimizeCoefficients (true);
+    seg.setModelType (pcl::SACMODEL_PLANE);
+    seg.setMethodType (pcl::SAC_RANSAC);
+    seg.setMaxIterations (100);
+    seg.setDistanceThreshold (this->plane_tol);
+    seg.segment(*inliers, *coefficients);
+    //extract what's on top of plane
+    if (filter)
+      extract.setInputCloud(this->scene_processed);
+    else
+      extract.setInputCloud(this->scene);
+    extract.setIndices(inliers);
+    extract.setNegative(true); 
+    extract.filter(*tmp);
+    pcl::copyPointCloud(*tmp, *(this->scene_processed));
   }
   //check if we need to downsample scene
   if (downsample) //cannot keep organized cloud after voxelgrid
   {
     VoxelGrid<PT> vg;
     vg.setLeafSize(leaf, leaf, leaf);
-    vg.setInputCloud (this->scene_filtered);
-    vg.filter (*(this->scene_processed));
+    vg.setDownsampleAllData(true);
+    if (filter || plane)
+      vg.setInputCloud (this->scene_processed);
+    else
+      vg.setInputCloud (this->scene);
+    vg.filter (*tmp);
+    pcl::copyPointCloud(*tmp, *(this->scene_processed));
   }
   //republish processed cloud
-  if (filter || downsample)
+  if (filter || downsample || plane)
     pub_scene.publish(*scene_processed);
   else
     pub_scene.publish(*scene);
@@ -159,19 +191,29 @@ void VisionNode::spin_estimator()
   //spin until we disable it or it dies somehow
   while (this->en_estimator && this->estimator_module)
   {
-    //push down filtered cloud to estimator (never pass downsampled one, cause estimator will autodownsample cluster of objects with its own leaf size)
+    //push down filtered cloud to estimator
     //lock variables so no-one else can touch what is copied
     mtx_scene.lock();
     mtx_estimator.lock();
-    if(this->filter)
-      copyPointCloud(*scene_filtered, *(this->estimator_module->scene));
+    if(this->filter || this->downsample || this->plane)
+    {
+      copyPointCloud(*(this->scene_processed), *(this->estimator_module->scene));
+      if (this->downsample)
+        this->estimator_module->downsampling = 0; //downsampling already done here
+      if (this->plane)
+        this->estimator_module->no_segment = true;
+    }
     else
+    {
       copyPointCloud(*scene, *(this->estimator_module->scene));
+      this->estimator_module->downsampling = 1;
+      this->estimator_module->no_segment = false;
+    }
     //release lock
     mtx_estimator.unlock();
     mtx_scene.unlock();
     this->estimator_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(200)); //estimator could try to go at 5Hz (no need to process those services faster)
+    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //estimator could try to go at 20Hz (no need to process those services faster)
   }
   //estimator got stopped
   return;
@@ -222,10 +264,19 @@ void VisionNode::spin_tracker()
     //lock variables so no-one else can touch what is copied
     mtx_scene.lock();
     mtx_tracker.lock();
-    if(filter)
-      copyPointCloud(*scene_filtered, *(this->tracker_module->scene));
+    if(filter || downsample || plane)
+    {
+     copyPointCloud(*(this->scene_processed), *(this->tracker_module->scene));
+     if (downsample)
+     {
+       this->tracker_module->downsample = false;
+       this->tracker_module->leaf = this->leaf;
+     }
+     else
+       this->tracker_module->downsample = true;
+    }
     else
-      copyPointCloud(*scene, *(this->tracker_module->scene));
+      copyPointCloud(*(this->scene), *(this->tracker_module->scene));
     //release lock
     mtx_tracker.unlock();
     mtx_scene.unlock();
@@ -255,13 +306,13 @@ void VisionNode::spin_tracker()
     {
       mtx_tracker.lock();
       boost::timer t;
-      this->tracker_module->track_v1();
+      this->tracker_module->track();
       cout<<"Tracker Step: "<<t.elapsed()<<std::endl;
       this->tracker_module->broadcast_tracked_object();
       mtx_tracker.unlock();
     }
     this->tracker_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //tracker could try to go at 20Hz
+    boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go at 100Hz
   }
   //tracker got stopped
   return;
@@ -277,7 +328,9 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.enable_broadcaster = en_broadcaster;
     config.enable_tracker= en_tracker;
     config.downsampling = downsample;
-    config.filtering = filter;
+    config.passthrough = filter;
+    config.plane_segmentation = plane;
+    config.plane_tolerance = plane_tol;
     config.keep_organized = keep_organized;
     config.leaf_size = leaf;
     config.pass_xmax = xmax;
@@ -292,14 +345,18 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("estimator_object_calibration", config.estimator_object_calibration);
     nh.getParam("broadcaster_tf", config.broadcaster_tf);
     nh.getParam("broadcaster_rviz_markers", config.broadcaster_rviz_markers);
-    nh.getParam("tracker_window", config.tracker_window);
+    nh.getParam("tracker_bounding_factor", config.tracker_bounding_factor);
+    nh.getParam("tracker_leaf_size", config.tracker_leaf_size);
+    nh.getParam("tracker_type", config.tracker_type);
     this->rqt_init = false;
     ROS_WARN("[PaCMaN Vision] Rqt-Reconfigure Default Values Initialized");
   }
   this->en_estimator = config.enable_estimator;
   this->en_tracker = config.enable_tracker;
   this->en_broadcaster = config.enable_broadcaster;
-  this->filter = config.filtering;
+  this->filter = config.passthrough;
+  this->plane = config.plane_segmentation;
+  this->plane_tol = config.plane_tolerance;
   this->downsample = config.downsampling;
   this->keep_organized = config.keep_organized;
   this->xmin = config.pass_xmin;
@@ -325,7 +382,9 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   }
   if (this->tracker_module && this->en_tracker)
   {
-    this->tracker_module->window = config.tracker_window;
+    this->tracker_module->factor = config.tracker_bounding_factor;
+    this->tracker_module->leaf = config.tracker_leaf_size;
+    this->tracker_module->type = config.tracker_type;
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request accepted");
 }

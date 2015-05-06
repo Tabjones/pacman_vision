@@ -45,11 +45,11 @@
 
 using namespace pcl;
 
-typedef pcl::PointXYZRGBA PT; //default point type
-typedef pcl::PointCloud<PT> PC; //default point cloud with default point type
-
 class VisionNode
 {
+  typedef pcl::PointXYZRGBA PT; //default point type
+  typedef pcl::PointCloud<PT> PC; //default point cloud with default point type
+  
   public:
     VisionNode();
     //custom spin method
@@ -71,7 +71,6 @@ class VisionNode
     //pointer to processed and acquired point cloud
     PC::Ptr scene_processed;
     PC::Ptr scene;
-    PC::Ptr scene_filtered;
 
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module; 
@@ -94,8 +93,8 @@ class VisionNode
     void cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message);
 
     //filter parameters
-    bool filter, downsample, keep_organized;
-    double xmin,xmax,ymin,ymax,zmin,zmax,leaf;
+    bool filter, downsample, keep_organized, plane;
+    double xmin,xmax,ymin,ymax,zmin,zmax,leaf,plane_tol;
 
     //Dynamic Reconfigure//
     //Server

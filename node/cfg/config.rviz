@@ -7,7 +7,6 @@ Panels:
         - /Global Options1
         - /Status1
         - /PointCloud21
-        - /TF1
         - /TF1/Frames1
         - /MarkerArray1
         - /Marker1
@@ -38,10 +37,10 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.0999459
-        Min Value: -0.0868897
+        Max Value: 0.898
+        Min Value: 0.491
         Value: true
-      Axis: Y
+      Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
@@ -70,16 +69,20 @@ Visualization Manager:
       Frames:
         All Enabled: false
         camera_depth_frame:
-          Value: false
+          Value: true
         camera_depth_optical_frame:
-          Value: false
+          Value: true
         camera_link:
-          Value: false
+          Value: true
         camera_rgb_frame:
-          Value: false
+          Value: true
         camera_rgb_optical_frame:
-          Value: false
-        pot:
+          Value: true
+        mugD:
+          Value: true
+        mugD_tracked:
+          Value: true
+        panA:
           Value: true
       Marker Scale: 0.5
       Name: TF
@@ -93,7 +96,11 @@ Visualization Manager:
               {}
           camera_rgb_frame:
             camera_rgb_optical_frame:
-              pot:
+              mugD:
+                {}
+              mugD_tracked:
+                {}
+              panA:
                 {}
       Update Interval: 0
       Value: true
@@ -102,7 +109,8 @@ Visualization Manager:
       Marker Topic: /pacman_vision/broadcaster/objects
       Name: MarkerArray
       Namespaces:
-        pot: true
+        mugD: true
+        panA: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -110,7 +118,7 @@ Visualization Manager:
       Marker Topic: /pacman_vision/tracker/tracked_object
       Name: Marker
       Namespaces:
-        {}
+        mugD_tracked: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -137,22 +145,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.13449
+      Distance: 0.773123
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.0445396
-        Y: 0.137469
-        Z: 0.985779
+        X: -0.00246218
+        Y: 0.278294
+        Z: 0.918653
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -1.1448
+      Pitch: -1.0548
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.73524
+      Yaw: 4.70524
     Saved: ~
 Window Geometry:
   Displays:
