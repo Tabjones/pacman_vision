@@ -125,11 +125,7 @@ bool Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_v
     pose_est.pose = pose;
     pose_est.name = names[i];
     pose_est.id = ids[i];
-<<<<<<< HEAD
     pose_est.parent_frame = "/camera_rgb_optical_frame";
-=======
-    pose_est.parent_frame = "/camera/rgb_optical_frame";
->>>>>>> 83d9edcd6dd0bec3412cbf8b3f5fb28c651dc15e
     res.estimated.poses.push_back(pose_est);
   }
   this->busy = false;
