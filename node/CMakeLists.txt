@@ -112,8 +112,11 @@ set(wget_url "https://www.dropbox.com/s/79vy38432vv80gu/PELdatabase.tar.gz?dl=0"
 set(tar_arg "-zxvf")
 set(tar_tgt "pelDB.tar.gz")
 set(rm_comm "pelDB.tar.gz")
+set(rm_arg "-rf")
+set(rm_db "database")
 add_custom_command(TARGET pacman_vision
   POST_BUILD
+  COMMAND rm ${rm_db} ${rm_arg}
   COMMAND wget ${wget_arg} ${wget_url}
   COMMAND tar ${tar_arg} ${tar_tgt}
   COMMAND rm ${rm_comm}

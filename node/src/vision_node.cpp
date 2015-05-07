@@ -260,7 +260,7 @@ void VisionNode::spin_tracker()
   //spin until we disable it or it dies somehow
   while (this->en_tracker && this->tracker_module)
   {
-    //push down filtered cloud to tracker (never pass downsampled one, cause tracker has its own downsampling)
+    //push down filtered cloud to tracker 
     //lock variables so no-one else can touch what is copied
     mtx_scene.lock();
     mtx_tracker.lock();
@@ -301,13 +301,12 @@ void VisionNode::spin_tracker()
       }
     }
     //spin
-    //TODO tmp timer
     if (this->tracker_module->started)
     {
       mtx_tracker.lock();
-      boost::timer t;
+    //  boost::timer t;
       this->tracker_module->track();
-      cout<<"Tracker Step: "<<t.elapsed()<<std::endl;
+    //  cout<<"Tracker Step: "<<t.elapsed()<<std::endl;
       this->tracker_module->broadcast_tracked_object();
       mtx_tracker.unlock();
     }

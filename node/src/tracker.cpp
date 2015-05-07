@@ -16,13 +16,15 @@ Tracker::Tracker(ros::NodeHandle &n)
   this->srv_track_object = nh.advertiseService("track_object", &Tracker::cb_track_object, this);
   this->rviz_marker_pub = nh.advertise<visualization_msgs::Marker>("tracked_object", 1);
   ce.reset( new pcl::registration::CorrespondenceEstimation<PTT, PTT, float>);
-  crd.reset( new pcl::registration::CorrespondenceRejectorDistance<PTT, PTT, float>);
-
+  crd.reset( new pcl::registration::CorrespondenceRejectorDistance);
+  //cro2o.reset( new pcl::registration::CorrespondenceRejectorOneToOne);
+ // crsc.reset( new pcl::registration::CorrespondenceRejectorSampleConsensus<PTT>);
 
   started = false;
   downsample = true;
   leaf = 0.02f;
-  factor = 1.1;
+  factor = 1.1f;
+  rej_distance = 0.025f;
 }
 Tracker::~Tracker()
 {
@@ -61,16 +63,16 @@ void Tracker::track()
   else
     pcl::transformPointCloud(*tmp, *target, transform);
   //align
-  ce->setInputSource(model);
+  pcl::Correspondences corr, filt;
   ce->setInputTarget(target);
-  icp.setCorrespondenceEstimation(ce);
-  crd->setInputsource(model);
-  crd->setInputTarget(target);
-  crd->setMaximumDistance(0.015);
-  icp.addCorrespondenceRejector(crd);
-  icp.setInputSource(model);
+  ce->determineCorrespondences(corr);
+  crd->setInputTarget<PTT>(target);
+  crd->getRemainingCorrespondences(corr, filt);
+  //TODO adjust distance and factor according to fitness and rej.size
+  //crsc->setInputTarget(target);
   icp.setInputTarget(target);
   icp.align(*tmp, transform);
+  ROS_INFO("model: %d, corr: %d, rej: %d, fitness: %g", (int)model->points.size(), (int)corr.size(), (int)filt.size(), icp.getFitnessScore());
   this->transform = icp.getFinalTransformation();
 }
 
@@ -120,20 +122,44 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   vg.setInputCloud (tmp);
   vg.setLeafSize(leaf, leaf, leaf);
   vg.filter (*model);
-  PTT min,max;
   //Get the minimum and maximum values on each of the 3 (x-y-z) dimensions of model
-  pcl::getMinMax3D(*model, min, max);
-  x1 = min.x;
-  y1 = min.y;
-  z1 = min.z;
-  x2 = max.x;
-  y2 = max.y;
-  z2 = max.z;
+  std::vector<float> xvec,yvec,zvec;
+  for (int i=0; i<model->points.size(); ++i)
+  {
+    xvec.push_back(model->points[i].x);
+    yvec.push_back(model->points[i].y);
+    zvec.push_back(model->points[i].z);
+  }
+  x1 = *std::min_element(xvec.begin(), xvec.end());
+  y1 = *std::min_element(yvec.begin(), yvec.end());
+  z1 = *std::min_element(zvec.begin(), zvec.end());
+  x2 = *std::max_element(xvec.begin(), xvec.end());
+  y2 = *std::max_element(yvec.begin(), yvec.end());
+  z2 = *std::max_element(zvec.begin(), zvec.end());
   //init icps
   icp.setUseReciprocalCorrespondences(false);
-  icp.setMaximumIterations(5);
+  icp.setMaximumIterations(50);
   icp.setTransformationEpsilon(1e-9);
   icp.setEuclideanFitnessEpsilon(1e-9);
+  ce->setInputSource(model);
+  icp.setCorrespondenceEstimation(ce);
+  crd->setInputSource<PTT>(model);
+  crd->setMaximumDistance(0.025); //initial rejector distance
+  //crsc->setInputSource(model);
+  //crsc->setInlierThreshold(0.02);
+  //crsc->setMaximumIterations(5);
+  //crsc->setRefineModel(true);
+  //icp.addCorrespondenceRejector(cro2o);
+  icp.addCorrespondenceRejector(crd);
+  //icp.addCorrespondenceRejector(crsc);
+  icp.setInputSource(model);
+  //do one step of icp
+  ce->setInputTarget(scene);
+  crd->setInputTarget(scene);
+  icp.setInputTarget(scene);
+  PTC tmp;
+  icp.align(tmp, transform);
+  fitness = icp.getFitnessScore(); //save fitness of correct alignment
   //init rviz marker
   marker.header.frame_id = "/camera_rgb_optical_frame";
   marker.ns = std::string(id + "_tracked").c_str();

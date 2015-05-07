@@ -16,6 +16,8 @@
 #include <pcl/common/common.h>
 #include <pcl/registration/correspondence_rejection_distance.h>
 #include <pcl/registration/correspondence_estimation.h>
+#include <pcl/registration/correspondence_rejection_one_to_one.h>
+#include <pcl/registration/correspondence_rejection_sample_consensus.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
@@ -35,6 +37,7 @@
 //general utilities
 #include <cmath>
 #include <fstream>
+#include <algorithm>
 #include <string>
 #include <stdlib.h>
 #include <boost/shared_ptr.hpp>
@@ -84,12 +87,17 @@ class Tracker
     int type;
     //boundingbox of object computed from model
     float x1,x2,y1,y2,z1,z2;
+    //distance threshold for rejector
+    float rej_distance;
+    double fitness;
    
     //icp member
     pcl::IterativeClosestPoint<PTT, PTT,float> icp;
     //correspondences
     pcl::registration::CorrespondenceEstimation<PTT, PTT, float>::Ptr ce;
-    pcl::registration::CorrespondenceRejectorDistance<PTT, PTT, float>::Ptr crd;
+    pcl::registration::CorrespondenceRejectorDistance::Ptr crd;
+//    pcl::registration::CorrespondenceRejectorOneToOne::Ptr cro2o;
+//    pcl::registration::CorrespondenceRejectorSampleConsensus< PTT >::Ptr crsc;
 
     //filters
     pcl::PassThrough<PTT> pass;
