@@ -14,6 +14,8 @@
 #include <pcl/common/centroid.h>
 #include <pcl/common/eigen.h>
 #include <pcl/common/common.h>
+#include <pcl/registration/correspondence_rejection_distance.h>
+#include <pcl/registration/correspondence_estimation.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
@@ -23,8 +25,6 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/registration/icp.h>
-#include <pcl/registration/icp_nl.h>
-#include <pcl/registration/gicp.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/sample_consensus/ransac.h>
@@ -79,18 +79,17 @@ class Tracker
     //factor to bounding box dimensions
     float factor;
     float leaf;
-    //tracker type
-    // 0 ICP
-    // 1 GICP
-    // 2 ICPNL
+    //tracker transform estimation type
+    // unused
     int type;
     //boundingbox of object computed from model
     float x1,x2,y1,y2,z1,z2;
    
-    //icp members
+    //icp member
     pcl::IterativeClosestPoint<PTT, PTT,float> icp;
-    pcl::GeneralizedIterativeClosestPoint<PTT, PTT> gicp;
-    pcl::IterativeClosestPoint<PTT, PTT,float> icp_nl;
+    //correspondences
+    pcl::registration::CorrespondenceEstimation<PTT, PTT, float>::Ptr ce;
+    pcl::registration::CorrespondenceRejectorDistance<PTT, PTT, float>::Ptr crd;
 
     //filters
     pcl::PassThrough<PTT> pass;

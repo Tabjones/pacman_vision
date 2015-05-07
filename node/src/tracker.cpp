@@ -15,6 +15,10 @@ Tracker::Tracker(ros::NodeHandle &n)
   this->nh.setCallbackQueue(&(*this->queue_ptr));
   this->srv_track_object = nh.advertiseService("track_object", &Tracker::cb_track_object, this);
   this->rviz_marker_pub = nh.advertise<visualization_msgs::Marker>("tracked_object", 1);
+  ce.reset( new pcl::registration::CorrespondenceEstimation<PTT, PTT, float>);
+  crd.reset( new pcl::registration::CorrespondenceRejectorDistance<PTT, PTT, float>);
+
+
   started = false;
   downsample = true;
   leaf = 0.02f;
@@ -57,27 +61,17 @@ void Tracker::track()
   else
     pcl::transformPointCloud(*tmp, *target, transform);
   //align
-  if (this->type == 0)
-  {
-    icp.setInputTarget(target);
-    icp.setInputSource(model);
-    icp.align(*tmp, transform);
-    transform = icp.getFinalTransformation();
-  }
-  else if (this->type == 1)
-  {
-    gicp.setInputTarget(target);
-    gicp.setInputSource(model);
-    gicp.align(*tmp, transform);
-    transform = gicp.getFinalTransformation();
-  }
-  else if (this->type == 2)
-  {
-    icp_nl.setInputTarget(target);
-    icp_nl.setInputSource(model);
-    icp_nl.align(*tmp, transform);
-    transform = icp_nl.getFinalTransformation();
-  }
+  ce->setInputSource(model);
+  ce->setInputTarget(target);
+  icp.setCorrespondenceEstimation(ce);
+  crd->setInputsource(model);
+  crd->setInputTarget(target);
+  crd->setMaximumDistance(0.015);
+  icp.addCorrespondenceRejector(crd);
+  icp.setInputSource(model);
+  icp.setInputTarget(target);
+  icp.align(*tmp, transform);
+  this->transform = icp.getFinalTransformation();
 }
 
 bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res)
@@ -140,17 +134,6 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   icp.setMaximumIterations(5);
   icp.setTransformationEpsilon(1e-9);
   icp.setEuclideanFitnessEpsilon(1e-9);
-  icp_nl.setUseReciprocalCorrespondences(false);
-  icp_nl.setMaximumIterations(5);
-  icp_nl.setTransformationEpsilon(1e-9);
-  icp_nl.setEuclideanFitnessEpsilon(1e-9);
-  gicp.setUseReciprocalCorrespondences(false);
-  gicp.setMaximumIterations(5);
-  gicp.setTransformationEpsilon(1e-9);
-  gicp.setEuclideanFitnessEpsilon(1e-9);
-  gicp.setCorrespondenceRandomness(10);
-  gicp.setMaximumOptimizerIterations(5);
-  gicp.setRotationEpsilon(1e-4);
   //init rviz marker
   marker.header.frame_id = "/camera_rgb_optical_frame";
   marker.ns = std::string(id + "_tracked").c_str();
