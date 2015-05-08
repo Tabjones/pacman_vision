@@ -64,8 +64,9 @@ class Tracker
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
     //Service Server
     ros::ServiceServer srv_track_object;
-    //tracker transform
+    //tracker transforms
     Eigen::Matrix4f transform;
+    
     //name and id of object to be tracked
     std::string name;
     std::string id;
@@ -90,6 +91,7 @@ class Tracker
     //distance threshold for rejector
     float rej_distance;
     double fitness;
+    double corr_ratio;
    
     //icp member
     pcl::IterativeClosestPoint<PTT, PTT,float> icp;

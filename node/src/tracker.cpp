@@ -67,13 +67,22 @@ void Tracker::track()
   ce->setInputTarget(target);
   ce->determineCorrespondences(corr);
   crd->setInputTarget<PTT>(target);
+  crd->setMaximumDistance(rej_distance);
   crd->getRemainingCorrespondences(corr, filt);
-  //TODO adjust distance and factor according to fitness and rej.size
+  double actual_corr_ratio = filt.size()/corr.size();
   //crsc->setInputTarget(target);
   icp.setInputTarget(target);
   icp.align(*tmp, transform);
-  ROS_INFO("model: %d, corr: %d, rej: %d, fitness: %g", (int)model->points.size(), (int)corr.size(), (int)filt.size(), icp.getFitnessScore());
+  ROS_INFO("corr: %g, fitness: %g", actual_corr_ratio/corr_ratio, icp.getFitnessScore()/fitness);
   this->transform = icp.getFinalTransformation();
+  //TODO adjust distance and factor according to fitness and rej.size
+  /*
+  if (actual_corr_ratio/corr_ratio < 0.8)
+  {
+    rej_distance += 0.003f;
+    factor += 0.1;
+  }
+  */
 }
 
 bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res)
@@ -144,7 +153,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   ce->setInputSource(model);
   icp.setCorrespondenceEstimation(ce);
   crd->setInputSource<PTT>(model);
-  crd->setMaximumDistance(0.025); //initial rejector distance
+  crd->setMaximumDistance(rej_distance);
   //crsc->setInputSource(model);
   //crsc->setInlierThreshold(0.02);
   //crsc->setMaximumIterations(5);
@@ -156,6 +165,10 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   //do one step of icp
   ce->setInputTarget(scene);
   crd->setInputTarget(scene);
+  pcl::Correspondences corr, filt;
+  ce->determineCorrespondences(corr);
+  crd->getRemainingCorrespondences(corr, filt);
+  corr_ratio = filt.size()/corr.size();
   icp.setInputTarget(scene);
   PTC tmp;
   icp.align(tmp, transform);
