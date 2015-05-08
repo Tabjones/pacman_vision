@@ -78,6 +78,19 @@ void Tracker::track()
   ROS_INFO("corr: %d, filt: %d, fitness: %g, actual: %g", (int)corr.size(), (int)filt.size(), fitness, icp.getFitnessScore(rej_distance));
   this->transform = icp.getFinalTransformation();
   //TODO adjust distance and factor according to fitness and rej.size
+  if (icp.getFitnessScore() > 0.0008) //something is probably wrong
+  {
+    rej_distance +=0.003;
+    factor += 0.01;
+    //create a disturbance
+  }
+  else if (icp.getFitnessScore() < 0.0003)
+  {
+    if(rej_distance > 0.01)
+      rej_distance -=0.003;
+    if(factor >= 1.0)
+      factor -=0.01;
+  }
   
 }
 
