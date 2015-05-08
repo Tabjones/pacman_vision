@@ -82,6 +82,19 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     pass.setFilterLimits (xmin, xmax);
     pass.filter (*(this->scene_processed));
   }
+  //check if we need to downsample scene
+  if (downsample) //cannot keep organized cloud after voxelgrid
+  {
+    VoxelGrid<PT> vg;
+    vg.setLeafSize(leaf, leaf, leaf);
+    vg.setDownsampleAllData(true);
+    if (filter)
+      vg.setInputCloud (this->scene_processed);
+    else
+      vg.setInputCloud (this->scene);
+    vg.filter (*tmp);
+    pcl::copyPointCloud(*tmp, *(this->scene_processed));
+  }
   if (plane)
   {
     pcl::SACSegmentation<PT> seg;
@@ -90,7 +103,7 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
     //plane segmentation
-    if (filter)
+    if (filter || downsample)
       seg.setInputCloud(this->scene_processed);
     else
       seg.setInputCloud(this->scene);
@@ -101,26 +114,13 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     seg.setDistanceThreshold (this->plane_tol);
     seg.segment(*inliers, *coefficients);
     //extract what's on top of plane
-    if (filter)
+    if (filter || downsample)
       extract.setInputCloud(this->scene_processed);
     else
       extract.setInputCloud(this->scene);
     extract.setIndices(inliers);
     extract.setNegative(true); 
     extract.filter(*tmp);
-    pcl::copyPointCloud(*tmp, *(this->scene_processed));
-  }
-  //check if we need to downsample scene
-  if (downsample) //cannot keep organized cloud after voxelgrid
-  {
-    VoxelGrid<PT> vg;
-    vg.setLeafSize(leaf, leaf, leaf);
-    vg.setDownsampleAllData(true);
-    if (filter || plane)
-      vg.setInputCloud (this->scene_processed);
-    else
-      vg.setInputCloud (this->scene);
-    vg.filter (*tmp);
     pcl::copyPointCloud(*tmp, *(this->scene_processed));
   }
   //republish processed cloud

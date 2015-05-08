@@ -26,6 +26,7 @@ Tracker::Tracker(ros::NodeHandle &n)
   leaf = 0.02f;
   factor = 1.1f;
   rej_distance = 0.025f;
+  disturbance_counter=0;
 }
 Tracker::~Tracker()
 {
@@ -35,6 +36,7 @@ Tracker::~Tracker()
 //tracker step 
 void Tracker::track()
 {
+  ++disturbance_counter;
   Eigen::Matrix4f inv_trans;
   PTC::Ptr target (new PTC);
   PTC::Ptr tmp (new PTC);
@@ -74,21 +76,32 @@ void Tracker::track()
   double actual_corr_ratio = filt.size()/corr.size();
   //crsc->setInputTarget(target);
   icp.setInputTarget(target);
-  icp.align(*tmp, transform);
+  /*
+  if (disturbance_counter >= 50)
+  {
+    ROS_WARN("DISTURBANCE !!");
+    Eigen::Matrix4f disturbed;
+    disturbed = (T_rotz*T_rotx*inv_trans).inverse();
+    icp.align(*tmp, disturbed);
+    disturbance_counter = 0;
+  }
+  else
+  */
+    icp.align(*tmp, transform);
   ROS_INFO("corr: %d, filt: %d, fitness: %g, actual: %g", (int)corr.size(), (int)filt.size(), fitness, icp.getFitnessScore(rej_distance));
   this->transform = icp.getFinalTransformation();
-  //TODO adjust distance and factor according to fitness and rej.size
+  //adjust distance and factor according to fitness
   if (icp.getFitnessScore() > 0.0008) //something is probably wrong
   {
-    rej_distance +=0.003;
+    rej_distance +=0.005;
     factor += 0.01;
     //create a disturbance
   }
-  else if (icp.getFitnessScore() < 0.0003)
+  else if (icp.getFitnessScore() < 0.0006)
   {
-    if(rej_distance > 0.01)
-      rej_distance -=0.003;
-    if(factor >= 1.0)
+    if(rej_distance > 0.025)
+      rej_distance -=0.005;
+    if(factor >= 1.1)
       factor -=0.01;
   }
   
@@ -182,6 +195,17 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   icp.setTransformationEstimation(teDQ);
   icp.align(*tmp, transform);
   fitness = icp.getFitnessScore(rej_distance); //save fitness of correct alignment
+  Eigen::AngleAxisf rotx (-30*D2R, Eigen::Vector3f::UnitX());
+  T_rotx << rotx.matrix()(0,0), rotx.matrix()(0,1), rotx.matrix()(0,2), -0.05,
+            rotx.matrix()(1,0), rotx.matrix()(1,1), rotx.matrix()(1,2), 0,
+            rotx.matrix()(2,0), rotx.matrix()(2,1), rotx.matrix()(2,2), 0,
+            0,                0,                  0,                 1;
+  Eigen::AngleAxisf rotz (15*D2R, Eigen::Vector3f::UnitZ());
+  T_rotz << rotz.matrix()(0,0), rotz.matrix()(0,1), rotz.matrix()(0,2), 0,
+            rotz.matrix()(1,0), rotz.matrix()(1,1), rotz.matrix()(1,2), 0,
+            rotz.matrix()(2,0), rotz.matrix()(2,1), rotz.matrix()(2,2), 0,
+            0,                0,                  0,                 1;
+
   //init rviz marker
   marker.header.frame_id = "/camera_rgb_optical_frame";
   marker.ns = std::string(id + "_tracked").c_str();

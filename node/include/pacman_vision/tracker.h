@@ -38,6 +38,7 @@
 #include <cmath>
 #include <fstream>
 #include <algorithm>
+#include <Eigen/Dense>
 #include <string>
 #include <stdlib.h>
 #include <boost/shared_ptr.hpp>
@@ -46,6 +47,8 @@
 #include <boost/date_time.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
+
+#define D2R 0.017453293
 
 class VisionNode;
 
@@ -66,6 +69,7 @@ class Tracker
     ros::ServiceServer srv_track_object;
     //tracker transforms
     Eigen::Matrix4f transform;
+    Eigen::Matrix4f T_rotx, T_rotz;
     
     //name and id of object to be tracked
     std::string name;
@@ -92,6 +96,7 @@ class Tracker
     float rej_distance;
     double fitness;
     double corr_ratio;
+    int disturbance_counter;
    
     //icp member
     pcl::IterativeClosestPoint<PTT, PTT,float> icp;
