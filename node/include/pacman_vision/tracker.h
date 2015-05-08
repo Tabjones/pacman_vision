@@ -17,7 +17,7 @@
 #include <pcl/registration/correspondence_rejection_distance.h>
 #include <pcl/registration/correspondence_estimation.h>
 #include <pcl/registration/correspondence_rejection_one_to_one.h>
-#include <pcl/registration/correspondence_rejection_sample_consensus.h>
+#include <pcl/registration/transformation_estimation_dual_quaternion.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
@@ -98,7 +98,8 @@ class Tracker
     //correspondences
     pcl::registration::CorrespondenceEstimation<PTT, PTT, float>::Ptr ce;
     pcl::registration::CorrespondenceRejectorDistance::Ptr crd;
-//    pcl::registration::CorrespondenceRejectorOneToOne::Ptr cro2o;
+    pcl::registration::CorrespondenceRejectorOneToOne::Ptr cro2o;
+    pcl::registration::TransformationEstimationDualQuaternion<PTT,PTT,float>::Ptr teDQ;
 //    pcl::registration::CorrespondenceRejectorSampleConsensus< PTT >::Ptr crsc;
 
     //filters

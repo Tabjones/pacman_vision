@@ -17,7 +17,8 @@ Tracker::Tracker(ros::NodeHandle &n)
   this->rviz_marker_pub = nh.advertise<visualization_msgs::Marker>("tracked_object", 1);
   ce.reset( new pcl::registration::CorrespondenceEstimation<PTT, PTT, float>);
   crd.reset( new pcl::registration::CorrespondenceRejectorDistance);
-  //cro2o.reset( new pcl::registration::CorrespondenceRejectorOneToOne);
+  cro2o.reset( new pcl::registration::CorrespondenceRejectorOneToOne);
+  teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PTT,PTT,float>);
  // crsc.reset( new pcl::registration::CorrespondenceRejectorSampleConsensus<PTT>);
 
   started = false;
@@ -68,21 +69,16 @@ void Tracker::track()
   ce->determineCorrespondences(corr);
   crd->setInputTarget<PTT>(target);
   crd->setMaximumDistance(rej_distance);
+  //cro2o->getRemainingCorrespondences(corr, o2o);
   crd->getRemainingCorrespondences(corr, filt);
   double actual_corr_ratio = filt.size()/corr.size();
   //crsc->setInputTarget(target);
   icp.setInputTarget(target);
   icp.align(*tmp, transform);
-  ROS_INFO("corr: %g, fitness: %g", actual_corr_ratio/corr_ratio, icp.getFitnessScore()/fitness);
+  ROS_INFO("corr: %d, filt: %d, fitness: %g, actual: %g", (int)corr.size(), (int)filt.size(), fitness, icp.getFitnessScore(rej_distance));
   this->transform = icp.getFinalTransformation();
   //TODO adjust distance and factor according to fitness and rej.size
-  /*
-  if (actual_corr_ratio/corr_ratio < 0.8)
-  {
-    rej_distance += 0.003f;
-    factor += 0.1;
-  }
-  */
+  
 }
 
 bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res)
@@ -164,15 +160,15 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   icp.setInputSource(model);
   //do one step of icp
   ce->setInputTarget(scene);
-  crd->setInputTarget(scene);
+  crd->setInputTarget<PTT>(scene);
   pcl::Correspondences corr, filt;
   ce->determineCorrespondences(corr);
   crd->getRemainingCorrespondences(corr, filt);
   corr_ratio = filt.size()/corr.size();
   icp.setInputTarget(scene);
-  PTC tmp;
-  icp.align(tmp, transform);
-  fitness = icp.getFitnessScore(); //save fitness of correct alignment
+  icp.setTransformationEstimation(teDQ);
+  icp.align(*tmp, transform);
+  fitness = icp.getFitnessScore(rej_distance); //save fitness of correct alignment
   //init rviz marker
   marker.header.frame_id = "/camera_rgb_optical_frame";
   marker.ns = std::string(id + "_tracked").c_str();
