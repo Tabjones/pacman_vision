@@ -10,6 +10,7 @@ Tracker::Tracker(ros::NodeHandle &n)
 {
   this->scene.reset(new PTC);
   this->model.reset(new PTC);
+  this->orig_model.reset(new PTC);
   this->nh = ros::NodeHandle (n, "tracker");
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
@@ -22,11 +23,12 @@ Tracker::Tracker(ros::NodeHandle &n)
  // crsc.reset( new pcl::registration::CorrespondenceRejectorSampleConsensus<PTT>);
 
   started = false;
-  downsample = true;
+  error_count=0;
   leaf = 0.02f;
   factor = 1.1f;
   rej_distance = 0.025f;
   disturbance_counter=0;
+  ROS_INFO("[Tracker] Tracker module tries to follow an already estimated object around the scene. For it to work properly please enable at least downsampling");
 }
 Tracker::~Tracker()
 {
@@ -36,12 +38,19 @@ Tracker::~Tracker()
 //tracker step 
 void Tracker::track()
 {
-  ++disturbance_counter;
+  if (error_count >= 10)
+  {
+    //failed 10 times in a row
+    ROS_ERROR("[Tracker][%s] Object is lost ... stopping tracker...",__func__);
+    started = false;
+    lost_it = true;
+    return;
+  }
   Eigen::Matrix4f inv_trans;
   PTC::Ptr target (new PTC);
   PTC::Ptr tmp (new PTC);
   inv_trans = transform.inverse();
-  //filter
+  //boundingbox
   pcl::transformPointCloud(*scene, *tmp, inv_trans);
   pass.setInputCloud(tmp);
   pass.setFilterFieldName("x");
@@ -55,17 +64,27 @@ void Tracker::track()
   pass.setFilterFieldName("z");
   pass.setFilterLimits(factor*z1, factor*z2);
   pass.filter(*tmp);
-  if(downsample)
+  if (tmp->points.size() <= 50)
   {
-    PTC t;
-    vg.setInputCloud (tmp);
-    vg.setLeafSize(leaf, leaf, leaf);
-    vg.filter (t);
-    pcl::transformPointCloud(t, *target, transform);
+    ROS_ERROR("[Tracker][%s] Not enought points in bounding box, retryng with larger bounding box", __func__);
+    factor += 0.2;
+    rej_distance +=0.01;
+    ++error_count;
+    return;
   }
-  else
-    pcl::transformPointCloud(*tmp, *target, transform);
+  error_count = 0;
+  pcl::transformPointCloud(*tmp, *target, transform);
   //align
+  if (old_leaf != leaf)
+  {
+    vg.setInputCloud (orig_model);
+    vg.setLeafSize(leaf, leaf, leaf);
+    vg.filter (*model);
+    old_leaf = leaf;
+    ce->setInputSource(model);
+    crd->setInputSource<PTT>(model);
+    icp.setInputSource(model);
+  }
   pcl::Correspondences corr, filt;
   ce->setInputTarget(target);
   ce->determineCorrespondences(corr);
@@ -76,33 +95,52 @@ void Tracker::track()
   double actual_corr_ratio = filt.size()/corr.size();
   //crsc->setInputTarget(target);
   icp.setInputTarget(target);
-  /*
-  if (disturbance_counter >= 50)
+  if (disturbance_counter >= 10)
   {
     ROS_WARN("DISTURBANCE !!");
+    boost::random::mt19937 gen(std::time(0));
+    boost::random::uniform_int_distribution<> angle(-20,20);
+    Eigen::AngleAxisf rotx (angle(gen)*D2R, Eigen::Vector3f::UnitX());
+    T_rotx << rotx.matrix()(0,0), rotx.matrix()(0,1), rotx.matrix()(0,2), -0.05,
+           rotx.matrix()(1,0), rotx.matrix()(1,1), rotx.matrix()(1,2), 0,
+           rotx.matrix()(2,0), rotx.matrix()(2,1), rotx.matrix()(2,2), 0,
+           0,                0,                  0,                 1;
+    Eigen::AngleAxisf rotz (angle(gen)*D2R, Eigen::Vector3f::UnitZ());
+    T_rotz << rotz.matrix()(0,0), rotz.matrix()(0,1), rotz.matrix()(0,2), 0,
+           rotz.matrix()(1,0), rotz.matrix()(1,1), rotz.matrix()(1,2), 0,
+           rotz.matrix()(2,0), rotz.matrix()(2,1), rotz.matrix()(2,2), 0,
+           0,                0,                  0,                 1;
+    Eigen::AngleAxisf roty (angle(gen)*D2R, Eigen::Vector3f::UnitY());
+    T_roty << roty.matrix()(0,0), roty.matrix()(0,1), roty.matrix()(0,2), 0,
+           roty.matrix()(1,0), roty.matrix()(1,1), roty.matrix()(1,2), 0,
+           roty.matrix()(2,0), roty.matrix()(2,1), roty.matrix()(2,2), 0,
+           0,                0,                  0,                 1;
+
     Eigen::Matrix4f disturbed;
-    disturbed = (T_rotz*T_rotx*inv_trans).inverse();
+    disturbed = (T_roty*T_rotz*T_rotx*inv_trans).inverse();
     icp.align(*tmp, disturbed);
     disturbance_counter = 0;
   }
   else
-  */
     icp.align(*tmp, transform);
-  ROS_INFO("corr: %d, filt: %d, fitness: %g, actual: %g", (int)corr.size(), (int)filt.size(), fitness, icp.getFitnessScore(rej_distance));
+  ROS_INFO("corr: %d, filt: %d, fitness: %g", (int)corr.size(), (int)filt.size(), icp.getFitnessScore());
   this->transform = icp.getFinalTransformation();
   //adjust distance and factor according to fitness
-  if (icp.getFitnessScore() > 0.0008) //something is probably wrong
+  if (icp.getFitnessScore() > 0.0008 || filt.size()/corr.size() < 0.3) //something is probably wrong
   {
     rej_distance +=0.005;
     factor += 0.01;
-    //create a disturbance
+    ++disturbance_counter;
   }
-  else if (icp.getFitnessScore() < 0.0006)
+  else if (icp.getFitnessScore() < 0.0005)
   {
     if(rej_distance > 0.025)
       rej_distance -=0.005;
     if(factor >= 1.1)
       factor -=0.01;
+    --disturbance_counter;
+    if (disturbance_counter < 0)
+      disturbance_counter = 0;
   }
   
 }
@@ -135,10 +173,9 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   id = vst.at(0);
   transform = estimations[j];
   boost::filesystem::path model_path (models_path + "/" + id + "/" + id + ".pcd");
-  PTC::Ptr tmp (new PTC);
   if (boost::filesystem::exists(model_path) && boost::filesystem::is_regular_file(model_path))
   {
-    if (pcl::io::loadPCDFile(model_path.c_str(), *tmp))
+    if (pcl::io::loadPCDFile(model_path.c_str(), *orig_model))
     {
       ROS_ERROR("[Tracker][%s] Error loading model %s",__func__, model_path.c_str());
       return false;
@@ -149,8 +186,8 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
     ROS_ERROR("[Tracker][%s] Request model (%s) does not exists in asus_scanner_models package",__func__, model_path.stem().c_str());
     return false;
   }
-  pcl::VoxelGrid<PTT> vg;
-  vg.setInputCloud (tmp);
+  old_leaf = leaf;
+  vg.setInputCloud (orig_model);
   vg.setLeafSize(leaf, leaf, leaf);
   vg.filter (*model);
   //Get the minimum and maximum values on each of the 3 (x-y-z) dimensions of model
@@ -185,27 +222,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   //icp.addCorrespondenceRejector(crsc);
   icp.setInputSource(model);
   //do one step of icp
-  ce->setInputTarget(scene);
-  crd->setInputTarget<PTT>(scene);
-  pcl::Correspondences corr, filt;
-  ce->determineCorrespondences(corr);
-  crd->getRemainingCorrespondences(corr, filt);
-  corr_ratio = filt.size()/corr.size();
-  icp.setInputTarget(scene);
   icp.setTransformationEstimation(teDQ);
-  icp.align(*tmp, transform);
-  fitness = icp.getFitnessScore(rej_distance); //save fitness of correct alignment
-  Eigen::AngleAxisf rotx (-30*D2R, Eigen::Vector3f::UnitX());
-  T_rotx << rotx.matrix()(0,0), rotx.matrix()(0,1), rotx.matrix()(0,2), -0.05,
-            rotx.matrix()(1,0), rotx.matrix()(1,1), rotx.matrix()(1,2), 0,
-            rotx.matrix()(2,0), rotx.matrix()(2,1), rotx.matrix()(2,2), 0,
-            0,                0,                  0,                 1;
-  Eigen::AngleAxisf rotz (15*D2R, Eigen::Vector3f::UnitZ());
-  T_rotz << rotz.matrix()(0,0), rotz.matrix()(0,1), rotz.matrix()(0,2), 0,
-            rotz.matrix()(1,0), rotz.matrix()(1,1), rotz.matrix()(1,2), 0,
-            rotz.matrix()(2,0), rotz.matrix()(2,1), rotz.matrix()(2,2), 0,
-            0,                0,                  0,                 1;
-
   //init rviz marker
   marker.header.frame_id = "/camera_rgb_optical_frame";
   marker.ns = std::string(id + "_tracked").c_str();

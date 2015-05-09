@@ -114,10 +114,7 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     seg.setDistanceThreshold (this->plane_tol);
     seg.segment(*inliers, *coefficients);
     //extract what's on top of plane
-    if (filter || downsample)
-      extract.setInputCloud(this->scene_processed);
-    else
-      extract.setInputCloud(this->scene);
+    extract.setInputCloud(seg.getInputCloud());
     extract.setIndices(inliers);
     extract.setNegative(true); 
     extract.filter(*tmp);
@@ -198,16 +195,11 @@ void VisionNode::spin_estimator()
     if(this->filter || this->downsample || this->plane)
     {
       copyPointCloud(*(this->scene_processed), *(this->estimator_module->scene));
-      if (this->downsample)
-        this->estimator_module->downsampling = 0; //downsampling already done here
-      if (this->plane)
-        this->estimator_module->no_segment = true;
     }
     else
     {
+      ROS_WARN("[PaCMaN Vision] Estimator module will not function properly without scene filtering, enable at least plane segmentation");
       copyPointCloud(*scene, *(this->estimator_module->scene));
-      this->estimator_module->downsampling = 1;
-      this->estimator_module->no_segment = false;
     }
     //release lock
     mtx_estimator.unlock();
@@ -264,19 +256,17 @@ void VisionNode::spin_tracker()
     //lock variables so no-one else can touch what is copied
     mtx_scene.lock();
     mtx_tracker.lock();
-    if(filter || downsample || plane)
+    if (filter || downsample || plane)
     {
-     copyPointCloud(*(this->scene_processed), *(this->tracker_module->scene));
-     if (downsample)
-     {
-       this->tracker_module->downsample = false;
-       this->tracker_module->leaf = this->leaf;
-     }
-     else
-       this->tracker_module->downsample = true;
+      copyPointCloud(*(this->scene_processed), *(this->tracker_module->scene));
+      this->tracker_module->leaf = this->leaf;
     }
     else
+    {
+      ROS_WARN("[PaCMaN Vision] Tracker module will not function properly without scene filtering, enable at least downsampling");
       copyPointCloud(*(this->scene), *(this->tracker_module->scene));
+      this->tracker_module->leaf = this->leaf;
+    }
     //release lock
     mtx_tracker.unlock();
     mtx_scene.unlock();
@@ -287,7 +277,7 @@ void VisionNode::spin_tracker()
       if (!this->estimator_module->busy && this->estimator_module->up_tracker)
       {
         if (!tracker_module->started)
-        { //we copy only if tracker is not started already
+        { //we copy only if tracker is not started already, otherwise we dont care
           mtx_estimator.lock();
           mtx_tracker.lock();
           tracker_module->estimations.clear();
@@ -303,12 +293,14 @@ void VisionNode::spin_tracker()
     //spin
     if (this->tracker_module->started)
     {
-      mtx_tracker.lock();
     //  boost::timer t;
       this->tracker_module->track();
     //  cout<<"Tracker Step: "<<t.elapsed()<<std::endl;
       this->tracker_module->broadcast_tracked_object();
-      mtx_tracker.unlock();
+    }
+    if (this->tracker_module->lost_it)
+    {
+      //The object is lost...  what now!? Lets ask Vito where the hands are
     }
     this->tracker_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go at 100Hz

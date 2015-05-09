@@ -36,6 +36,7 @@
 #include "pacman_vision_comm/track_object.h"
 //general utilities
 #include <cmath>
+#include <ctime>
 #include <fstream>
 #include <algorithm>
 #include <Eigen/Dense>
@@ -47,6 +48,8 @@
 #include <boost/date_time.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
 
 #define D2R 0.017453293
 
@@ -69,7 +72,7 @@ class Tracker
     ros::ServiceServer srv_track_object;
     //tracker transforms
     Eigen::Matrix4f transform;
-    Eigen::Matrix4f T_rotx, T_rotz;
+    Eigen::Matrix4f T_rotx, T_rotz, T_roty;
     
     //name and id of object to be tracked
     std::string name;
@@ -81,12 +84,15 @@ class Tracker
     PTC::Ptr scene;
     //actual model
     PTC::Ptr model;
-    
+    //loaded model
+    PTC::Ptr orig_model;
+
     //config//
-    bool started, downsample;
+    bool started, lost_it;
     //factor to bounding box dimensions
     float factor;
-    float leaf;
+    float leaf, old_leaf;
+    int error_count;
     //tracker transform estimation type
     // unused
     int type;

@@ -21,15 +21,14 @@ Estimator::Estimator(ros::NodeHandle &n)
   iterations = 10;
   neighbors = 10;
   clus_tol = 0.05;
-  downsampling = 1;
-  no_segment=false;
   busy = false;
   pe.setParam("verbosity",2);
   pe.setParam("progItera",iterations);
   pe.setParam("icpReciprocal",1);
   pe.setParam("kNeighbors",neighbors);
-  pe.setParam("downsampling",downsampling);
+  pe.setParam("downsampling",0);
   pe.setDatabase(db_path);
+  ROS_INFO("[Estimator] Estimator module extract euclidean clusters from current scene and tries to identify each of them by matching with provided database. For the Estimator to work properly please enable at least plane segmentation during scene processing.");
 }
 Estimator::~Estimator()
 {
@@ -42,44 +41,17 @@ int Estimator::extract_clusters()
     return -1;
   ROS_INFO("[Estimator][%s] Extracting object clusters with cluster tolerance of %g",__func__,clus_tol);
   //objects
-  pcl::SACSegmentation<PET> seg;
   pcl::ExtractIndices<PET> extract;
   pcl::EuclideanClusterExtraction<PET> ec;
   pcl::search::KdTree<PET>::Ptr tree (new pcl::search::KdTree<PET>);
-  PEC::Ptr table_top (new PEC);
-  //coefficients
-  pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-  pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
   std::vector<pcl::PointIndices> cluster_indices;
-  //plane segmentation
-  //disable interruption during clustering, will be restored when di is destroyed
-  boost::this_thread::disable_interruption di;
-  if (!no_segment)
-  {
-    seg.setInputCloud(scene);
-    seg.setOptimizeCoefficients (true);
-    seg.setModelType (pcl::SACMODEL_PLANE);
-    seg.setMethodType (pcl::SAC_RANSAC);
-    seg.setMaxIterations (100);
-    seg.setDistanceThreshold (0.02);
-    seg.segment(*inliers, *coefficients);
-    //extract what's on top of plane
-    extract.setInputCloud(scene);
-    extract.setIndices(inliers);
-    extract.setNegative(true); 
-    extract.filter(*table_top);
-  }
-  else
-  {
-    pcl::copyPointCloud(*scene,*table_top);
-  }
   //cluster extraction
-  tree->setInputCloud(table_top);
-  ec.setInputCloud(table_top);
+  tree->setInputCloud(scene);
+  ec.setInputCloud(scene);
   ec.setSearchMethod(tree);
   ec.setClusterTolerance(clus_tol);
   ec.setMinClusterSize(100);
-  ec.setMaxClusterSize(table_top->points.size());
+  ec.setMaxClusterSize(scene->points.size());
   ec.extract(cluster_indices);
   int size = (int)cluster_indices.size();
   clusters.clear();
@@ -94,7 +66,7 @@ int Estimator::extract_clusters()
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it, ++j)
   {
     PEC::Ptr object (new PEC);
-    extract.setInputCloud(table_top);
+    extract.setInputCloud(scene);
     extract.setIndices(boost::make_shared<PointIndices>(*it));
     extract.setNegative(false);
   /*  
