@@ -18,6 +18,7 @@ VisionNode::VisionNode()
   nh.param<bool>("downsampling", downsample, false);
   nh.param<bool>("enable_estimator", en_estimator, false);
   nh.param<bool>("enable_tracker", en_tracker, false);
+  nh.param<bool>("enable_listener", en_listener, false);
   nh.param<bool>("enable_broadcaster", en_broadcaster, false);
   nh.param<bool>("passthrough", filter, true);
   nh.param<bool>("plane_segmentation", plane, false);
@@ -57,6 +58,8 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
 {
   mtx_scene.lock();
   pcl::fromROSMsg (*message, *(this->scene));
+  //check if have a listener and thus a table transform
+  //TODO
   PC::Ptr tmp (new PC);
   //filters
   //check if we need to filter scene
@@ -179,6 +182,23 @@ void VisionNode::check_modules()
     tracker_driver.join();
     //kill the module
     this->tracker_module.reset();
+  }
+  
+  //check if we want listener module and it is not started, or if it is started but we want it disabled
+  if (this->en_listener && !this->listener_module)
+  {
+    ROS_WARN("[PaCMaN Vision] Started Vito Listener module");
+    this->listener_module.reset( new Listener(this->nh) );
+    //spawn a thread to handle the module spinning
+    listener_driver = boost::thread(&VisionNode::spin_listener, this);
+  }
+  else if (!this->en_listener && this->listener_module)
+  {
+    ROS_WARN("[PaCMaN Vision] Stopped Vito Listener module");
+    //wait for the thread to stop, if not already, if already stopped this results in a no_op
+    listener_driver.join();
+    //kill the module
+    this->listener_module.reset();
   }
 }
 ///////Spinner threads//////////
@@ -309,6 +329,44 @@ void VisionNode::spin_tracker()
   return;
 }
 
+void VisionNode::spin_listener()
+{
+  /*
+  //spin until we disable it or it dies somehow
+  while (this->en_broadcaster && this->broadcaster_module)
+  {
+    //check if we have an estimator and or a tracker 
+    if (this->en_estimator && this->estimator_module)
+    { //we have an estimator module running
+      //check if it is not busy computing and it has some new estimations to upload
+      if (!this->estimator_module->busy && this->estimator_module->up_broadcaster)
+      {
+        mtx_estimator.lock();
+        mtx_broadcaster.lock();
+        broadcaster_module->estimated.clear();
+        broadcaster_module->names.clear();
+        broadcaster_module->ids.clear();
+        boost::copy(estimator_module->estimations, back_inserter(broadcaster_module->estimated));
+        boost::copy(estimator_module->names, back_inserter(broadcaster_module->names));
+        boost::copy(estimator_module->ids, back_inserter(broadcaster_module->ids));
+        mtx_broadcaster.unlock();
+        estimator_module->up_broadcaster = false;
+        mtx_estimator.unlock();
+        //process new data
+        broadcaster_module->compute_transforms();
+      }
+    }
+    //do the broadcasting
+    this->broadcaster_module->broadcast_once();
+    //spin
+    this->broadcaster_module->spin_once();
+    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //broadcaster could try to go at 20Hz
+  }
+  */
+  //listener got stopped
+  return;
+}
+
 //dynamic reconfigure callback
 void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t level)
 {
@@ -317,6 +375,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   {
     config.enable_estimator = en_estimator;
     config.enable_broadcaster = en_broadcaster;
+    config.enable_listener = en_listener;
     config.enable_tracker= en_tracker;
     config.downsampling = downsample;
     config.passthrough = filter;
@@ -336,15 +395,14 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("estimator_object_calibration", config.estimator_object_calibration);
     nh.getParam("broadcaster_tf", config.broadcaster_tf);
     nh.getParam("broadcaster_rviz_markers", config.broadcaster_rviz_markers);
-    nh.getParam("tracker_bounding_factor", config.tracker_bounding_factor);
-    nh.getParam("tracker_leaf_size", config.tracker_leaf_size);
-    nh.getParam("tracker_type", config.tracker_type);
+    nh.getParam("tracker_estimation_type", config.tracker_estimation_type);
     this->rqt_init = false;
     ROS_WARN("[PaCMaN Vision] Rqt-Reconfigure Default Values Initialized");
   }
   this->en_estimator = config.enable_estimator;
   this->en_tracker = config.enable_tracker;
   this->en_broadcaster = config.enable_broadcaster;
+  this->en_listener = config.enable_listener;
   this->filter = config.passthrough;
   this->plane = config.plane_segmentation;
   this->plane_tol = config.plane_tolerance;
@@ -373,9 +431,10 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   }
   if (this->tracker_module && this->en_tracker)
   {
-    this->tracker_module->factor = config.tracker_bounding_factor;
-    this->tracker_module->leaf = config.tracker_leaf_size;
-    this->tracker_module->type = config.tracker_type;
+    this->tracker_module->type = config.tracker_estimation_type;
+  }
+  if (this->listenerr_module && this->en_listener)
+  {
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request accepted");
 }
@@ -384,6 +443,13 @@ void VisionNode::spin_once()
 {
     ros::spinOnce();
     this->check_modules();
+}
+
+void VisionNode::shutdown()
+{
+  en_tracker = en_broadcaster = en_estimator = en_listener = false;
+  check_modules();
+  boost::this_thread::sleep(boost::posix_time::seconds(1));
 }
 
 int main (int argc, char *argv[])
@@ -396,5 +462,6 @@ int main (int argc, char *argv[])
     node.spin_once(); 
     rate.sleep();
   }
+  node.shutdown();
   return 0;
 }

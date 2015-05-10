@@ -44,3 +44,61 @@ void fromPose(geometry_msgs::Pose &source, Eigen::Matrix4f &dest, tf::Transform 
   tf_dest.setOrigin(tf::Vector3(t(0), t(1), t(2)));
   tf_dest.setRotation(qt);
 }
+
+void fromTF(tf::StampedTransform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &pose_dest)
+{
+  Eigen::Quaternionf q(source.getRotation().getW(), source.getRotation().getX(), source.getRotation().getY(), source.getRotation().getZ());
+  q.normalize();
+  Eigen::Vector3f t(source.getOrigin().x(), source.getOrigin().y(), source.getOrigin.z());
+  Eigen::Matrix3f R(q.toRotationMatrix());
+  dest(0,0) = R(0,0);
+  dest(0,1) = R(0,1);
+  dest(0,2) = R(0,2);
+  dest(1,0) = R(1,0);
+  dest(1,1) = R(1,1);
+  dest(1,2) = R(1,2);
+  dest(2,0) = R(2,0);
+  dest(2,1) = R(2,1);
+  dest(2,2) = R(2,2);
+  dest(3,0) = dest(3,1)= dest(3,2) = 0;
+  dest(3,3) = 1;
+  dest(0,3) = t(0);
+  dest(1,3) = t(1);
+  dest(2,3) = t(2);
+  pose_dest.orientation.x = q.x();
+  pose_dest.orientation.y = q.y();
+  pose_dest.orientation.z = q.z();
+  pose_dest.orientation.w = q.w();
+  pose_dest.position.x = t(0);
+  pose_dest.position.y = t(1);
+  pose_dest.position.z = t(2);
+}
+
+void fromTF(tf::Transform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &pose_dest)
+{
+  Eigen::Quaternionf q(source.getRotation().getW(), source.getRotation().getX(), source.getRotation().getY(), source.getRotation().getZ());
+  q.normalize();
+  Eigen::Vector3f t(source.getOrigin().x(), source.getOrigin().y(), source.getOrigin.z());
+  Eigen::Matrix3f R(q.toRotationMatrix());
+  dest(0,0) = R(0,0);
+  dest(0,1) = R(0,1);
+  dest(0,2) = R(0,2);
+  dest(1,0) = R(1,0);
+  dest(1,1) = R(1,1);
+  dest(1,2) = R(1,2);
+  dest(2,0) = R(2,0);
+  dest(2,1) = R(2,1);
+  dest(2,2) = R(2,2);
+  dest(3,0) = dest(3,1)= dest(3,2) = 0;
+  dest(3,3) = 1;
+  dest(0,3) = t(0);
+  dest(1,3) = t(1);
+  dest(2,3) = t(2);
+  pose_dest.orientation.x = q.x();
+  pose_dest.orientation.y = q.y();
+  pose_dest.orientation.z = q.z();
+  pose_dest.orientation.w = q.w();
+  pose_dest.position.x = t(0);
+  pose_dest.position.y = t(1);
+  pose_dest.position.z = t(2);
+}

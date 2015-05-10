@@ -41,6 +41,7 @@
 
 #include "pacman_vision/estimator.h"
 #include "pacman_vision/broadcaster.h"
+#include "pacman_vision/vito_listener.h"
 #include "pacman_vision/tracker.h"
 
 using namespace pcl;
@@ -54,11 +55,13 @@ class VisionNode
     VisionNode();
     //custom spin method
     void spin_once();
+    //method to say goodbye
+    void shutdown();
     //node handle
     ros::NodeHandle nh;
   private:
     //bools to control modules
-    bool en_estimator, en_tracker, en_broadcaster;
+    bool en_estimator, en_tracker, en_broadcaster, en_listener;
     //bool to initialize rqt_reconfigure with user parameters
     bool rqt_init;
     
@@ -75,6 +78,7 @@ class VisionNode
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module; 
     boost::shared_ptr<Broadcaster> broadcaster_module; 
+    boost::shared_ptr<Listener> listener_module; 
     boost::shared_ptr<Tracker> tracker_module; 
     //slave spinner threads for modules
     //estimator
@@ -86,6 +90,9 @@ class VisionNode
     //tracker
     boost::thread tracker_driver;
     void spin_tracker();
+    //listenerr
+    boost::thread listener_driver;
+    void spin_listener();
     
     //Service callback for srv_get_scene
     bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
@@ -107,9 +114,11 @@ class VisionNode
     boost::mutex mtx_estimator;
     boost::mutex mtx_broadcaster;
     boost::mutex mtx_tracker;
+    boost::mutex mtx_listener;
 
     //method to enable/disable modules
     void check_modules();
+    
 };
 
 #define _INCL_NODE
