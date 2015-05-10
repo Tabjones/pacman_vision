@@ -131,6 +131,7 @@ class Tracker
 
     //tracker methods
     void track();
+    void find_object_in_scene();
 
     //custom spin method
     void spin_once();

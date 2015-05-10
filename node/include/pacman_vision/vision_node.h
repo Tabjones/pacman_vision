@@ -12,6 +12,8 @@
 #include <sensor_msgs/point_cloud_conversion.h>
 //PCL
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/crop_box.h>
+#include <pcl/filters/passthrough.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/point_cloud.h>
@@ -23,7 +25,6 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl_ros/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl/filters/passthrough.h>
 // ROS generated headers
 #include "pacman_vision_comm/get_scene.h"
 #include "pacman_vision/pacman_visionConfig.h"
@@ -74,6 +75,8 @@ class VisionNode
     //pointer to processed and acquired point cloud
     PC::Ptr scene_processed;
     PC::Ptr scene;
+    //table transform and hands
+    Eigen::Matrix4f table_trans, left, right;
 
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module; 

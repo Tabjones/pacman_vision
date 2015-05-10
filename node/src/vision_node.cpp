@@ -13,6 +13,9 @@ VisionNode::VisionNode()
   std::string topic =nh.resolveName("/camera/depth_registered/points");
   sub_openni = nh.subscribe(topic, 3, &VisionNode::cb_openni, this);
   pub_scene = nh.advertise<PC> ("scene_processed", 3);
+  table_trans.setIdentity();
+  left.setIdentity();
+  right.setIdentity();
 
   //init filter params 
   nh.param<bool>("downsampling", downsample, false);
@@ -58,32 +61,54 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
 {
   mtx_scene.lock();
   pcl::fromROSMsg (*message, *(this->scene));
-  //check if have a listener and thus a table transform
-  //TODO
   PC::Ptr tmp (new PC);
   //filters
   //check if we need to filter scene
   if (filter)
   {
     PassThrough<PT> pass;
-    PC::Ptr t (new PC);
-    //check if we need to maintain scene organized
-    if (keep_organized)
-      pass.setKeepOrganized(true);
+    //check if have a listener and thus a table transform and hands
+    if (en_listener && listener_module)
+    {
+      pcl::CropBox<PT> cb;
+      Eigen::Matrix4f inv_trans;
+      inv_trans = table_trans.inverse();
+      //check if we need to maintain scene organized
+      if (keep_organized)
+        cb.setKeepOrganized(true);
+      else
+        cb.setKeepOrganized(false);
+      cb.setInputCloud (this->scene);
+      Eigen::Vector4f min,max;
+      min << -0.1, -1.15, -0.1, 1;
+      max << 0.825, 0.1, 1.5, 1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter (*(this->scene_processed));
+      //TODO clip out hands
+    }
     else
-      pass.setKeepOrganized(false);
-    pass.setInputCloud (this->scene);
-    pass.setFilterFieldName ("z");
-    pass.setFilterLimits (zmin, zmax);
-    pass.filter (*tmp);
-    pass.setInputCloud (tmp);
-    pass.setFilterFieldName ("y");
-    pass.setFilterLimits (ymin, ymax);
-    pass.filter (*t);
-    pass.setInputCloud (t);
-    pass.setFilterFieldName ("x");
-    pass.setFilterLimits (xmin, xmax);
-    pass.filter (*(this->scene_processed));
+    {
+      PC::Ptr t (new PC);
+      //check if we need to maintain scene organized
+      if (keep_organized)
+        pass.setKeepOrganized(true);
+      else
+        pass.setKeepOrganized(false);
+      pass.setInputCloud (this->scene);
+      pass.setFilterFieldName ("z");
+      pass.setFilterLimits (zmin, zmax);
+      pass.filter (*tmp);
+      pass.setInputCloud (tmp);
+      pass.setFilterFieldName ("y");
+      pass.setFilterLimits (ymin, ymax);
+      pass.filter (*t);
+      pass.setInputCloud (t);
+      pass.setFilterFieldName ("x");
+      pass.setFilterLimits (xmin, xmax);
+      pass.filter (*(this->scene_processed));
+    }
   }
   //check if we need to downsample scene
   if (downsample) //cannot keep organized cloud after voxelgrid
@@ -318,9 +343,10 @@ void VisionNode::spin_tracker()
     //  cout<<"Tracker Step: "<<t.elapsed()<<std::endl;
       this->tracker_module->broadcast_tracked_object();
     }
-    if (this->tracker_module->lost_it)
+    if (this->tracker_module->lost_it && !this->tracker_module->started)
     {
-      //The object is lost...  what now!? Lets ask Vito where the hands are
+      //The object is lost...  what now!? Lets ask Vito where the hands are //TODO
+      tracker_module->find_object_in_scene();
     }
     this->tracker_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go at 100Hz
@@ -331,38 +357,24 @@ void VisionNode::spin_tracker()
 
 void VisionNode::spin_listener()
 {
-  /*
+  //fetch table transform
+  listener_module->listen_table();
+  mtx_scene.lock();
+  this->table_trans = listener_module->table;
+  mtx_scene.unlock();
   //spin until we disable it or it dies somehow
-  while (this->en_broadcaster && this->broadcaster_module)
+  while (this->en_listener && this->listener_module)
   {
-    //check if we have an estimator and or a tracker 
-    if (this->en_estimator && this->estimator_module)
-    { //we have an estimator module running
-      //check if it is not busy computing and it has some new estimations to upload
-      if (!this->estimator_module->busy && this->estimator_module->up_broadcaster)
-      {
-        mtx_estimator.lock();
-        mtx_broadcaster.lock();
-        broadcaster_module->estimated.clear();
-        broadcaster_module->names.clear();
-        broadcaster_module->ids.clear();
-        boost::copy(estimator_module->estimations, back_inserter(broadcaster_module->estimated));
-        boost::copy(estimator_module->names, back_inserter(broadcaster_module->names));
-        boost::copy(estimator_module->ids, back_inserter(broadcaster_module->ids));
-        mtx_broadcaster.unlock();
-        estimator_module->up_broadcaster = false;
-        mtx_estimator.unlock();
-        //process new data
-        broadcaster_module->compute_transforms();
-      }
-    }
-    //do the broadcasting
-    this->broadcaster_module->broadcast_once();
+    //do the listening
+    this->listener_module->listen_once();
+    mtx_scene.lock();
+    this->left = listener_module->left;
+    this->right = listener_module->right;
+    mtx_scene.unlock();
     //spin
-    this->broadcaster_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //broadcaster could try to go at 20Hz
+    this->listener_module->spin_once();
+    boost::this_thread::sleep(boost::posix_time::milliseconds(100)); //listener could try to go at 10Hz
   }
-  */
   //listener got stopped
   return;
 }
