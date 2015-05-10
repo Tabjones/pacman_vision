@@ -5,6 +5,7 @@
 #include <ros/package.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <tf/transform_datatypes.h>
 #include <Eigen/Dense>
 //convert from eigen matrix to tf and pose
 void fromEigen(Eigen::Matrix4f &source, geometry_msgs::Pose &dest, tf::Transform &tf_dest);

@@ -23,7 +23,7 @@ void Listener::listen_table()
     tf_listener.waitForTransform("/camera_rgb_optical_frame", "/workbench_plate_link", ros::Time(0), ros::Duration(2.0));
     tf_listener.lookupTransform("/camera_rgb_optical_frame", "/workbench_plate_link", ros::Time(0), table_tf);
   }
-  catch (tf::TransformException)
+  catch (tf::TransformException& ex)
   {
     ROS_ERROR("%s", ex.what());
     return;
@@ -42,7 +42,7 @@ void Listener::listen_once()
     tf_listener.waitForTransform("/camera_rgb_optical_frame", "/right_hand_palm_link", ros::Time(0), ros::Duration(2.0));
     tf_listener.lookupTransform("/camera_rgb_optical_frame", "/right_hand_palm_link", ros::Time(0), right_tf);
   }
-  catch (tf::TransformException)
+  catch (tf::TransformException& ex)
   {
     ROS_ERROR("%s", ex.what());
     return;
@@ -53,7 +53,7 @@ void Listener::listen_once()
   return;
 }
 
-void Listener::cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pacman_vision_comm::grasp_verification::Response& res)
+bool Listener::cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pacman_vision_comm::grasp_verification::Response& res)
 {
   //TODO
 }

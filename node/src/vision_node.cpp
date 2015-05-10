@@ -433,7 +433,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   {
     this->tracker_module->type = config.tracker_estimation_type;
   }
-  if (this->listenerr_module && this->en_listener)
+  if (this->listener_module && this->en_listener)
   {
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request accepted");

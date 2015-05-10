@@ -117,7 +117,6 @@ void Estimator::estimate()
     this->busy = false;
     return;
   }
-  pe.setParam("downsampling",this->downsampling);
   pe.setDatabase(db_path);
   for (int i=0; i<size; ++i)
   {

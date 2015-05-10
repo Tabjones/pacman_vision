@@ -49,7 +49,7 @@ void fromTF(tf::StampedTransform &source, Eigen::Matrix4f &dest, geometry_msgs::
 {
   Eigen::Quaternionf q(source.getRotation().getW(), source.getRotation().getX(), source.getRotation().getY(), source.getRotation().getZ());
   q.normalize();
-  Eigen::Vector3f t(source.getOrigin().x(), source.getOrigin().y(), source.getOrigin.z());
+  Eigen::Vector3f t(source.getOrigin().x(), source.getOrigin().y(), source.getOrigin().z());
   Eigen::Matrix3f R(q.toRotationMatrix());
   dest(0,0) = R(0,0);
   dest(0,1) = R(0,1);
@@ -78,7 +78,7 @@ void fromTF(tf::Transform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &p
 {
   Eigen::Quaternionf q(source.getRotation().getW(), source.getRotation().getX(), source.getRotation().getY(), source.getRotation().getZ());
   q.normalize();
-  Eigen::Vector3f t(source.getOrigin().x(), source.getOrigin().y(), source.getOrigin.z());
+  Eigen::Vector3f t(source.getOrigin().x(), source.getOrigin().y(), source.getOrigin().z());
   Eigen::Matrix3f R(q.toRotationMatrix());
   dest(0,0) = R(0,0);
   dest(0,1) = R(0,1);
