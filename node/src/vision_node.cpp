@@ -370,12 +370,12 @@ void VisionNode::spin_listener()
     //do the listening
     this->listener_module->listen_once();
     mtx_scene.lock();
-    this->left = listener_module->left;
-    this->right = listener_module->right;
+    //this->left = listener_module->left;
+    //this->right = listener_module->right;
     mtx_scene.unlock();
     //spin
     this->listener_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(100)); //listener could try to go at 10Hz
+    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //listener could try to go at 20Hz
   }
   //listener got stopped
   return;
@@ -403,6 +403,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.pass_ymin = ymin;
     config.pass_zmax = zmax;
     config.pass_zmin = zmin;
+    config.tracker_disturbance = false;
     nh.getParam("estimator_clus_tol", config.estimator_clus_tol);
     nh.getParam("estimator_iterations", config.estimator_iterations);
     nh.getParam("estimator_neighbors", config.estimator_neighbors);
@@ -446,6 +447,11 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   if (this->tracker_module && this->en_tracker)
   {
     this->tracker_module->type = config.tracker_estimation_type;
+    if (config.tracker_disturbance)
+    {
+      tracker_module->manual_disturbance = true;
+      config.tracker_disturbance = false;
+    }
   }
   if (this->listener_module && this->en_listener)
   {

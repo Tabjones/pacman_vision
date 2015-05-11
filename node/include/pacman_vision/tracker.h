@@ -17,6 +17,7 @@
 #include <pcl/registration/correspondence_rejection_distance.h>
 #include <pcl/registration/correspondence_estimation.h>
 #include <pcl/registration/correspondence_rejection_one_to_one.h>
+#include <pcl/registration/correspondence_rejection_trimmed.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/passthrough.h>
@@ -34,6 +35,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 // ROS generated headers
 #include "pacman_vision_comm/track_object.h"
+#include "pacman_vision_comm/grasp_verification.h"
 //general utilities
 #include <cmath>
 #include <ctime>
@@ -70,6 +72,9 @@ class Tracker
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
     //Service Server
     ros::ServiceServer srv_track_object;
+    //service server to comm with dual manip
+    ros::ServiceServer srv_grasp;
+
     //tracker transforms
     Eigen::Matrix4f transform;
     Eigen::Matrix4f T_rotx, T_rotz, T_roty;
@@ -90,7 +95,7 @@ class Tracker
     PTT model_centroid;
 
     //config//
-    bool started, lost_it;
+    bool started, lost_it, manual_disturbance;
     //factor to bounding box dimensions
     float factor;
     float leaf, old_leaf;
@@ -104,12 +109,14 @@ class Tracker
     float rej_distance;
     double fitness;
     double corr_ratio;
+    int disturbance_done;
    
     //icp member
     pcl::IterativeClosestPoint<PTT, PTT,float> icp;
     //correspondences
     pcl::registration::CorrespondenceEstimation<PTT, PTT, float>::Ptr ce;
     pcl::registration::CorrespondenceRejectorDistance::Ptr crd;
+    pcl::registration::CorrespondenceRejectorTrimmed::Ptr crt;
     pcl::registration::CorrespondenceRejectorOneToOne::Ptr cro2o;
     pcl::registration::TransformationEstimationDualQuaternion<PTT,PTT,float>::Ptr teDQ;
 //    pcl::registration::CorrespondenceRejectorSampleConsensus< PTT >::Ptr crsc;
@@ -126,7 +133,10 @@ class Tracker
 
     //track_object service callback  
     bool cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res);
-    
+   
+    //grasp_verification service callback
+    bool cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pacman_vision_comm::grasp_verification::Response& res);
+   
     //method to publish transform and marker of tracked object
     void broadcast_tracked_object();
 

@@ -15,9 +15,12 @@ Tracker::Tracker(ros::NodeHandle &n)
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
   this->srv_track_object = nh.advertiseService("track_object", &Tracker::cb_track_object, this);
+  this->srv_grasp = nh.advertiseService("grasp_verification", &Tracker::cb_grasp, this);
+  
   this->rviz_marker_pub = nh.advertise<visualization_msgs::Marker>("tracked_object", 1);
   ce.reset( new pcl::registration::CorrespondenceEstimation<PTT, PTT, float>);
   crd.reset( new pcl::registration::CorrespondenceRejectorDistance);
+  crt.reset( new pcl::registration::CorrespondenceRejectorTrimmed);
   cro2o.reset( new pcl::registration::CorrespondenceRejectorOneToOne);
   teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PTT,PTT,float>);
  // crsc.reset( new pcl::registration::CorrespondenceRejectorSampleConsensus<PTT>);
@@ -26,7 +29,8 @@ Tracker::Tracker(ros::NodeHandle &n)
   leaf = 0.02f;
   factor = 1.5f;
   rej_distance = 0.025f;
-  disturbance_counter= centroid_counter = error_count =0;
+  manual_disturbance = false;
+  disturbance_counter= centroid_counter = error_count = disturbance_done = 0;
   ROS_INFO("[Tracker] Tracker module tries to follow an already estimated object around the scene. For it to work properly please enable at least downsampling");
 }
 Tracker::~Tracker()
@@ -81,7 +85,6 @@ void Tracker::track()
     vg.filter (*model);
     old_leaf = leaf;
     ce->setInputSource(model);
-    crd->setInputSource<PTT>(model);
     icp.setInputSource(model);
     pcl::CentroidPoint<PTT> mc;
     for (int i=0; i<model->points.size(); ++i)
@@ -91,11 +94,10 @@ void Tracker::track()
   pcl::Correspondences corr, filt, interm;
   ce->setInputTarget(target);
   ce->determineCorrespondences(corr);
-  crd->setInputTarget<PTT>(target);
   crd->setMaximumDistance(rej_distance);
-  std::cout<<crd->getMaximumDistance()<<std::endl<<std::flush;
-  crd->getRemainingCorrespondences(corr, interm);
-  cro2o->getRemainingCorrespondences(interm, filt);
+  crt->getRemainingCorrespondences(corr, interm);
+  crd->getRemainingCorrespondences(interm, filt);
+  //cro2o->getRemainingCorrespondences(interm, filt);
   //crsc->setInputTarget(target);
   icp.setInputTarget(target);
   if (centroid_counter >=5)
@@ -112,13 +114,19 @@ void Tracker::track()
             0, 0, 1,  (target_centroid.z - mc_transformed.z),
             0, 0, 0,  1;
     guess = Tcen*transform;
+    ROS_WARN("CENTROID TRANSLATION !!");
     icp.align(*tmp, guess);
     centroid_counter = 0;
+    if (icp.getFitnessScore() < 0.001 )
+    {
+      fitness = icp.getFitnessScore();
+      this->transform = icp.getFinalTransformation();
+    }
   }
-  else if (disturbance_counter >= 10)
+  else if (disturbance_counter >= 10 || manual_disturbance)
   {
     boost::random::mt19937 gen(std::time(0));
-    boost::random::uniform_int_distribution<> angle(10,20);
+    boost::random::uniform_int_distribution<> angle(20,90);
     float angx,angy,angz;
     if (angle(gen)%2)
       angx = -D2R*angle(gen);
@@ -138,6 +146,7 @@ void Tracker::track()
            rotz.matrix()(1,0), rotz.matrix()(1,1), rotz.matrix()(1,2), 0,
            rotz.matrix()(2,0), rotz.matrix()(2,1), rotz.matrix()(2,2), 0,
            0,                0,                  0,                 1;
+    /*
     if (angle(gen)%2)
       angy = -D2R*angle(gen);
     else
@@ -147,23 +156,69 @@ void Tracker::track()
            roty.matrix()(1,0), roty.matrix()(1,1), roty.matrix()(1,2), 0,
            roty.matrix()(2,0), roty.matrix()(2,1), roty.matrix()(2,2), 0,
            0,                0,                  0,                 1;
-
-    ROS_WARN("DISTURBANCE !! %g %g %g", angx/D2R, angy/D2R, angz/D2R);
+           */
     Eigen::Matrix4f disturbed;
-    disturbed = (T_roty*T_rotz*T_rotx*inv_trans).inverse();
+    disturbed = (T_rotz*T_rotx*inv_trans).inverse();
+    if (disturbance_done >5 || manual_disturbance)
+    {
+      manual_disturbance = false;
+      ROS_ERROR("HEAVY DISTURBANCE !!");
+      Eigen::AngleAxisf rothz (3.14159/2, Eigen::Vector3f::UnitZ());
+      Eigen::AngleAxisf rothx (3.14159/2, Eigen::Vector3f::UnitX());
+      Eigen::AngleAxisf rothy (3.14159/2, Eigen::Vector3f::UnitY());
+      Eigen::Matrix4f Tx,Tz,Ty;
+      if (angle(gen)%2)
+      {
+        Tx << rothx.matrix()(0,0), rothx.matrix()(0,1), rothx.matrix()(0,2), 0,
+           rothx.matrix()(1,0), rothx.matrix()(1,1), rothx.matrix()(1,2), 0,
+           rothx.matrix()(2,0), rothx.matrix()(2,1), rothx.matrix()(2,2), 0,
+           0,                0,                  0,                 1;
+           disturbed = (Tx*inv_trans).inverse();
+      }
+      else if (angle(gen)%3)
+      {
+        Ty << rothy.matrix()(0,0), rothy.matrix()(0,1), rothy.matrix()(0,2), 0,
+           rothy.matrix()(1,0), rothy.matrix()(1,1), rothy.matrix()(1,2), 0,
+           rothy.matrix()(2,0), rothy.matrix()(2,1), rothy.matrix()(2,2), 0,
+           0,                0,                  0,                 1;
+           disturbed = (Ty*inv_trans).inverse();
+      }
+      else
+      {
+        Tz << rothz.matrix()(0,0), rothz.matrix()(0,1), rothz.matrix()(0,2), 0,
+           rothz.matrix()(1,0), rothz.matrix()(1,1), rothz.matrix()(1,2), 0,
+           rothz.matrix()(2,0), rothz.matrix()(2,1), rothz.matrix()(2,2), 0,
+           0,                0,                  0,                 1;
+           disturbed = (Tz*inv_trans).inverse();
+      }
+      disturbance_done = 0;
+    }
+    ROS_WARN("DISTURBANCE !! %g %g", angx/D2R, angz/D2R);
     icp.align(*tmp, disturbed);
+    ++disturbance_done;
     disturbance_counter = 0;
+    if (icp.getFitnessScore() < 0.001 )
+    {
+      fitness = icp.getFitnessScore();
+      this->transform = icp.getFinalTransformation();
+    }
   }
   else
+  {
     icp.align(*tmp, transform);
-  float fitness = icp.getFitnessScore();
+    fitness = icp.getFitnessScore();
+    this->transform = icp.getFinalTransformation();
+  }
   ROS_INFO("corr: %d, filt: %d, fitness: %g", (int)corr.size(), (int)filt.size(), fitness);
-  this->transform = icp.getFinalTransformation();
   //adjust distance and factor according to fitness
   if (fitness > 0.0008 ) //something is probably wrong
   {
     rej_distance +=0.001;
     factor += 0.05;
+    if (rej_distance > 2.0)
+      rej_distance = 2.0;
+    if (factor > 5.0)
+      factor = 5.0;
     ++disturbance_counter;
     ++centroid_counter;
     return;
@@ -174,12 +229,13 @@ void Tracker::track()
     if(rej_distance < 0.025)
       rej_distance = 0.025; //we dont want to go lower than this
     factor -=0.05;
-    if(factor < 1.5)
-      factor = 1.5;
+    if(factor < 1.3)
+      factor = 1.3;
   }
   error_count = 0;
   disturbance_counter = 0;
   centroid_counter = 0;
+  disturbance_done = 0;
 }
 
 void Tracker::find_object_in_scene()
@@ -201,6 +257,9 @@ void Tracker::find_object_in_scene()
     transform = guess;
     this->started = true;
     this->lost_it = false;
+    this->disturbance_counter = 0;
+    this->error_count = 0;
+    this->centroid_counter = 0;
     ROS_INFO("[Tracker][%s] Found something that could be the object, trying to track that",__func__);
     return;
   }
@@ -283,15 +342,19 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   icp.setEuclideanFitnessEpsilon(1e-9);
   ce->setInputSource(model);
   icp.setCorrespondenceEstimation(ce);
-  crd->setInputSource<PTT>(model);
   crd->setMaximumDistance(rej_distance);
+  
   //crsc->setInputSource(model);
   //crsc->setInlierThreshold(0.02);
   //crsc->setMaximumIterations(5);
   //crsc->setRefineModel(true);
+  
+  crt->setOverlapRatio(1);
+  crt->setMinCorrespondences(200);
+  //icp.addCorrespondenceRejector(crt);
   icp.addCorrespondenceRejector(crd);
-  icp.addCorrespondenceRejector(cro2o);
-  //icp.addCorrespondenceRejector(crsc);
+  //icp.addCorrespondenceRejector(cro2o);
+  
   icp.setInputSource(model);
   //do one step of icp
   icp.setTransformationEstimation(teDQ);
@@ -326,6 +389,13 @@ void Tracker::broadcast_tracked_object()
   rviz_marker_pub.publish(marker);
   tf_broadcaster.sendTransform(tf::StampedTransform(trans, ros::Time::now(), "/camera_rgb_optical_frame", std::string(name + "_tracked").c_str()));
 }
+
+
+bool Tracker::cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pacman_vision_comm::grasp_verification::Response& res)
+{
+  //TODO
+}
+
 
 void Tracker::spin_once()
 {

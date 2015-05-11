@@ -7,10 +7,6 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <ros/callback_queue.h>
 #include <ros/callback_queue_interface.h>
-//generated
-#include "pacman_vision_comm/pe.h"
-#include "pacman_vision_comm/peArray.h"
-#include "pacman_vision_comm/grasp_verification.h"
 //general utilities
 #include <cmath>
 #include <fstream>
@@ -36,13 +32,15 @@ class Listener
   private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
-    //service server
-    ros::ServiceServer srv_grasp;
     
     //eigen transform 
-    Eigen::Matrix4f left, right, table;
+    Eigen::Matrix4f left_2, left_3, left_4, left_5, left_6, left_7, 
+                    right_2, right_3, right_4, right_5, right_6, right_7, 
+                    table, left_hand, right_hand;
     //tf transforms
-    tf::StampedTransform left_tf, right_tf, table_tf;
+    tf::StampedTransform left_tf_2, left_tf_3, left_tf_4, left_tf_5, left_tf_6, left_tf_7, 
+                         right_tf_2, right_tf_3, right_tf_4, right_tf_5, right_tf_6, right_tf_7, 
+                         table_tf, left_tf_hand, right_tf_hand;
     
     //tf listener
     tf::TransformListener tf_listener;
@@ -55,8 +53,6 @@ class Listener
     //method to listen to table transform
     void listen_table();
 
-    //grasp_verification service callback
-    bool cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pacman_vision_comm::grasp_verification::Response& res);
     
 };
 #define _INCL_LISTENER
