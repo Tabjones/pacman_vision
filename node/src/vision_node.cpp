@@ -321,7 +321,7 @@ void VisionNode::spin_tracker()
       //check if it is not busy computing and it has some new estimations to upload
       if (!this->estimator_module->busy && this->estimator_module->up_tracker)
       {
-        if (!tracker_module->started)
+        if (!tracker_module->started && !tracker_module->lost_it)
         { //we copy only if tracker is not started already, otherwise we dont care
           mtx_estimator.lock();
           mtx_tracker.lock();
@@ -351,6 +351,8 @@ void VisionNode::spin_tracker()
     this->tracker_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go at 100Hz
   }
+  if (this->estimator_module && this->en_estimator)
+    this->estimator_module->up_tracker = true;
   //tracker got stopped
   return;
 }

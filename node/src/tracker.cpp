@@ -23,11 +23,10 @@ Tracker::Tracker(ros::NodeHandle &n)
  // crsc.reset( new pcl::registration::CorrespondenceRejectorSampleConsensus<PTT>);
 
   started = lost_it = false;
-  error_count=0;
   leaf = 0.02f;
   factor = 1.5f;
   rej_distance = 0.025f;
-  disturbance_counter=0;
+  disturbance_counter= centroid_counter = error_count =0;
   ROS_INFO("[Tracker] Tracker module tries to follow an already estimated object around the scene. For it to work properly please enable at least downsampling");
 }
 Tracker::~Tracker()
@@ -64,7 +63,7 @@ void Tracker::track()
   pass.setFilterFieldName("z");
   pass.setFilterLimits(-factor*z1, factor*z2); //z1 is positive due to model, adding a minus
   pass.filter(*tmp);
-  if (tmp->points.size() <= 50)
+  if (tmp->points.size() <= 30)
   {
     ROS_ERROR("[Tracker][%s] Not enought points in bounding box, retryng with larger bounding box", __func__);
     factor += 0.5;
@@ -74,6 +73,7 @@ void Tracker::track()
   }
   pcl::transformPointCloud(*tmp, *target, transform);
   //align
+  //user changed leaf size
   if (old_leaf != leaf)
   {
     vg.setInputCloud (orig_model);
@@ -83,6 +83,10 @@ void Tracker::track()
     ce->setInputSource(model);
     crd->setInputSource<PTT>(model);
     icp.setInputSource(model);
+    pcl::CentroidPoint<PTT> mc;
+    for (int i=0; i<model->points.size(); ++i)
+      mc.add(model->points[i]);
+    mc.get(model_centroid);
   }
   pcl::Correspondences corr, filt, interm;
   ce->setInputTarget(target);
@@ -94,9 +98,25 @@ void Tracker::track()
   cro2o->getRemainingCorrespondences(interm, filt);
   //crsc->setInputTarget(target);
   icp.setInputTarget(target);
-  if (disturbance_counter >= 10)
+  if (centroid_counter >=5)
   {
-    /* TODO need to rethink a better way, maybe centroid
+    pcl::CentroidPoint<PTT> tc;
+    for (int i=0; i<target->points.size(); ++i)
+      tc.add(target->points[i]);
+    PTT target_centroid, mc_transformed;
+    mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(transform));
+    tc.get(target_centroid);
+    Eigen::Matrix4f Tcen, guess;
+    Tcen << 1, 0, 0,  (target_centroid.x - mc_transformed.x),
+            0, 1, 0,  (target_centroid.y - mc_transformed.y),
+            0, 0, 1,  (target_centroid.z - mc_transformed.z),
+            0, 0, 0,  1;
+    guess = Tcen*transform;
+    icp.align(*tmp, guess);
+    centroid_counter = 0;
+  }
+  else if (disturbance_counter >= 10)
+  {
     boost::random::mt19937 gen(std::time(0));
     boost::random::uniform_int_distribution<> angle(10,20);
     float angx,angy,angz;
@@ -105,9 +125,9 @@ void Tracker::track()
     else
       angx = D2R*angle(gen);
     Eigen::AngleAxisf rotx (angx, Eigen::Vector3f::UnitX());
-    T_rotx << rotx.matrix()(0,0), rotx.matrix()(0,1), rotx.matrix()(0,2), -0.05,
+    T_rotx << rotx.matrix()(0,0), rotx.matrix()(0,1), rotx.matrix()(0,2), 0,
            rotx.matrix()(1,0), rotx.matrix()(1,1), rotx.matrix()(1,2), 0,
-           rotx.matrix()(2,0), rotx.matrix()(2,1), rotx.matrix()(2,2), 0.05,
+           rotx.matrix()(2,0), rotx.matrix()(2,1), rotx.matrix()(2,2), 0,
            0,                0,                  0,                 1;
     if (angle(gen)%2)
       angz = -D2R*angle(gen);
@@ -132,7 +152,6 @@ void Tracker::track()
     Eigen::Matrix4f disturbed;
     disturbed = (T_roty*T_rotz*T_rotx*inv_trans).inverse();
     icp.align(*tmp, disturbed);
-    */
     disturbance_counter = 0;
   }
   else
@@ -146,6 +165,7 @@ void Tracker::track()
     rej_distance +=0.001;
     factor += 0.05;
     ++disturbance_counter;
+    ++centroid_counter;
     return;
   }
   else if (fitness < 0.0005)
@@ -159,11 +179,36 @@ void Tracker::track()
   }
   error_count = 0;
   disturbance_counter = 0;
+  centroid_counter = 0;
 }
 
 void Tracker::find_object_in_scene()
 {
-//TODO
+  if (scene->points.size() > model->points.size()/3)
+  {
+    pcl::CentroidPoint<PTT> tc;
+    for (int i=0; i<scene->points.size(); ++i)
+      tc.add(scene->points[i]);
+    PTT target_centroid, mc_transformed;
+    mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(transform));
+    tc.get(target_centroid);
+    Eigen::Matrix4f Tcen, guess;
+    Tcen << 1, 0, 0,  (target_centroid.x - mc_transformed.x),
+            0, 1, 0,  (target_centroid.y - mc_transformed.y),
+            0, 0, 1,  (target_centroid.z - mc_transformed.z),
+            0, 0, 0,  1;
+    guess = Tcen*transform;
+    transform = guess;
+    this->started = true;
+    this->lost_it = false;
+    ROS_INFO("[Tracker][%s] Found something that could be the object, trying to track that",__func__);
+    return;
+  }
+  else
+  {
+    ROS_WARN("[Tracker][%s] Nothing is found on scene yet...",__func__);
+    return;
+  }
 }
 
 bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res)
@@ -211,14 +256,17 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   vg.setInputCloud (orig_model);
   vg.setLeafSize(leaf, leaf, leaf);
   vg.filter (*model);
-  pcl::io::savePCDFile("/home/tabjones/Desktop/model.pcd", *model); //TODO tmp
+  //pcl::io::savePCDFile("/home/tabjones/Desktop/model.pcd", *model); //TODO tmp
   //Get the minimum and maximum values on each of the 3 (x-y-z) dimensions of model
+  //also get model centroid
+  pcl::CentroidPoint<PTT> mc;
   std::vector<float> xvec,yvec,zvec;
   for (int i=0; i<model->points.size(); ++i)
   {
     xvec.push_back(model->points[i].x);
     yvec.push_back(model->points[i].y);
     zvec.push_back(model->points[i].z);
+    mc.add(model->points[i]);
   }
   x1 = *std::min_element(xvec.begin(), xvec.end());
   y1 = *std::min_element(yvec.begin(), yvec.end());
@@ -226,6 +274,8 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   x2 = *std::max_element(xvec.begin(), xvec.end());
   y2 = *std::max_element(yvec.begin(), yvec.end());
   z2 = *std::max_element(zvec.begin(), zvec.end());
+  mc.get(model_centroid);
+  
   //init icps
   icp.setUseReciprocalCorrespondences(false);
   icp.setMaximumIterations(50);

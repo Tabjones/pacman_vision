@@ -86,13 +86,15 @@ class Tracker
     PTC::Ptr model;
     //loaded model
     PTC::Ptr orig_model;
+    //model centroid
+    PTT model_centroid;
 
     //config//
     bool started, lost_it;
     //factor to bounding box dimensions
     float factor;
     float leaf, old_leaf;
-    int error_count;
+    int error_count, disturbance_counter, centroid_counter;
     //tracker transform estimation type
     // unused
     int type;
@@ -102,7 +104,6 @@ class Tracker
     float rej_distance;
     double fitness;
     double corr_ratio;
-    int disturbance_counter;
    
     //icp member
     pcl::IterativeClosestPoint<PTT, PTT,float> icp;
