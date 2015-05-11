@@ -13,11 +13,15 @@ VisionNode::VisionNode()
   std::string topic =nh.resolveName("/camera/depth_registered/points");
   sub_openni = nh.subscribe(topic, 3, &VisionNode::cb_openni, this);
   pub_scene = nh.advertise<PC> ("scene_processed", 3);
+  table_trans.setIdentity();
+  left.setIdentity();
+  right.setIdentity();
 
   //init filter params 
   nh.param<bool>("downsampling", downsample, false);
   nh.param<bool>("enable_estimator", en_estimator, false);
   nh.param<bool>("enable_tracker", en_tracker, false);
+  nh.param<bool>("enable_listener", en_listener, false);
   nh.param<bool>("enable_broadcaster", en_broadcaster, false);
   nh.param<bool>("passthrough", filter, true);
   nh.param<bool>("plane_segmentation", plane, false);
@@ -63,24 +67,48 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
   if (filter)
   {
     PassThrough<PT> pass;
-    PC::Ptr t (new PC);
-    //check if we need to maintain scene organized
-    if (keep_organized)
-      pass.setKeepOrganized(true);
+    //check if have a listener and thus a table transform and hands
+    if (en_listener && listener_module)
+    {
+      pcl::CropBox<PT> cb;
+      Eigen::Matrix4f inv_trans;
+      inv_trans = table_trans.inverse();
+      //check if we need to maintain scene organized
+      if (keep_organized)
+        cb.setKeepOrganized(true);
+      else
+        cb.setKeepOrganized(false);
+      cb.setInputCloud (this->scene);
+      Eigen::Vector4f min,max;
+      min << -0.1, -1.15, -0.1, 1;
+      max << 0.825, 0.1, 1.5, 1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter (*(this->scene_processed));
+      //TODO clip out hands
+    }
     else
-      pass.setKeepOrganized(false);
-    pass.setInputCloud (this->scene);
-    pass.setFilterFieldName ("z");
-    pass.setFilterLimits (zmin, zmax);
-    pass.filter (*tmp);
-    pass.setInputCloud (tmp);
-    pass.setFilterFieldName ("y");
-    pass.setFilterLimits (ymin, ymax);
-    pass.filter (*t);
-    pass.setInputCloud (t);
-    pass.setFilterFieldName ("x");
-    pass.setFilterLimits (xmin, xmax);
-    pass.filter (*(this->scene_processed));
+    {
+      PC::Ptr t (new PC);
+      //check if we need to maintain scene organized
+      if (keep_organized)
+        pass.setKeepOrganized(true);
+      else
+        pass.setKeepOrganized(false);
+      pass.setInputCloud (this->scene);
+      pass.setFilterFieldName ("z");
+      pass.setFilterLimits (zmin, zmax);
+      pass.filter (*tmp);
+      pass.setInputCloud (tmp);
+      pass.setFilterFieldName ("y");
+      pass.setFilterLimits (ymin, ymax);
+      pass.filter (*t);
+      pass.setInputCloud (t);
+      pass.setFilterFieldName ("x");
+      pass.setFilterLimits (xmin, xmax);
+      pass.filter (*(this->scene_processed));
+    }
   }
   //check if we need to downsample scene
   if (downsample) //cannot keep organized cloud after voxelgrid
@@ -114,10 +142,7 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     seg.setDistanceThreshold (this->plane_tol);
     seg.segment(*inliers, *coefficients);
     //extract what's on top of plane
-    if (filter || downsample)
-      extract.setInputCloud(this->scene_processed);
-    else
-      extract.setInputCloud(this->scene);
+    extract.setInputCloud(seg.getInputCloud());
     extract.setIndices(inliers);
     extract.setNegative(true); 
     extract.filter(*tmp);
@@ -183,6 +208,23 @@ void VisionNode::check_modules()
     //kill the module
     this->tracker_module.reset();
   }
+  
+  //check if we want listener module and it is not started, or if it is started but we want it disabled
+  if (this->en_listener && !this->listener_module)
+  {
+    ROS_WARN("[PaCMaN Vision] Started Vito Listener module");
+    this->listener_module.reset( new Listener(this->nh) );
+    //spawn a thread to handle the module spinning
+    listener_driver = boost::thread(&VisionNode::spin_listener, this);
+  }
+  else if (!this->en_listener && this->listener_module)
+  {
+    ROS_WARN("[PaCMaN Vision] Stopped Vito Listener module");
+    //wait for the thread to stop, if not already, if already stopped this results in a no_op
+    listener_driver.join();
+    //kill the module
+    this->listener_module.reset();
+  }
 }
 ///////Spinner threads//////////
 ////////////////////////////////
@@ -198,16 +240,11 @@ void VisionNode::spin_estimator()
     if(this->filter || this->downsample || this->plane)
     {
       copyPointCloud(*(this->scene_processed), *(this->estimator_module->scene));
-      if (this->downsample)
-        this->estimator_module->downsampling = 0; //downsampling already done here
-      if (this->plane)
-        this->estimator_module->no_segment = true;
     }
     else
     {
+      ROS_WARN("[PaCMaN Vision] Estimator module will not function properly without scene filtering, enable at least plane segmentation");
       copyPointCloud(*scene, *(this->estimator_module->scene));
-      this->estimator_module->downsampling = 1;
-      this->estimator_module->no_segment = false;
     }
     //release lock
     mtx_estimator.unlock();
@@ -264,19 +301,17 @@ void VisionNode::spin_tracker()
     //lock variables so no-one else can touch what is copied
     mtx_scene.lock();
     mtx_tracker.lock();
-    if(filter || downsample || plane)
+    if (filter || downsample || plane)
     {
-     copyPointCloud(*(this->scene_processed), *(this->tracker_module->scene));
-     if (downsample)
-     {
-       this->tracker_module->downsample = false;
-       this->tracker_module->leaf = this->leaf;
-     }
-     else
-       this->tracker_module->downsample = true;
+      copyPointCloud(*(this->scene_processed), *(this->tracker_module->scene));
+      this->tracker_module->leaf = this->leaf;
     }
     else
+    {
+      ROS_WARN("[PaCMaN Vision] Tracker module will not function properly without scene filtering, enable at least downsampling");
       copyPointCloud(*(this->scene), *(this->tracker_module->scene));
+      this->tracker_module->leaf = this->leaf;
+    }
     //release lock
     mtx_tracker.unlock();
     mtx_scene.unlock();
@@ -286,8 +321,8 @@ void VisionNode::spin_tracker()
       //check if it is not busy computing and it has some new estimations to upload
       if (!this->estimator_module->busy && this->estimator_module->up_tracker)
       {
-        if (!tracker_module->started)
-        { //we copy only if tracker is not started already
+        if (!tracker_module->started && !tracker_module->lost_it)
+        { //we copy only if tracker is not started already, otherwise we dont care
           mtx_estimator.lock();
           mtx_tracker.lock();
           tracker_module->estimations.clear();
@@ -303,17 +338,46 @@ void VisionNode::spin_tracker()
     //spin
     if (this->tracker_module->started)
     {
-      mtx_tracker.lock();
     //  boost::timer t;
       this->tracker_module->track();
     //  cout<<"Tracker Step: "<<t.elapsed()<<std::endl;
       this->tracker_module->broadcast_tracked_object();
-      mtx_tracker.unlock();
+    }
+    if (this->tracker_module->lost_it && !this->tracker_module->started)
+    {
+      //The object is lost...  what now!? Lets ask Vito where the hands are //TODO
+      tracker_module->find_object_in_scene();
     }
     this->tracker_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go at 100Hz
   }
+  if (this->estimator_module && this->en_estimator)
+    this->estimator_module->up_tracker = true;
   //tracker got stopped
+  return;
+}
+
+void VisionNode::spin_listener()
+{
+  //fetch table transform
+  listener_module->listen_table();
+  mtx_scene.lock();
+  this->table_trans = listener_module->table;
+  mtx_scene.unlock();
+  //spin until we disable it or it dies somehow
+  while (this->en_listener && this->listener_module)
+  {
+    //do the listening
+    this->listener_module->listen_once();
+    mtx_scene.lock();
+    this->left = listener_module->left;
+    this->right = listener_module->right;
+    mtx_scene.unlock();
+    //spin
+    this->listener_module->spin_once();
+    boost::this_thread::sleep(boost::posix_time::milliseconds(100)); //listener could try to go at 10Hz
+  }
+  //listener got stopped
   return;
 }
 
@@ -325,6 +389,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   {
     config.enable_estimator = en_estimator;
     config.enable_broadcaster = en_broadcaster;
+    config.enable_listener = en_listener;
     config.enable_tracker= en_tracker;
     config.downsampling = downsample;
     config.passthrough = filter;
@@ -344,15 +409,14 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("estimator_object_calibration", config.estimator_object_calibration);
     nh.getParam("broadcaster_tf", config.broadcaster_tf);
     nh.getParam("broadcaster_rviz_markers", config.broadcaster_rviz_markers);
-    nh.getParam("tracker_bounding_factor", config.tracker_bounding_factor);
-    nh.getParam("tracker_leaf_size", config.tracker_leaf_size);
-    nh.getParam("tracker_type", config.tracker_type);
+    nh.getParam("tracker_estimation_type", config.tracker_estimation_type);
     this->rqt_init = false;
     ROS_WARN("[PaCMaN Vision] Rqt-Reconfigure Default Values Initialized");
   }
   this->en_estimator = config.enable_estimator;
   this->en_tracker = config.enable_tracker;
   this->en_broadcaster = config.enable_broadcaster;
+  this->en_listener = config.enable_listener;
   this->filter = config.passthrough;
   this->plane = config.plane_segmentation;
   this->plane_tol = config.plane_tolerance;
@@ -381,9 +445,10 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   }
   if (this->tracker_module && this->en_tracker)
   {
-    this->tracker_module->factor = config.tracker_bounding_factor;
-    this->tracker_module->leaf = config.tracker_leaf_size;
-    this->tracker_module->type = config.tracker_type;
+    this->tracker_module->type = config.tracker_estimation_type;
+  }
+  if (this->listener_module && this->en_listener)
+  {
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request accepted");
 }
@@ -392,6 +457,13 @@ void VisionNode::spin_once()
 {
     ros::spinOnce();
     this->check_modules();
+}
+
+void VisionNode::shutdown()
+{
+  en_tracker = en_broadcaster = en_estimator = en_listener = false;
+  check_modules();
+  boost::this_thread::sleep(boost::posix_time::seconds(1));
 }
 
 int main (int argc, char *argv[])
@@ -404,5 +476,6 @@ int main (int argc, char *argv[])
     node.spin_once(); 
     rate.sleep();
   }
+  node.shutdown();
   return 0;
 }

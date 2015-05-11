@@ -79,8 +79,6 @@ class Estimator
     bool calibration;
     int iterations, neighbors;
     double clus_tol;
-    int downsampling;
-    bool no_segment;
     bool busy, up_broadcaster, up_tracker;
 
     //PEL object
