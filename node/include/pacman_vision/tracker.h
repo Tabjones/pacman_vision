@@ -35,6 +35,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 // ROS generated headers
 #include "pacman_vision_comm/track_object.h"
+#include "pacman_vision_comm/stop_track.h"
 #include "pacman_vision_comm/grasp_verification.h"
 //general utilities
 #include <cmath>
@@ -74,6 +75,8 @@ class Tracker
     ros::ServiceServer srv_track_object;
     //service server to comm with dual manip
     ros::ServiceServer srv_grasp;
+    //service server to stop tracker
+    ros::ServiceServer srv_stop;
 
     //tracker transforms
     Eigen::Matrix4f transform;
@@ -134,6 +137,9 @@ class Tracker
     //track_object service callback  
     bool cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res);
    
+    //track_object service callback  
+    bool cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacman_vision_comm::stop_track::Response& res);
+    
     //grasp_verification service callback
     bool cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pacman_vision_comm::grasp_verification::Response& res);
    

@@ -14,9 +14,8 @@ VisionNode::VisionNode()
   sub_openni = nh.subscribe(topic, 3, &VisionNode::cb_openni, this);
   pub_scene = nh.advertise<PC> ("scene_processed", 3);
   table_trans.setIdentity();
-  left.setIdentity();
-  right.setIdentity();
-
+  
+  crop_arms = false;
   //init filter params 
   nh.param<bool>("downsampling", downsample, false);
   nh.param<bool>("enable_estimator", en_estimator, false);
@@ -86,7 +85,6 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMax(max);
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter (*(this->scene_processed));
-      //TODO clip out hands
     }
     else
     {
@@ -148,8 +146,159 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     extract.filter(*tmp);
     pcl::copyPointCloud(*tmp, *(this->scene_processed));
   }
+  //crop arms if listener set it
+  if (crop_arms)
+  {
+    PC::Ptr tmp2 (new PC);
+    pcl::CropBox<PT> cb;
+    Eigen::Matrix4f inv_trans;
+    inv_trans = left_2.inverse();
+    if (filter || downsample || plane)
+      cb.setInputCloud (this->scene_processed);
+    else
+      cb.setInputCloud (this->scene);
+    //left2
+    Eigen::Vector4f min,max;
+    min << -0.06, -0.06, -0.06, 1;
+    max << 0.06, 0.0938, 0.1915, 1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter (*(tmp));
+    //left3
+    cb.setInputCloud(tmp);
+    min << -0.06,-0.06,0,1;
+    max << 0.06,0.0938,0.2685,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = left_3.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp2);
+    //left4
+    cb.setInputCloud(tmp2);
+    min << -0.06,-0.0938,-0.06,1;
+    max << 0.06,0.06,0.1915,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = left_4.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp);
+    //left5
+    cb.setInputCloud(tmp);
+    min << -0.06,-0.0555,0,1;
+    max << 0.06,0.06,0.2585,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = left_5.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp2);
+    //left6
+    cb.setInputCloud(tmp2);
+    min << -0.0711,-0.0555,-0.0711,1;
+    max << 0.0711,0.0795,0.057,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = left_6.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp);
+    //left7
+    cb.setInputCloud(tmp);
+    min << -0.04,-0.0399,-0.031,1;
+    max << 0.04,0.0399,0,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = left_7.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp2);
+    //right2
+    cb.setInputCloud(tmp2);
+    min << -0.06, -0.06, -0.06, 1;
+    max << 0.06, 0.0938, 0.1915, 1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = right_2.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp);
+    //right3
+    cb.setInputCloud(tmp);
+    min << -0.06,-0.06,0,1;
+    max << 0.06,0.0938,0.2685,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = right_3.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp2);
+    //right4
+    cb.setInputCloud(tmp2);
+    min << -0.06,-0.0938,-0.06,1;
+    max << 0.06,0.06,0.1915,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = right_4.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp);
+    //right5
+    cb.setInputCloud(tmp);
+    min << -0.06,-0.0555,0,1;
+    max << 0.06,0.06,0.2585,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = right_5.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp2);
+    //right6
+    cb.setInputCloud(tmp2);
+    min << -0.0711,-0.0555,-0.0711,1;
+    max << 0.0711,0.0795,0.057,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = right_6.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp);
+    //right7
+    cb.setInputCloud(tmp);
+    min << -0.04,-0.0399,-0.031,1;
+    max << 0.04,0.0399,0,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = right_7.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp2);
+    //right hand //TODO hand measures
+    cb.setInputCloud(tmp2);
+    min << 0,0,0,1;
+    max << 0,0,0,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = right_hand.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*tmp);
+    //left_hand
+    cb.setInputCloud(tmp);
+    min << 0,0,0,1;
+    max << 0,0,0,1;
+    cb.setMin(min);
+    cb.setMax(max);
+    cb.setNegative(true); //crop what's inside
+    inv_trans = left_hand.inverse();
+    cb.setTransform(Eigen::Affine3f(inv_trans));
+    cb.filter(*(this->scene_processed));
+  }
   //republish processed cloud
-  if (filter || downsample || plane)
+  if (filter || downsample || plane || crop_arms)
     pub_scene.publish(*scene_processed);
   else
     pub_scene.publish(*scene);
@@ -345,7 +494,7 @@ void VisionNode::spin_tracker()
     }
     if (this->tracker_module->lost_it && !this->tracker_module->started)
     {
-      //The object is lost...  what now!? Lets ask Vito where the hands are //TODO
+      //The object is lost...  what now!? Lets ask Vito where the hands are
       tracker_module->find_object_in_scene();
     }
     this->tracker_module->spin_once();
@@ -361,6 +510,7 @@ void VisionNode::spin_listener()
 {
   //fetch table transform
   listener_module->listen_table();
+  this->listener_module->spin_once();
   mtx_scene.lock();
   this->table_trans = listener_module->table;
   mtx_scene.unlock();
@@ -370,14 +520,28 @@ void VisionNode::spin_listener()
     //do the listening
     this->listener_module->listen_once();
     mtx_scene.lock();
-    //this->left = listener_module->left;
-    //this->right = listener_module->right;
+    this->left_2 = listener_module->left_2;
+    this->left_3 = listener_module->left_3;
+    this->left_4 = listener_module->left_4;
+    this->left_5 = listener_module->left_5;
+    this->left_6 = listener_module->left_6;
+    this->left_7 = listener_module->left_7;
+    this->right_2 = listener_module->right_2;
+    this->right_3 = listener_module->right_3;
+    this->right_4 = listener_module->right_4;
+    this->right_5 = listener_module->right_5;
+    this->right_6 = listener_module->right_6;
+    this->right_7 = listener_module->right_7;
+    this->right_hand = listener_module->right_hand;
+    this->left_hand = listener_module->left_hand;
     mtx_scene.unlock();
+    this->crop_arms = true;
     //spin
     this->listener_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //listener could try to go at 20Hz
   }
   //listener got stopped
+  this->crop_arms = false;
   return;
 }
 

@@ -15,6 +15,7 @@ Tracker::Tracker(ros::NodeHandle &n)
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
   this->srv_track_object = nh.advertiseService("track_object", &Tracker::cb_track_object, this);
+  this->srv_stop = nh.advertiseService("stop_track", &Tracker::cb_stop_tracker, this);
   this->srv_grasp = nh.advertiseService("grasp_verification", &Tracker::cb_grasp, this);
   
   this->rviz_marker_pub = nh.advertise<visualization_msgs::Marker>("tracked_object", 1);
@@ -388,6 +389,13 @@ void Tracker::broadcast_tracked_object()
   marker.pose = pose;
   rviz_marker_pub.publish(marker);
   tf_broadcaster.sendTransform(tf::StampedTransform(trans, ros::Time::now(), "/camera_rgb_optical_frame", std::string(name + "_tracked").c_str()));
+}
+
+bool Tracker::cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacman_vision_comm::stop_track::Response& res)
+{
+  this->started = false;
+  this->lost_it = false;
+  return true;
 }
 
 

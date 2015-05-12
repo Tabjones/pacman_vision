@@ -65,6 +65,16 @@ class VisionNode
     bool en_estimator, en_tracker, en_broadcaster, en_listener;
     //bool to initialize rqt_reconfigure with user parameters
     bool rqt_init;
+   
+    //transforms to crop out vito arms and hands
+    //only use them if vito listener is active
+    Eigen::Matrix4f left_2,left_3, left_4, left_5, left_6, left_7,
+                    right_2, right_3, right_4, right_5, right_6, right_7,
+                    left_hand, right_hand;
+    //table transform from vito listener
+    Eigen::Matrix4f table_trans;
+    //crop or not
+    bool crop_arms;
     
     //Service Server to retrieve processed scene
     ros::ServiceServer srv_get_scene;
@@ -75,8 +85,6 @@ class VisionNode
     //pointer to processed and acquired point cloud
     PC::Ptr scene_processed;
     PC::Ptr scene;
-    //table transform and hands
-    Eigen::Matrix4f table_trans, left, right;
 
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module; 
