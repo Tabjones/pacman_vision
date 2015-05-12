@@ -26,10 +26,11 @@ Tracker::Tracker(ros::NodeHandle &n)
   teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PTT,PTT,float>);
  // crsc.reset( new pcl::registration::CorrespondenceRejectorSampleConsensus<PTT>);
 
-  started = lost_it = false;
+  started = lost_it = to_estimator = false;
   leaf = 0.02f;
   factor = 1.5f;
   rej_distance = 0.025f;
+  index = -1;
   manual_disturbance = false;
   disturbance_counter= centroid_counter = error_count = disturbance_done = 0;
   ROS_INFO("[Tracker] Tracker module tries to follow an already estimated object around the scene. For it to work properly please enable at least downsampling");
@@ -279,16 +280,15 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
     return false;
   }
   std::string models_path (ros::package::getPath("asus_scanner_models"));
-  int j = -1;
   for (int i=0; i<names.size(); ++i)
   {
     if (names[i].compare(req.name) == 0)
     {
-      j = i;
+      index = i;
       break;
     }
   }
-  if (j == -1)
+  if (index == -1)
   {
     ROS_ERROR("[Tracker][%s] Cannot find %s from the pool of already estimated objects, check spelling or run an estimation first!", __func__, req.name.c_str());
     return false;
@@ -297,7 +297,9 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   std::vector<std::string> vst;
   boost::split(vst, name, boost::is_any_of("_"), boost::token_compress_on);
   id = vst.at(0);
-  transform = estimations[j];
+  transform = estimations[index];
+  estimations.erase(estimations.begin() + index);
+  names.erase(names.begin() +index);
   boost::filesystem::path model_path (models_path + "/" + id + "/" + id + ".pcd");
   if (boost::filesystem::exists(model_path) && boost::filesystem::is_regular_file(model_path))
   {
@@ -376,6 +378,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   marker.color.a = 1.0f;
   marker.lifetime = ros::Duration(1);
   //we are ready to start
+  to_estimator = true;
   started = true;
   return true;
 }
@@ -395,6 +398,8 @@ bool Tracker::cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacm
 {
   this->started = false;
   this->lost_it = false;
+  this->to_estimator = true;
+  index = -1;
   return true;
 }
 

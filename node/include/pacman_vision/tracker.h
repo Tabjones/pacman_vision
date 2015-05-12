@@ -85,6 +85,8 @@ class Tracker
     //name and id of object to be tracked
     std::string name;
     std::string id;
+    //index of tracked object
+    int index;
     //pool of estimated objects from estimator
     std::vector<std::string> names;
     std::vector<Eigen::Matrix4f> estimations;
@@ -98,7 +100,7 @@ class Tracker
     PTT model_centroid;
 
     //config//
-    bool started, lost_it, manual_disturbance;
+    bool started, lost_it, manual_disturbance, to_estimator;
     //factor to bounding box dimensions
     float factor;
     float leaf, old_leaf;

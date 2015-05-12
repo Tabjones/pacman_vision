@@ -487,19 +487,51 @@ void VisionNode::spin_tracker()
     //spin
     if (this->tracker_module->started)
     {
+      if (tracker_module->to_estimator && this->en_estimator && this->estimator_module)
+      {
+        if (!this->estimator_module->busy)
+        {
+          mtx_estimator.lock();
+        //TODO FIx this wont work if user disable estimator during tracking and then enables it again (it will segfault!)
+          this->estimator_module->estimations.erase(estimator_module->estimations.begin() + tracker_module->index);
+          this->estimator_module->names.erase(estimator_module->names.begin() + tracker_module->index);
+          this->estimator_module->ids.erase(estimator_module->ids.begin() + tracker_module->index);
+          this->estimator_module->up_broadcaster = true;
+          mtx_estimator.unlock();
+        }
+        //if estimator was busy it is computing again so no point in forwarding tracker transform
+        tracker_module->to_estimator = false;
+      }
     //  boost::timer t;
       this->tracker_module->track();
     //  cout<<"Tracker Step: "<<t.elapsed()<<std::endl;
       this->tracker_module->broadcast_tracked_object();
     }
-    if (this->tracker_module->lost_it && !this->tracker_module->started)
+    else if (this->tracker_module->lost_it && !this->tracker_module->started)
     {
       //The object is lost...  what now!? Lets ask Vito where the hands are
       tracker_module->find_object_in_scene();
     }
+    else if (!tracker_module->started && !tracker_module->lost_it && tracker_module->to_estimator)
+    {
+      if (this->en_estimator && this->estimator_module)
+      {
+        if (!estimator_module->busy)
+        {
+          mtx_estimator.lock();
+          this->estimator_module->estimations.push_back(tracker_module->transform);
+          this->estimator_module->names.push_back(tracker_module->name);
+          this->estimator_module->ids.push_back(tracker_module->id);
+          this->estimator_module->up_broadcaster = true;
+          this->estimator_module->up_tracker = true;
+          mtx_estimator.unlock();
+        }
+        tracker_module->to_estimator = false;
+      }
+    }
     this->tracker_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go at 100Hz
-  }
+  }//end while
   if (this->estimator_module && this->en_estimator)
     this->estimator_module->up_tracker = true;
   //tracker got stopped
