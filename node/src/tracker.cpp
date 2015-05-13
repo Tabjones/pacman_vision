@@ -407,12 +407,12 @@ void Tracker::broadcast_tracked_object()
   box.color.b = 1.0f;
   box.color.a = 1.0f;
   box.lifetime = ros::Duration(1);
-  geomtry_msgs::Point p;
+  geometry_msgs::Point p;
   p.x = factor*x1;
   p.y = factor*y1;
   p.z = -factor*z1;
   box.points.push_back(p);
-  p.x = factor*x2
+  p.x = factor*x2;
   p.y = factor*y1;
   p.z = -factor*z1;
   box.points.push_back(p);
@@ -436,7 +436,7 @@ void Tracker::broadcast_tracked_object()
   p.y = factor*y1;
   p.z = factor*z2;
   box.points.push_back(p);
-  p.x = factor*x2
+  p.x = factor*x2;
   p.y = factor*y1;
   p.z = -factor*z1;
   box.points.push_back(p);
