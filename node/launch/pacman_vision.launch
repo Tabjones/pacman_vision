@@ -31,12 +31,12 @@
 
   <!-- rviz -->
   <group if="$(arg run_rviz)">
-	  <node name="$(anon rviz_pacman_vision)" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
+	  <node name="rviz_pacman_vision" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
   </group>
   
   <!-- rqt_reconfigure -->
   <group if="$(arg run_reconfigure)">
-    <node name="$(anon dynreconf_pacman_vision)" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/> 
+    <node name="dynamic_reconfigure_pacman_vision" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/> 
   </group>
     
 </launch>
