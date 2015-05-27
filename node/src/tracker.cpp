@@ -362,7 +362,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   //do one step of icp
   icp.setTransformationEstimation(teDQ);
   //init rviz marker
-  marker.header.frame_id = "/camera_rgb_optical_frame";
+  marker.header.frame_id = "/kinect2_rgb_optical_frame";
   marker.ns = std::string(id + "_tracked").c_str();
   marker.id = 0;
   marker.scale.x=1;
@@ -391,11 +391,11 @@ void Tracker::broadcast_tracked_object()
   marker.header.stamp = ros::Time();
   marker.pose = pose;
   rviz_marker_pub.publish(marker);
-  tf_broadcaster.sendTransform(tf::StampedTransform(trans, ros::Time::now(), "/camera_rgb_optical_frame", std::string(name + "_tracked").c_str()));
+  tf_broadcaster.sendTransform(tf::StampedTransform(trans, ros::Time::now(), "/kinect2_rgb_optical_frame", std::string(name + "_tracked").c_str()));
   //bounding box visualization
   visualization_msgs::Marker box;
   box.type = visualization_msgs::Marker::LINE_STRIP;
-  box.header.frame_id = "/camera_rgb_optical_frame";
+  box.header.frame_id = "/kinect2_rgb_optical_frame";
   box.header.stamp = ros::Time();
   box.ns = "bounding_box";
   box.id = 0;

@@ -29,7 +29,7 @@ void Broadcaster::compute_transforms()
     fromEigen(estimated[i], pose, trans);
     transforms.push_back(trans);
     visualization_msgs::Marker marker;
-    marker.header.frame_id = "/camera_rgb_optical_frame";
+    marker.header.frame_id = "/kinect2_rgb_optical_frame";
     marker.header.stamp = ros::Time();
     marker.ns=ids[i].c_str();
     if (ids[i].compare(names[i]) != 0)
@@ -63,7 +63,7 @@ void Broadcaster::broadcast_once()
   if (tf)
   {
     for (int i = 0; i < transforms.size(); ++i)
-      tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), "/camera_rgb_optical_frame", names[i].c_str()));
+      tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), "/kinect2_rgb_optical_frame", names[i].c_str()));
   }
   if (rviz_markers)
   {
