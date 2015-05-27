@@ -66,6 +66,9 @@ class VisionNode
     //bool to initialize rqt_reconfigure with user parameters
     bool rqt_init;
    
+    // use kinect2 or not
+    bool use_kinect2;
+
     //transforms to crop out vito arms and hands
     //only use them if vito listener is active
     Eigen::Matrix4f left_2,left_3, left_4, left_5, left_6, left_7,

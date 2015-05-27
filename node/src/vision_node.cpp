@@ -9,9 +9,6 @@ VisionNode::VisionNode()
   rqt_init = true;
   //service callback init
   srv_get_scene = nh.advertiseService("get_scene_processed", &VisionNode::cb_get_scene, this);
-  //subscribe to depth_registered pointclouds topic
-  std::string topic =nh.resolveName("/camera/depth_registered/points");
-  sub_openni = nh.subscribe(topic, 3, &VisionNode::cb_openni, this);
   pub_scene = nh.advertise<PC> ("scene_processed", 3);
   table_trans.setIdentity();
   
@@ -25,6 +22,7 @@ VisionNode::VisionNode()
   nh.param<bool>("passthrough", filter, true);
   nh.param<bool>("plane_segmentation", plane, false);
   nh.param<bool>("keep_organized", keep_organized, false);
+  nh.param<bool>("use_kinect2", use_kinect2, true);
   nh.param<double>("leaf_size", leaf, 0.01);
   nh.param<double>("plane_tolerance", plane_tol, 0.004);
   nh.param<double>("pass_xmax", xmax, 0.5);
@@ -33,6 +31,15 @@ VisionNode::VisionNode()
   nh.param<double>("pass_ymin", ymin, -0.5);
   nh.param<double>("pass_zmax", zmax, 1.0);
   nh.param<double>("pass_zmin", zmin, 0.3);
+  
+  //subscribe to depth_registered pointclouds topic
+  std::string topic;
+  if (use_kinect2)
+    topic = nh.resolveName("/kinect2/depth_lowres/points");
+  else
+    topic = nh.resolveName("/camera/depth_registered/points");
+  sub_openni = nh.subscribe(topic, 2, &VisionNode::cb_openni, this);
+
   //set callback for dynamic reconfigure
   this->dyn_srv.setCallback(boost::bind(&VisionNode::cb_reconfigure, this, _1, _2));
 }

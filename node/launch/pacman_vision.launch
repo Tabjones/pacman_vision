@@ -2,12 +2,8 @@
 
   <!-- Configurations -->
   
-  <!-- launch_openni: true if you want to include openni2_launch with custom parameters, if set to false make sure you enable depth_registration and set intrinsics parameters correctly -->
-  <arg name="launch_openni" default="true" doc="true if you want to include openni2_launch with custom parameters, if set to false make sure you enable depth_registration and set intrinsics parameters correctly, when you launch openni2." />
-  
-  <!-- asus: which asus to use. Currently there are 2 asus sensors. 'asus1' is the one at CP, 'asus2' is the one at PhaseSpace lab. This argument is needed to
-       correctly load intrinsic calibrations from calibration package -->
-  <arg name="asus" default="asus1" doc="which asus to use. Currently there are 2 asus sensors. 'asus1' is the one at CP, 'asus2' is the one at PhaseSpace lab. This argument is needed to correctly load intrinsic calibrations from calibration package. So either set it 'asus1' or 'asus2'." />
+  <!-- launch_kinect2 -->
+  <arg name="launch_kinect2" default="true" doc="true if you want to include openni2_kinect2, this should be set to true or dynamic reconfigure wont load (bug)" />
   
   <!-- run_reconfigure:  If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters.-->
   <arg name="run_reconfigure" default="true" doc="If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters." />
@@ -20,13 +16,11 @@
 
   <!-- Implementation -->
 
-  <group if="$(arg launch_openni)">
-    <!-- Launch openni2 with custom driver parameters -->
-    <include file="$(find openni2_launch)/launch/openni2.launch">  
-      <arg name="depth_registration"              value="true" />
-      <arg name="color_depth_synchronization"     value="true" />
-      <arg name="rgb_camera_info_url"       value="file:///$(find calibration)/config/intrinsics/rgb_$(arg asus).yaml" />
-      <arg name="depth_camera_info_url"     value="file:///$(find calibration)/config/intrinsics/depth_$(arg asus).yaml" />
+  <group if="$(arg launch_kinect2)">
+    <!-- Launch kinect2 with custom driver parameters -->
+    <include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch">  
+      <arg name="publish_tf"             value="true" />
+      <arg name="worker_threads"         value="4" />
     </include>
   </group>
 
@@ -35,14 +29,14 @@
 	<!-- pacman vision node  -->
 	<node name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" />
 
-  <!-- rqt_reconfigure -->
-  <group if="$(arg run_reconfigure)">
-    <node name="$(anon dynreconf_pacman_vision)" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/> 
-  </group>
-
   <!-- rviz -->
   <group if="$(arg run_rviz)">
 	  <node name="$(anon rviz_pacman_vision)" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
+  </group>
+  
+  <!-- rqt_reconfigure -->
+  <group if="$(arg run_reconfigure)">
+    <node name="$(anon dynreconf_pacman_vision)" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/> 
   </group>
     
 </launch>

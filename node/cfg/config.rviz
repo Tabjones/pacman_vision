@@ -10,8 +10,9 @@ Panels:
         - /Original Scene1
         - /Estimated Objects1
         - /Tracked Object1
-        - /Transformations1
+        - /Transformations1/Status1
         - /Transformations1/Frames1
+        - /Transformations1/Frames1/kinect2_link1
       Splitter Ratio: 0.5
     Tree Height: 715
   - Class: rviz/Selection
@@ -39,8 +40,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.223135
-        Min Value: -0.145546
+        Max Value: 0.214576
+        Min Value: -0.274174
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -56,9 +57,9 @@ Visualization Manager:
       Min Intensity: 0
       Name: Processed Scene
       Position Transformer: XYZ
-      Queue Size: 3
+      Queue Size: 2
       Selectable: true
-      Size (Pixels): 4
+      Size (Pixels): 2
       Size (m): 0.01
       Style: Points
       Topic: /pacman_vision/scene_processed
@@ -99,11 +100,7 @@ Visualization Manager:
       Marker Topic: /pacman_vision/broadcaster/objects
       Name: Estimated Objects
       Namespaces:
-        bowlA: true
-        containerA: true
-        kitchenUtensilA: true
-        mugD: true
-        pot: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -111,10 +108,7 @@ Visualization Manager:
       Marker Topic: /pacman_vision/tracker/tracked_object
       Name: Tracked Object
       Namespaces:
-        containerA_tracked: true
-        kitchenUtensilA_tracked: true
-        mugD_tracked: true
-        pot_tracked: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/TF
@@ -122,35 +116,15 @@ Visualization Manager:
       Frame Timeout: 1
       Frames:
         All Enabled: false
-        bowlA:
+        kinect2_ir_frame:
+          Value: false
+        kinect2_ir_optical_frame:
+          Value: false
+        kinect2_link:
           Value: true
-        camera_depth_frame:
-          Value: true
-        camera_depth_optical_frame:
-          Value: true
-        camera_link:
-          Value: true
-        camera_rgb_frame:
-          Value: true
-        camera_rgb_optical_frame:
-          Value: true
-        containerA:
-          Value: true
-        containerA_tracked:
-          Value: true
-        kitchenUtensilA:
-          Value: true
-        kitchenUtensilA_tracked:
-          Value: true
-        mugD:
-          Value: true
-        mugD_tracked:
-          Value: true
-        pot:
-          Value: true
-        pot_2:
-          Value: true
-        pot_tracked:
+        kinect2_rgb_frame:
+          Value: false
+        kinect2_rgb_optical_frame:
           Value: true
       Marker Scale: 0.5
       Name: Transformations
@@ -158,38 +132,19 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        camera_link:
-          camera_depth_frame:
-            camera_depth_optical_frame:
+        kinect2_link:
+          kinect2_ir_frame:
+            kinect2_ir_optical_frame:
               {}
-          camera_rgb_frame:
-            camera_rgb_optical_frame:
-              bowlA:
-                {}
-              containerA:
-                {}
-              containerA_tracked:
-                {}
-              kitchenUtensilA:
-                {}
-              kitchenUtensilA_tracked:
-                {}
-              mugD:
-                {}
-              mugD_tracked:
-                {}
-              pot:
-                {}
-              pot_2:
-                {}
-              pot_tracked:
-                {}
+          kinect2_rgb_frame:
+            kinect2_rgb_optical_frame:
+              {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: camera_link
+    Fixed Frame: kinect2_link
     Frame Rate: 30
   Name: root
   Tools:
@@ -210,22 +165,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.740715
+      Distance: 1.4619
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.759859
-        Y: 0.00160267
-        Z: 0.137986
+        X: 0.594057
+        Y: 0.065358
+        Z: -0.176455
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 1.5698
+      Pitch: 0.567689
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 6.28008
+      Yaw: 3.16123
     Saved: ~
 Window Geometry:
   Displays:
