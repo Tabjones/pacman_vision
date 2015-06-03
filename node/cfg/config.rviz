@@ -10,9 +10,7 @@ Panels:
         - /Original Scene1
         - /Estimated Objects1
         - /Tracked Object1
-        - /Transformations1/Status1
         - /Transformations1/Frames1
-        - /Transformations1/Frames1/kinect2_link1
       Splitter Ratio: 0.5
     Tree Height: 715
   - Class: rviz/Selection
@@ -40,16 +38,16 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.214576
-        Min Value: -0.274174
+        Max Value: 11.891
+        Min Value: 0.413
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: AxisColor
+      Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -65,7 +63,7 @@ Visualization Manager:
       Topic: /pacman_vision/scene_processed
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 0.5
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -78,7 +76,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: RGB8
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -91,10 +89,10 @@ Visualization Manager:
       Size (Pixels): 2
       Size (m): 0.01
       Style: Points
-      Topic: /camera/depth_registered/points
+      Topic: /kinect2/qhd/points
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /pacman_vision/broadcaster/objects
@@ -116,14 +114,10 @@ Visualization Manager:
       Frame Timeout: 1
       Frames:
         All Enabled: false
-        kinect2_ir_frame:
-          Value: false
         kinect2_ir_optical_frame:
-          Value: false
+          Value: true
         kinect2_link:
           Value: true
-        kinect2_rgb_frame:
-          Value: false
         kinect2_rgb_optical_frame:
           Value: true
       Marker Scale: 0.5
@@ -133,18 +127,15 @@ Visualization Manager:
       Show Names: true
       Tree:
         kinect2_link:
-          kinect2_ir_frame:
+          kinect2_rgb_optical_frame:
             kinect2_ir_optical_frame:
-              {}
-          kinect2_rgb_frame:
-            kinect2_rgb_optical_frame:
               {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: kinect2_link
+    Fixed Frame: kinect2_rgb_optical_frame
     Frame Rate: 30
   Name: root
   Tools:
@@ -165,7 +156,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.4619
+      Distance: 0.285054
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -177,10 +168,10 @@ Visualization Manager:
         Z: -0.176455
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.567689
+      Pitch: -1.3348
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.16123
+      Yaw: 4.70941
     Saved: ~
 Window Geometry:
   Displays:

@@ -21,6 +21,8 @@
     <include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch">  
       <arg name="publish_tf"             value="true" />
       <arg name="worker_threads"         value="4" />
+      <arg name="depth_method"           value="opencl" />
+      <arg name="reg_method"             value="opencl" />
     </include>
   </group>
 

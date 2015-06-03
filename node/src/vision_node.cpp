@@ -22,7 +22,6 @@ VisionNode::VisionNode()
   nh.param<bool>("passthrough", filter, true);
   nh.param<bool>("plane_segmentation", plane, false);
   nh.param<bool>("keep_organized", keep_organized, false);
-  nh.param<bool>("use_kinect2", use_kinect2, true);
   nh.param<double>("leaf_size", leaf, 0.01);
   nh.param<double>("plane_tolerance", plane_tol, 0.004);
   nh.param<double>("pass_xmax", xmax, 0.5);
@@ -31,13 +30,20 @@ VisionNode::VisionNode()
   nh.param<double>("pass_ymin", ymin, -0.5);
   nh.param<double>("pass_zmax", zmax, 1.0);
   nh.param<double>("pass_zmin", zmin, 0.3);
-  
-  //subscribe to depth_registered pointclouds topic
+ 
+  //force kinect2 qhd (TODO create reconfigure enumerator, also move subscription inside callback)
+  kinect2_resolution = 1;
+
+  //subscribe to pointcloud topic
   std::string topic;
-  if (use_kinect2)
-    topic = nh.resolveName("/kinect2/depth_lowres/points");
-  else
-    topic = nh.resolveName("/camera/depth_registered/points");
+  if (kinect2_resolution == 0)
+    topic = nh.resolveName("/kinect2/hd/points");
+  else if (kinect2_resolution == 1)
+    topic = nh.resolveName("/kinect2/qhd/points");
+  else if (kinect2_resolution == 2)
+    topic = nh.resolveName("/kinect2/sd/points");
+  else //unhandled default to sd
+    topic = nh.resolveName("/kinect2/sd/points");
   sub_openni = nh.subscribe(topic, 2, &VisionNode::cb_openni, this);
 
   //set callback for dynamic reconfigure
