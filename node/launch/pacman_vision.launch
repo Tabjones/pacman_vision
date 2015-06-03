@@ -3,7 +3,10 @@
   <!-- Configurations -->
   
   <!-- launch_kinect2 -->
-  <arg name="launch_kinect2" default="true" doc="true if you want to include openni2_kinect2, this should be set to true or dynamic reconfigure wont load (bug)" />
+  <arg name="launch_kinect2" default="true" doc="true if you want to include kinect2_bridge" />
+  
+  <!-- kinect2_max_depth -->
+  <arg name="kinect2_max_depth" default="2.0" doc="Maximum distance in meters to consider when creating the point clouds from kinect2. Smaller values increase performance, reducing total number of points processed. Ignored if launch_kinect2 is false." />
   
   <!-- run_reconfigure:  If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters.-->
   <arg name="run_reconfigure" default="true" doc="If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters." />
@@ -23,6 +26,7 @@
       <arg name="worker_threads"         value="4" />
       <arg name="depth_method"           value="opencl" />
       <arg name="reg_method"             value="opencl" />
+      <arg name="max_depth"              value="$(arg kinect2_max_depth)" />
     </include>
   </group>
 

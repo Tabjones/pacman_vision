@@ -31,7 +31,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Processed Scene
+    SyncSource: Original Scene
 Visualization Manager:
   Class: ""
   Displays:
@@ -86,7 +86,7 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 1
       Selectable: true
-      Size (Pixels): 2
+      Size (Pixels): 3
       Size (m): 0.01
       Style: Points
       Topic: /kinect2/qhd/points
@@ -156,22 +156,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.285054
+      Distance: 0.57402
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.594057
-        Y: 0.065358
-        Z: -0.176455
+        X: 0.0437037
+        Y: 0.196207
+        Z: 0.625166
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -1.3348
+      Pitch: -1.2048
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.70941
+      Yaw: 4.72868
     Saved: ~
 Window Geometry:
   Displays:
