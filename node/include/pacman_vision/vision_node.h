@@ -66,7 +66,7 @@ class VisionNode
     //bool to initialize rqt_reconfigure with user parameters
     bool rqt_init;
    
-    // use kinect2 hd(1920x1080) <0>, qhd(960x540) <1>, or sd(530x270) <2>
+    // use kinect2 hd(1920x1080) <2>, qhd(960x540) <1>, or sd(530x270) <0>
     int kinect2_resolution;
 
     //transforms to crop out vito arms and hands
