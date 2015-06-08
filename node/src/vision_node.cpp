@@ -12,39 +12,26 @@ VisionNode::VisionNode()
   pub_scene = nh.advertise<PC> ("scene_processed", 3);
   table_trans.setIdentity();
   
-  crop_arms = false;
-  //init filter params 
-  nh.param<bool>("downsampling", downsample, false);
+  crop_r_arm = crop_l_arm = crop_r_hand = crop_l_hand = false;
+  //init node params 
   nh.param<bool>("enable_estimator", en_estimator, false);
   nh.param<bool>("enable_tracker", en_tracker, false);
-  nh.param<bool>("enable_listener", en_listener, false);
   nh.param<bool>("enable_broadcaster", en_broadcaster, false);
+  nh.param<bool>("enable_listener", en_listener, false);
   nh.param<bool>("passthrough", filter, true);
+  nh.param<bool>("downsampling", downsample, false);
   nh.param<bool>("plane_segmentation", plane, false);
   nh.param<bool>("keep_organized", keep_organized, false);
-  nh.param<double>("leaf_size", leaf, 0.01);
-  nh.param<double>("plane_tolerance", plane_tol, 0.004);
+  nh.param<int>("kinect2_resolution", kinect2_resolution, 1);
   nh.param<double>("pass_xmax", xmax, 0.5);
   nh.param<double>("pass_xmin", xmin, -0.5);
   nh.param<double>("pass_ymax", ymax, 0.5);
   nh.param<double>("pass_ymin", ymin, -0.5);
   nh.param<double>("pass_zmax", zmax, 1.0);
   nh.param<double>("pass_zmin", zmin, 0.3);
+  nh.param<double>("leaf_size", leaf, 0.01);
+  nh.param<double>("plane_tolerance", plane_tol, 0.004);
  
-  //force kinect2 qhd (TODO create reconfigure enumerator, also move subscription inside callback)
-  kinect2_resolution = 1;
-
-  //subscribe to pointcloud topic
-  std::string topic;
-  if (kinect2_resolution == 0)
-    topic = nh.resolveName("/kinect2/hd/points");
-  else if (kinect2_resolution == 1)
-    topic = nh.resolveName("/kinect2/qhd/points");
-  else if (kinect2_resolution == 2)
-    topic = nh.resolveName("/kinect2/sd/points");
-  else //unhandled default to sd
-    topic = nh.resolveName("/kinect2/sd/points");
-  sub_openni = nh.subscribe(topic, 2, &VisionNode::cb_openni, this);
 
   //set callback for dynamic reconfigure
   this->dyn_srv.setCallback(boost::bind(&VisionNode::cb_reconfigure, this, _1, _2));
@@ -160,158 +147,182 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     pcl::copyPointCloud(*tmp, *(this->scene_processed));
   }
   //crop arms if listener set it
-  if (crop_arms)
+  if ( (crop_r_arm || crop_l_arm || crop_r_hand || crop_l_hand) && this->en_listener && this->listener_module )
   {
-    PC::Ptr tmp2 (new PC);
+    PC::Ptr input (new PC);
+    PC::Ptr output (new PC);
     pcl::CropBox<PT> cb;
     Eigen::Matrix4f inv_trans;
-    inv_trans = left_2.inverse();
-    if (filter || downsample || plane)
-      cb.setInputCloud (this->scene_processed);
-    else
-      cb.setInputCloud (this->scene);
-    //left2
     Eigen::Vector4f min,max;
-    min << -0.06, -0.06, -0.06, 1;
-    max << 0.06, 0.0938, 0.1915, 1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter (*(tmp));
-    //left3
-    cb.setInputCloud(tmp);
-    min << -0.06,-0.06,0,1;
-    max << 0.06,0.0938,0.2685,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = left_3.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp2);
-    //left4
-    cb.setInputCloud(tmp2);
-    min << -0.06,-0.0938,-0.06,1;
-    max << 0.06,0.06,0.1915,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = left_4.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp);
-    //left5
-    cb.setInputCloud(tmp);
-    min << -0.06,-0.0555,0,1;
-    max << 0.06,0.06,0.2585,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = left_5.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp2);
-    //left6
-    cb.setInputCloud(tmp2);
-    min << -0.0711,-0.0555,-0.0711,1;
-    max << 0.0711,0.0795,0.057,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = left_6.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp);
-    //left7
-    cb.setInputCloud(tmp);
-    min << -0.04,-0.0399,-0.031,1;
-    max << 0.04,0.0399,0,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = left_7.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp2);
-    //right2
-    cb.setInputCloud(tmp2);
-    min << -0.06, -0.06, -0.06, 1;
-    max << 0.06, 0.0938, 0.1915, 1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = right_2.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp);
-    //right3
-    cb.setInputCloud(tmp);
-    min << -0.06,-0.06,0,1;
-    max << 0.06,0.0938,0.2685,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = right_3.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp2);
-    //right4
-    cb.setInputCloud(tmp2);
-    min << -0.06,-0.0938,-0.06,1;
-    max << 0.06,0.06,0.1915,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = right_4.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp);
-    //right5
-    cb.setInputCloud(tmp);
-    min << -0.06,-0.0555,0,1;
-    max << 0.06,0.06,0.2585,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = right_5.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp2);
-    //right6
-    cb.setInputCloud(tmp2);
-    min << -0.0711,-0.0555,-0.0711,1;
-    max << 0.0711,0.0795,0.057,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = right_6.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp);
-    //right7
-    cb.setInputCloud(tmp);
-    min << -0.04,-0.0399,-0.031,1;
-    max << 0.04,0.0399,0,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = right_7.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp2);
-    //right hand //TODO hand measures
-    cb.setInputCloud(tmp2);
-    min << 0,0,0,1;
-    max << 0,0,0,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = right_hand.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*tmp);
-    //left_hand
-    cb.setInputCloud(tmp);
-    min << 0,0,0,1;
-    max << 0,0,0,1;
-    cb.setMin(min);
-    cb.setMax(max);
-    cb.setNegative(true); //crop what's inside
-    inv_trans = left_hand.inverse();
-    cb.setTransform(Eigen::Affine3f(inv_trans));
-    cb.filter(*(this->scene_processed));
+    if (filter || downsample || plane)
+      pcl::copyPointCloud(*(this->scene_processed), *input);
+    else
+      pcl::copyPointCloud(*(this->scene), *input);
+    if (crop_l_arm)
+    {
+      //left2
+      cb.setInputCloud(input);
+      min << -0.06, -0.06, -0.06, 1;
+      max << 0.06, 0.0938, 0.1915, 1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = left_2.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter (*(tmp));
+      //left3
+      cb.setInputCloud(tmp);
+      min << -0.06,-0.06,0,1;
+      max << 0.06,0.0938,0.2685,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = left_3.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*input);
+      //left4
+      cb.setInputCloud(input);
+      min << -0.06,-0.0938,-0.06,1;
+      max << 0.06,0.06,0.1915,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = left_4.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*tmp);
+      //left5
+      cb.setInputCloud(tmp);
+      min << -0.06,-0.0555,0,1;
+      max << 0.06,0.06,0.2585,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = left_5.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*input);
+      //left6
+      cb.setInputCloud(input);
+      min << -0.0711,-0.0555,-0.0711,1;
+      max << 0.0711,0.0795,0.057,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = left_6.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*tmp);
+      //left7
+      cb.setInputCloud(tmp);
+      min << -0.04,-0.0399,-0.031,1;
+      max << 0.04,0.0399,0,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = left_7.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*input);
+      if (!crop_r_arm && !crop_r_hand && !crop_l_hand)
+        pcl::copyPointCloud(*input, *(this->scene_processed));
+    }
+    if (crop_r_arm)
+    {
+      //right2
+      cb.setInputCloud(input);
+      min << -0.06, -0.06, -0.06, 1;
+      max << 0.06, 0.0938, 0.1915, 1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = right_2.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*tmp);
+      //right3
+      cb.setInputCloud(tmp);
+      min << -0.06,-0.06,0,1;
+      max << 0.06,0.0938,0.2685,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = right_3.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*input);
+      //right4
+      cb.setInputCloud(input);
+      min << -0.06,-0.0938,-0.06,1;
+      max << 0.06,0.06,0.1915,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = right_4.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*tmp);
+      //right5
+      cb.setInputCloud(tmp);
+      min << -0.06,-0.0555,0,1;
+      max << 0.06,0.06,0.2585,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = right_5.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*input);
+      //right6
+      cb.setInputCloud(input);
+      min << -0.0711,-0.0555,-0.0711,1;
+      max << 0.0711,0.0795,0.057,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = right_6.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*tmp);
+      //right7
+      cb.setInputCloud(tmp);
+      min << -0.04,-0.0399,-0.031,1;
+      max << 0.04,0.0399,0,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = right_7.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*input);
+      if (!crop_r_hand && !crop_l_hand)
+        pcl::copyPointCloud(*input, *(this->scene_processed));
+    }
+    if (crop_r_hand)
+    {
+      //right hand //TODO hand measures
+      cb.setInputCloud(input);
+      min << 0,0,0,1;
+      max << 0,0,0,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = right_hand.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*tmp);
+      if (!crop_l_hand)
+        pcl::copyPointCloud(*tmp, *(this->scene_processed));
+    }
+    if (crop_l_hand)
+    {
+      //left_hand
+      if (crop_r_hand)
+        cb.setInputCloud(tmp);
+      else
+        cb.setInputCloud(input);
+      min << 0,0,0,1;
+      max << 0,0,0,1;
+      cb.setMin(min);
+      cb.setMax(max);
+      cb.setNegative(true); //crop what's inside
+      inv_trans = left_hand.inverse();
+      cb.setTransform(Eigen::Affine3f(inv_trans));
+      cb.filter(*(this->scene_processed));
+    }
   }
   //republish processed cloud
-  if (filter || downsample || plane || crop_arms)
+  /* |passt   | voxelgrid   |segment | | arms or hands croppings                                                                  |    */
+  if (filter || downsample || plane || ((crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand) && en_listener && listener_module) )
     pub_scene.publish(*scene_processed);
   else
     pub_scene.publish(*scene);
@@ -580,13 +591,11 @@ void VisionNode::spin_listener()
     this->right_hand = listener_module->right_hand;
     this->left_hand = listener_module->left_hand;
     mtx_scene.unlock();
-    this->crop_arms = true;
     //spin
     this->listener_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //listener could try to go at 20Hz
   }
   //listener got stopped
-  this->crop_arms = false;
   return;
 }
 
@@ -612,13 +621,34 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.pass_ymin = ymin;
     config.pass_zmax = zmax;
     config.pass_zmin = zmin;
+    config.point_cloud_resolution = kinect2_resolution;
+    //subscribe to pointcloud topic
+    std::string topic;
+    if (kinect2_resolution == 2)
+      topic = nh.resolveName("/kinect2/hd/points");
+    else if (kinect2_resolution == 1)
+      topic = nh.resolveName("/kinect2/qhd/points");
+    else if (kinect2_resolution == 0)
+      topic = nh.resolveName("/kinect2/sd/points");
+    else //unhandled default to sd
+      topic = nh.resolveName("/kinect2/sd/points");
+    sub_openni = nh.subscribe(topic, 2, &VisionNode::cb_openni, this);
+
     config.tracker_disturbance = false;
-    nh.getParam("estimator_clus_tol", config.estimator_clus_tol);
+    //listener
+    nh.getParam("listener_crop_right_arm", config.listener_crop_right_arm);
+    nh.getParam("listener_crop_left_arm", config.listener_crop_left_arm);
+    nh.getParam("listener_crop_right_hand", config.listener_crop_right_hand);
+    nh.getParam("listener_crop_left_hand", config.listener_crop_left_hand);
+    //estimator
+    nh.getParam("estimator_object_calibration", config.estimator_object_calibration);
     nh.getParam("estimator_iterations", config.estimator_iterations);
     nh.getParam("estimator_neighbors", config.estimator_neighbors);
-    nh.getParam("estimator_object_calibration", config.estimator_object_calibration);
+    nh.getParam("estimator_clus_tol", config.estimator_clus_tol);
+    //broadcaster
     nh.getParam("broadcaster_tf", config.broadcaster_tf);
     nh.getParam("broadcaster_rviz_markers", config.broadcaster_rviz_markers);
+    //tracker
     nh.getParam("tracker_estimation_type", config.tracker_estimation_type);
     this->rqt_init = false;
     ROS_WARN("[PaCMaN Vision] Rqt-Reconfigure Default Values Initialized");
@@ -639,6 +669,29 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   this->zmin = config.pass_zmin;
   this->zmax = config.pass_zmax;
   this->leaf = config.leaf_size;
+  if (this->kinect2_resolution != config.point_cloud_resolution)
+  {
+    this->kinect2_resolution = config.point_cloud_resolution;
+    std::string topic;
+    if (kinect2_resolution == 2)
+      topic = nh.resolveName("/kinect2/hd/points");
+    else if (kinect2_resolution == 1)
+      topic = nh.resolveName("/kinect2/qhd/points");
+    else if (kinect2_resolution == 0)
+      topic = nh.resolveName("/kinect2/sd/points");
+    else //unhandled default to sd
+      topic = nh.resolveName("/kinect2/sd/points");
+    //resubscribe (also kills previous subscription)
+    sub_openni = nh.subscribe(topic, 2, &VisionNode::cb_openni, this);
+  }
+
+  if (this->listener_module && this->en_listener)
+  {
+    this->crop_r_arm = config.listener_crop_right_arm;
+    this->crop_l_arm = config.listener_crop_left_arm;
+    this->crop_r_hand = config.listener_crop_right_hand;
+    this->crop_l_hand = config.listener_crop_left_hand;
+  }
   if (this->estimator_module && this->en_estimator)
   {
     this->estimator_module->calibration = config.estimator_object_calibration;
@@ -661,9 +714,6 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
       tracker_module->manual_disturbance = true;
       config.tracker_disturbance = false;
     }
-  }
-  if (this->listener_module && this->en_listener)
-  {
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request accepted");
 }

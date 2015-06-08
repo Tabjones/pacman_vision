@@ -49,7 +49,7 @@ using namespace pcl;
 
 class VisionNode
 {
-  typedef pcl::PointXYZRGBA PT; //default point type
+  typedef pcl::PointXYZRGB PT; //default point type
   typedef pcl::PointCloud<PT> PC; //default point cloud with default point type
   
   public:
@@ -77,7 +77,7 @@ class VisionNode
     //table transform from vito listener
     Eigen::Matrix4f table_trans;
     //crop or not
-    bool crop_arms;
+    bool crop_r_arm, crop_l_arm, crop_r_hand, crop_l_hand;
     
     //Service Server to retrieve processed scene
     ros::ServiceServer srv_get_scene;

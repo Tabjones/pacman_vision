@@ -11,6 +11,9 @@
   <!-- run_reconfigure:  If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters.-->
   <arg name="run_reconfigure" default="true" doc="If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters." />
   
+  <!-- run_service_caller:  If true runs rqt_service_caller gui for calling services.-->
+  <arg name="run_service_caller" default="true" doc="If true runs rqt_service_caller gui for calling various services" />
+  
   <!-- run_rviz:  If true runs rviz gui.-->
   <arg name="run_rviz" default="true" doc="If true runs rviz gui with config stored under cfg directory."/>
   
@@ -43,6 +46,11 @@
   <!-- rqt_reconfigure -->
   <group if="$(arg run_reconfigure)">
     <node name="dynamic_reconfigure_pacman_vision" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/> 
+  </group>
+  
+  <!-- rqt_service_caller -->
+  <group if="$(arg run_service_caller)">
+    <node name="service_caller_pacman_vision" pkg="rqt_service_caller" type="rqt_service_caller" respawn="false"/> 
   </group>
     
 </launch>
