@@ -1,22 +1,22 @@
 <launch>
 
   <!-- Configurations -->
-  
+
   <!-- launch_kinect2 -->
   <arg name="launch_kinect2" default="true" doc="true if you want to include kinect2_bridge" />
-  
+
   <!-- kinect2_max_depth -->
   <arg name="kinect2_max_depth" default="2.0" doc="Maximum distance in meters to consider when creating the point clouds from kinect2. Smaller values increase performance, reducing total number of points processed. Ignored if launch_kinect2 is false." />
-  
+
   <!-- run_reconfigure:  If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters.-->
   <arg name="run_reconfigure" default="true" doc="If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters." />
-  
+
   <!-- run_service_caller:  If true runs rqt_service_caller gui for calling services.-->
   <arg name="run_service_caller" default="true" doc="If true runs rqt_service_caller gui for calling various services" />
-  
+
   <!-- run_rviz:  If true runs rviz gui.-->
   <arg name="run_rviz" default="true" doc="If true runs rviz gui with config stored under cfg directory."/>
-  
+
   <!-- load:  Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder).-->
   <arg name="load" default="default" doc="Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder of this node)."/>
 
@@ -24,7 +24,7 @@
 
   <group if="$(arg launch_kinect2)">
     <!-- Launch kinect2 with custom driver parameters -->
-    <include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch">  
+    <include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch">
       <arg name="publish_tf"             value="true" />
       <arg name="worker_threads"         value="4" />
       <arg name="depth_method"           value="opencl" />
@@ -42,15 +42,15 @@
   <group if="$(arg run_rviz)">
 	  <node name="rviz_pacman_vision" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
   </group>
-  
+
   <!-- rqt_reconfigure -->
   <group if="$(arg run_reconfigure)">
-    <node name="dynamic_reconfigure_pacman_vision" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/> 
+    <node name="dynamic_reconfigure_pacman_vision" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/>
   </group>
-  
+
   <!-- rqt_service_caller -->
   <group if="$(arg run_service_caller)">
-    <node name="service_caller_pacman_vision" pkg="rqt_service_caller" type="rqt_service_caller" respawn="false"/> 
+    <node name="service_caller_pacman_vision" pkg="rqt_service_caller" type="rqt_service_caller" respawn="false"/>
   </group>
-    
+
 </launch>

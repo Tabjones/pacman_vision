@@ -2,7 +2,7 @@
 ## Dependencies ##
 * [Calibration](https://github.com/CentroEPiaggio/calibration)
 * [Asus Scanner Models](https://github.com/pacman-project/pacman-object-database)
-* Openni2 Launch and Camera.
+* [Kinect2 Bridge](https://github.com/code-iai/iai_kinect2)
 
 ## Usage ##
 Launch the node with

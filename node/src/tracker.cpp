@@ -17,7 +17,7 @@ Tracker::Tracker(ros::NodeHandle &n)
   this->srv_track_object = nh.advertiseService("track_object", &Tracker::cb_track_object, this);
   this->srv_stop = nh.advertiseService("stop_track", &Tracker::cb_stop_tracker, this);
   this->srv_grasp = nh.advertiseService("grasp_verification", &Tracker::cb_grasp, this);
-  
+
   this->rviz_marker_pub = nh.advertise<visualization_msgs::Marker>("tracked_object", 1);
   ce.reset( new pcl::registration::CorrespondenceEstimation<PTT, PTT, float>);
   crd.reset( new pcl::registration::CorrespondenceRejectorDistance);
@@ -40,7 +40,7 @@ Tracker::~Tracker()
   this->nh.shutdown();
 }
 
-//tracker step 
+//tracker step
 void Tracker::track()
 {
   if (error_count >= 30)
@@ -337,7 +337,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   y2 = *std::max_element(yvec.begin(), yvec.end());
   z2 = *std::max_element(zvec.begin(), zvec.end());
   mc.get(model_centroid);
-  
+
   //init icps
   icp.setUseReciprocalCorrespondences(false);
   icp.setMaximumIterations(50);
@@ -346,18 +346,18 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   ce->setInputSource(model);
   icp.setCorrespondenceEstimation(ce);
   crd->setMaximumDistance(rej_distance);
-  
+
   //crsc->setInputSource(model);
   //crsc->setInlierThreshold(0.02);
   //crsc->setMaximumIterations(5);
   //crsc->setRefineModel(true);
-  
+
   crt->setOverlapRatio(1);
   crt->setMinCorrespondences(200);
   //icp.addCorrespondenceRejector(crt);
   icp.addCorrespondenceRejector(crd);
   //icp.addCorrespondenceRejector(cro2o);
-  
+
   icp.setInputSource(model);
   //do one step of icp
   icp.setTransformationEstimation(teDQ);

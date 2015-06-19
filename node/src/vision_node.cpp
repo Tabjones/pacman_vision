@@ -11,9 +11,9 @@ VisionNode::VisionNode()
   srv_get_scene = nh.advertiseService("get_scene_processed", &VisionNode::cb_get_scene, this);
   pub_scene = nh.advertise<PC> ("scene_processed", 3);
   table_trans.setIdentity();
-  
+
   crop_r_arm = crop_l_arm = crop_r_hand = crop_l_hand = false;
-  //init node params 
+  //init node params
   nh.param<bool>("enable_estimator", en_estimator, false);
   nh.param<bool>("enable_tracker", en_tracker, false);
   nh.param<bool>("enable_broadcaster", en_broadcaster, false);
@@ -31,8 +31,6 @@ VisionNode::VisionNode()
   nh.param<double>("pass_zmin", zmin, 0.3);
   nh.param<double>("leaf_size", leaf, 0.01);
   nh.param<double>("plane_tolerance", plane_tol, 0.004);
- 
-
   //set callback for dynamic reconfigure
   this->dyn_srv.setCallback(boost::bind(&VisionNode::cb_reconfigure, this, _1, _2));
 }
@@ -51,7 +49,7 @@ bool VisionNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacma
   mtx_scene.lock();
   pcl::toROSMsg(*scene_processed, msg);
   mtx_scene.unlock();
-  res.scene = msg; 
+  res.scene = msg;
   ROS_INFO("[PaCMaN Vision][%s] Sent processed scene to service response.", __func__);
   return true;
 }
@@ -142,7 +140,7 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     //extract what's on top of plane
     extract.setInputCloud(seg.getInputCloud());
     extract.setIndices(inliers);
-    extract.setNegative(true); 
+    extract.setNegative(true);
     extract.filter(*tmp);
     pcl::copyPointCloud(*tmp, *(this->scene_processed));
   }
@@ -347,7 +345,7 @@ void VisionNode::check_modules()
     //kill the module
     this->estimator_module.reset();
   }
-  
+
   //check if we want broadcaster module and it is not started, or if it is started but we want it disabled
   if (this->en_broadcaster && !this->broadcaster_module)
   {
@@ -364,7 +362,7 @@ void VisionNode::check_modules()
     //kill the module
     this->broadcaster_module.reset();
   }
-  
+
   //check if we want tracker module and it is not started, or if it is started but we want it disabled
   if (this->en_tracker && !this->tracker_module)
   {
@@ -381,7 +379,7 @@ void VisionNode::check_modules()
     //kill the module
     this->tracker_module.reset();
   }
-  
+
   //check if we want listener module and it is not started, or if it is started but we want it disabled
   if (this->en_listener && !this->listener_module)
   {
@@ -434,7 +432,7 @@ void VisionNode::spin_broadcaster()
   //spin until we disable it or it dies somehow
   while (this->en_broadcaster && this->broadcaster_module)
   {
-    //check if we have an estimator and or a tracker 
+    //check if we have an estimator and or a tracker
     if (this->en_estimator && this->estimator_module)
     { //we have an estimator module running
       //check if it is not busy computing and it has some new estimations to upload
@@ -470,7 +468,7 @@ void VisionNode::spin_tracker()
   //spin until we disable it or it dies somehow
   while (this->en_tracker && this->tracker_module)
   {
-    //push down filtered cloud to tracker 
+    //push down filtered cloud to tracker
     //lock variables so no-one else can touch what is copied
     mtx_scene.lock();
     mtx_tracker.lock();
@@ -684,7 +682,6 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     //resubscribe (also kills previous subscription)
     sub_openni = nh.subscribe(topic, 2, &VisionNode::cb_openni, this);
   }
-
   if (this->listener_module && this->en_listener)
   {
     this->crop_r_arm = config.listener_crop_right_arm;
@@ -738,7 +735,7 @@ int main (int argc, char *argv[])
   ros::Rate rate(30); //try to go at 30hz
   while (node.nh.ok())
   {
-    node.spin_once(); 
+    node.spin_once();
     rate.sleep();
   }
   node.shutdown();

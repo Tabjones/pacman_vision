@@ -89,15 +89,15 @@ link_directories(
   ${PEL_LIBRARY_DIRS}
   )
 
-add_executable(pacman_vision src/vision_node.cpp 
+add_executable(pacman_vision src/vision_node.cpp
                              src/estimator.cpp
                              src/broadcaster.cpp
                              src/tracker.cpp
                              src/utility.cpp
                              src/vito_listener.cpp)
 
-add_dependencies(pacman_vision 
-  pacman_vision_comm_generate_messages_cpp 
+add_dependencies(pacman_vision
+  pacman_vision_comm_generate_messages_cpp
   pacman_vision_gencfg)
 
 target_link_libraries(pacman_vision

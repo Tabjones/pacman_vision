@@ -69,7 +69,7 @@ int Estimator::extract_clusters()
     extract.setInputCloud(scene);
     extract.setIndices(boost::make_shared<PointIndices>(*it));
     extract.setNegative(false);
-  /*  
+  /*
     for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit)
     {
       object->points.push_back(table_top->points[*pit]);
