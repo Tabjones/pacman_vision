@@ -1,20 +1,21 @@
+<?xml version="1.0"?>
 <launch>
 
   <!-- Configurations -->
-  
+
   <!-- launch_openni: true if you want to include openni2_launch with custom parameters, if set to false make sure you enable depth_registration and set intrinsics parameters correctly -->
   <arg name="launch_openni" default="true" doc="true if you want to include openni2_launch with custom parameters, if set to false make sure you enable depth_registration and set intrinsics parameters correctly, when you launch openni2." />
-  
+
   <!-- asus: which asus to use. Currently there are 2 asus sensors. 'asus1' is the one at CP, 'asus2' is the one at PhaseSpace lab. This argument is needed to
        correctly load intrinsic calibrations from calibration package -->
   <arg name="asus" default="asus1" doc="which asus to use. Currently there are 2 asus sensors. 'asus1' is the one at CP, 'asus2' is the one at PhaseSpace lab. This argument is needed to correctly load intrinsic calibrations from calibration package. So either set it 'asus1' or 'asus2'." />
-  
+
   <!-- run_reconfigure:  If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters.-->
   <arg name="run_reconfigure" default="true" doc="If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters." />
-  
+
   <!-- run_rviz:  If true runs rviz gui.-->
   <arg name="run_rviz" default="true" doc="If true runs rviz gui with config stored under cfg directory."/>
-  
+
   <!-- load:  Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder).-->
   <arg name="load" default="default" doc="Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder of this node)."/>
 
@@ -22,7 +23,7 @@
 
   <group if="$(arg launch_openni)">
     <!-- Launch openni2 with custom driver parameters -->
-    <include file="$(find openni2_launch)/launch/openni2.launch">  
+    <include file="$(find openni2_launch)/launch/openni2.launch">
       <arg name="depth_registration"              value="true" />
       <arg name="color_depth_synchronization"     value="true" />
       <arg name="rgb_camera_info_url"       value="file:///$(find calibration)/config/intrinsics/rgb_$(arg asus).yaml" />
@@ -32,17 +33,17 @@
 
   <rosparam command="load" file="$(find pacman_vision)/params/$(arg load).yaml"/>
 
-	<!-- pacman vision node  -->
-	<node name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" />
+  <!-- pacman vision node  -->
+  <node name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" />
 
   <!-- rqt_reconfigure -->
   <group if="$(arg run_reconfigure)">
-    <node name="$(anon dynreconf_pacman_vision)" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/> 
+    <node name="$(anon dynreconf_pacman_vision)" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/>
   </group>
 
   <!-- rviz -->
   <group if="$(arg run_rviz)">
-	  <node name="$(anon rviz_pacman_vision)" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
+    <node name="$(anon rviz_pacman_vision)" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
   </group>
-    
+
 </launch>
