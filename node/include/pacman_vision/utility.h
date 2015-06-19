@@ -1,4 +1,4 @@
-#ifndef _INCL_MODULE
+#ifndef _INCL_UTILITY
 // ROS headers
 #include <ros/ros.h>
 #include <ros/console.h>
@@ -14,5 +14,5 @@ void fromPose(geometry_msgs::Pose &source, Eigen::Matrix4f &dest, tf::Transform 
 //convert from tf to eigen matrix and pose
 void fromTF(tf::Transform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &pose_dest);
 void fromTF(tf::StampedTransform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &pose_dest);
-#define _INCL_MODULE
+#define _INCL_UTILITY
 #endif
