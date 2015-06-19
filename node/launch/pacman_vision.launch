@@ -36,12 +36,12 @@
 
   <rosparam command="load" file="$(find pacman_vision)/params/$(arg load).yaml"/>
 
-	<!-- pacman vision node  -->
-	<node name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" />
+  <!-- pacman vision node  -->
+  <node name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" />
 
   <!-- rviz -->
   <group if="$(arg run_rviz)">
-	  <node name="rviz_pacman_vision" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
+    <node name="rviz_pacman_vision" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
   </group>
 
   <!-- rqt_reconfigure -->
