@@ -1,4 +1,5 @@
 #ifndef _INCL_NODE
+#define _INCL_NODE
 
 // ROS headers
 #include <ros/ros.h>
@@ -44,13 +45,12 @@
 #include "pacman_vision/broadcaster.h"
 #include "pacman_vision/vito_listener.h"
 #include "pacman_vision/tracker.h"
-
-using namespace pcl;
+#include "pacman_vision/utility.h"
+#include "pacman_vision/storage.h"
+#include "pacman_vision/supervoxels.h"
 
 class VisionNode
 {
-  typedef pcl::PointXYZRGB PT; //default point type
-  typedef pcl::PointCloud<PT> PC; //default point cloud with default point type
 
   public:
     VisionNode();
@@ -88,7 +88,9 @@ class VisionNode
     //pointer to processed and acquired point cloud
     PC::Ptr scene_processed;
     PC::Ptr scene;
-
+//TODO add supervoxels module
+    //Shared pointer of Storage (to be shared to modules)
+    boost::shared_ptr<Storage> storage;
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module;
     boost::shared_ptr<Broadcaster> broadcaster_module;
@@ -123,17 +125,9 @@ class VisionNode
     //Callback
     void cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t level);
 
-    //boost mutexes to protect intra-module copy
-    boost::mutex mtx_scene;
-    boost::mutex mtx_estimator;
-    boost::mutex mtx_broadcaster;
-    boost::mutex mtx_tracker;
-    boost::mutex mtx_listener;
-
     //method to enable/disable modules
     void check_modules();
 
 };
 
-#define _INCL_NODE
 #endif

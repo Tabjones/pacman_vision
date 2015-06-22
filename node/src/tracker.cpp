@@ -6,25 +6,26 @@
 ///////////////////
 
 //Constructor
-Tracker::Tracker(ros::NodeHandle &n)
+Tracker::Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
 {
-  this->scene.reset(new PTC);
-  this->model.reset(new PTC);
-  this->orig_model.reset(new PTC);
+  this->scene.reset(new PXC);
+  this->model.reset(new PXC);
+  this->orig_model.reset(new PXC);
   this->nh = ros::NodeHandle (n, "tracker");
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
+  this->storage = stor;
   this->srv_track_object = nh.advertiseService("track_object", &Tracker::cb_track_object, this);
   this->srv_stop = nh.advertiseService("stop_track", &Tracker::cb_stop_tracker, this);
   this->srv_grasp = nh.advertiseService("grasp_verification", &Tracker::cb_grasp, this);
 
   this->rviz_marker_pub = nh.advertise<visualization_msgs::Marker>("tracked_object", 1);
-  ce.reset( new pcl::registration::CorrespondenceEstimation<PTT, PTT, float>);
+  ce.reset( new pcl::registration::CorrespondenceEstimation<PX, PX, float>);
   crd.reset( new pcl::registration::CorrespondenceRejectorDistance);
   crt.reset( new pcl::registration::CorrespondenceRejectorTrimmed);
   cro2o.reset( new pcl::registration::CorrespondenceRejectorOneToOne);
-  teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PTT,PTT,float>);
- // crsc.reset( new pcl::registration::CorrespondenceRejectorSampleConsensus<PTT>);
+  teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PX,PX,float>);
+ // crsc.reset( new pcl::registration::CorrespondenceRejectorSampleConsensus<PX>);
 
   started = lost_it = to_estimator = false;
   leaf = 0.02f;
@@ -52,8 +53,8 @@ void Tracker::track()
     return;
   }
   Eigen::Matrix4f inv_trans;
-  PTC::Ptr target (new PTC);
-  PTC::Ptr tmp (new PTC);
+  PXC::Ptr target (new PXC);
+  PXC::Ptr tmp (new PXC);
   inv_trans = transform.inverse();
   //boundingbox
   pcl::transformPointCloud(*scene, *tmp, inv_trans);
@@ -88,7 +89,7 @@ void Tracker::track()
     old_leaf = leaf;
     ce->setInputSource(model);
     icp.setInputSource(model);
-    pcl::CentroidPoint<PTT> mc;
+    pcl::CentroidPoint<PX> mc;
     for (int i=0; i<model->points.size(); ++i)
       mc.add(model->points[i]);
     mc.get(model_centroid);
@@ -104,10 +105,10 @@ void Tracker::track()
   icp.setInputTarget(target);
   if (centroid_counter >=5)
   {
-    pcl::CentroidPoint<PTT> tc;
+    pcl::CentroidPoint<PX> tc;
     for (int i=0; i<target->points.size(); ++i)
       tc.add(target->points[i]);
-    PTT target_centroid, mc_transformed;
+    PX target_centroid, mc_transformed;
     mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(transform));
     tc.get(target_centroid);
     Eigen::Matrix4f Tcen, guess;
@@ -244,10 +245,10 @@ void Tracker::find_object_in_scene()
 {
   if (scene->points.size() > model->points.size()/3)
   {
-    pcl::CentroidPoint<PTT> tc;
+    pcl::CentroidPoint<PX> tc;
     for (int i=0; i<scene->points.size(); ++i)
       tc.add(scene->points[i]);
-    PTT target_centroid, mc_transformed;
+    PX target_centroid, mc_transformed;
     mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(transform));
     tc.get(target_centroid);
     Eigen::Matrix4f Tcen, guess;
@@ -321,7 +322,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   //pcl::io::savePCDFile("/home/tabjones/Desktop/model.pcd", *model); //TODO tmp
   //Get the minimum and maximum values on each of the 3 (x-y-z) dimensions of model
   //also get model centroid
-  pcl::CentroidPoint<PTT> mc;
+  pcl::CentroidPoint<PX> mc;
   std::vector<float> xvec,yvec,zvec;
   for (int i=0; i<model->points.size(); ++i)
   {

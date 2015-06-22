@@ -4,11 +4,12 @@
 /////////////////
 // Broadcaster //
 /////////////////
-Broadcaster::Broadcaster(ros::NodeHandle &n)
+Broadcaster::Broadcaster(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
 {
   this->nh = ros::NodeHandle (n, "broadcaster");
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
+  this->storage = stor;
   tf = rviz_markers = true;
   rviz_markers_pub = nh.advertise<visualization_msgs::MarkerArray>("objects", 1);
 }

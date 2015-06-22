@@ -32,19 +32,16 @@ class VisionNode;
 
 class Supervoxels
 {
-  typedef pcl::PointXYZRGB PT; //default point type
-  typedef pcl::PointCloud<PT> PC; //default point cloud
-  typedef pcl::PointNormal PN; //default point normal type
-  typedef pcl::PointCloud<PN> PCN; //default point normal cloud
 
   friend class VisionNode;
 
   public:
-    Supervoxels(ros::NodeHandle &n);
+    Supervoxels(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~Supervoxels();
   private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
+    boost::shared_ptr<Storage> storage;
 
     PC::Ptr scene;
     PC::Ptr clustered_scene;

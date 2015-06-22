@@ -6,12 +6,13 @@
 ///////////////////
 
 //Constructor
-Estimator::Estimator(ros::NodeHandle &n)
+Estimator::Estimator(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
 {
-  this->scene.reset(new PEC);
+  this->scene.reset(new PXC);
   this->nh = ros::NodeHandle (n, "estimator");
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
+  this->storage = stor;
   this->db_path = (ros::package::getPath("pacman_vision") + "/database" );
   if (!boost::filesystem::exists(db_path) || !boost::filesystem::is_directory(db_path))
     ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
@@ -41,9 +42,9 @@ int Estimator::extract_clusters()
     return -1;
   ROS_INFO("[Estimator][%s] Extracting object clusters with cluster tolerance of %g",__func__,clus_tol);
   //objects
-  pcl::ExtractIndices<PET> extract;
-  pcl::EuclideanClusterExtraction<PET> ec;
-  pcl::search::KdTree<PET>::Ptr tree (new pcl::search::KdTree<PET>);
+  pcl::ExtractIndices<PX> extract;
+  pcl::EuclideanClusterExtraction<PX> ec;
+  pcl::search::KdTree<PX>::Ptr tree (new pcl::search::KdTree<PX>);
   std::vector<pcl::PointIndices> cluster_indices;
   //cluster extraction
   tree->setInputCloud(scene);
@@ -65,7 +66,7 @@ int Estimator::extract_clusters()
   int j=0;
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it, ++j)
   {
-    PEC::Ptr object (new PEC);
+    PXC::Ptr object (new PXC);
     extract.setInputCloud(scene);
     extract.setIndices(boost::make_shared<PointIndices>(*it));
     extract.setNegative(false);

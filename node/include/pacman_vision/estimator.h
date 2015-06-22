@@ -46,35 +46,34 @@
 #include <pel.h> //also gets typedefs of PEL
 //Storage
 #include "pacman_vision/storage.h"
+#include "pacman_vision/utility.h"
 
-#define D2R 0.017453293  //deg to rad conversion
 
 class VisionNode;
 
 class Estimator
 {
-  typedef pcl::PointXYZ PET; //default point type
-  typedef pcl::PointCloud<PET> PEC; //default point cloud with default point type
 
   friend class VisionNode;
 
   public:
-    Estimator(ros::NodeHandle &n);
+    Estimator(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~Estimator();
   private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
+    boost::shared_ptr<Storage> storage;
     //Service Server
     ros::ServiceServer srv_estimate;
     //estimated transforms
     std::vector<Eigen::Matrix4f> estimations;
     //object clusters found on scene
-    std::vector<PEC> clusters;
+    std::vector<PXC> clusters;
     //naming and id-ing of estimated objects
     std::vector<std::string> names;
     std::vector<std::string> ids;
     //actual scene
-    PEC::Ptr scene;
+    PXC::Ptr scene;
     //path to pel database
     boost::filesystem::path db_path;
 

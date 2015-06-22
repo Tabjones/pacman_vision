@@ -1,5 +1,4 @@
 #ifndef _INCL_TRACKER
-#define _INCL_TRACKER
 
 // ROS headers
 #include <ros/ros.h>
@@ -54,26 +53,22 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
-//Storage
-#include "pacman_vision/storage.h"
 
-#define D2R 0.017453293
+#include "pacman_vision/storage.h"
 
 class VisionNode;
 
 class Tracker
 {
   friend class VisionNode;
-  //preferred point type and cloud for tracker
-  typedef pcl::PointXYZ PTT;
-  typedef pcl::PointCloud<pcl::PointXYZ> PTC;
 
   public:
-    Tracker(ros::NodeHandle &n);
+    Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~Tracker();
   private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
+    boost::shared_ptr<Storage> storage;
     //Service Server
     ros::ServiceServer srv_track_object;
     //service server to comm with dual manip
@@ -94,13 +89,13 @@ class Tracker
     std::vector<std::string> names;
     std::vector<Eigen::Matrix4f> estimations;
     //actual scene
-    PTC::Ptr scene;
+    PXC::Ptr scene;
     //actual model
-    PTC::Ptr model;
+    PXC::Ptr model;
     //loaded model
-    PTC::Ptr orig_model;
+    PXC::Ptr orig_model;
     //model centroid
-    PTT model_centroid;
+    PX model_centroid;
 
     //config//
     bool started, lost_it, manual_disturbance, to_estimator;
@@ -120,18 +115,18 @@ class Tracker
     int disturbance_done;
 
     //icp member
-    pcl::IterativeClosestPoint<PTT, PTT,float> icp;
+    pcl::IterativeClosestPoint<PX, PX,float> icp;
     //correspondences
-    pcl::registration::CorrespondenceEstimation<PTT, PTT, float>::Ptr ce;
+    pcl::registration::CorrespondenceEstimation<PX, PX, float>::Ptr ce;
     pcl::registration::CorrespondenceRejectorDistance::Ptr crd;
     pcl::registration::CorrespondenceRejectorTrimmed::Ptr crt;
     pcl::registration::CorrespondenceRejectorOneToOne::Ptr cro2o;
-    pcl::registration::TransformationEstimationDualQuaternion<PTT,PTT,float>::Ptr teDQ;
-//    pcl::registration::CorrespondenceRejectorSampleConsensus< PTT >::Ptr crsc;
+    pcl::registration::TransformationEstimationDualQuaternion<PX,PX,float>::Ptr teDQ;
+//    pcl::registration::CorrespondenceRejectorSampleConsensus< PX >::Ptr crsc;
 
     //filters
-    pcl::PassThrough<PTT> pass;
-    pcl::VoxelGrid<PTT> vg;
+    pcl::PassThrough<PX> pass;
+    pcl::VoxelGrid<PX> vg;
 
     //rviz marker
     visualization_msgs::Marker marker;
@@ -158,4 +153,5 @@ class Tracker
     //custom spin method
     void spin_once();
 };
+#define _INCL_TRACKER
 #endif

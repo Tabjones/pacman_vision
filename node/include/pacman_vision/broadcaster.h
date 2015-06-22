@@ -31,11 +31,12 @@ class Broadcaster
   friend class VisionNode;
 
   public:
-    Broadcaster(ros::NodeHandle &n);
+    Broadcaster(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~Broadcaster();
   private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
+    boost::shared_ptr<Storage> storage;
 
     //bools to control what to broadcast
     bool tf, rviz_markers;

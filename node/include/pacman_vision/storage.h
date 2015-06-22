@@ -30,41 +30,28 @@
 #include <boost/filesystem.hpp>
 #include <boost/date_time.hpp>
 
-class VisionNode;
-class Estimator;
-class Broadcaster;
-class Tracker;
-class Supervoxels;
+#include "pacman_vision/utility.h"
 
 class Storage
 {
-  friend class VisionNode;
-  friend class Estimator;
-  friend class Broadcaster;
-  friend class Tracker;
-  friend class Supervoxels;
-
   public:
     Storage();
+
+    //Read and write methods
+    void read_scene (PC::Ptr &cloud);
+    void write_scene (PC::Ptr &cloud);
+    void read_scene_processed (PC::Ptr &cloud);
+    void write_scene_processed (PC::Ptr &cloud);
   private:
     //mutexes
-    boost::mutex clouds;
+    boost::mutex scenes;
     boost::mutex objects;
     boost::mutex tracked;
-
-    //////////////// Protected by mutex clouds /////////////
-    //untouched scene from openni
-    pcl::PointCloud<pcl::PointXYZ>::Ptr scene;
-    //scene after passthrough
-    pcl::PointCloud<pcl::PointXYZ>::Ptr scene_passthrough;
-    //scene after downsampling
-    pcl::PointCloud<pcl::PointXYZ>::Ptr scene_downsample;
-    //scene after plane segmentation
-    pcl::PointCloud<pcl::PointXYZ>::Ptr scene_plane;
-    //scene processed after all filters (excluding clustering)
-    pcl::PointCloud<pcl::PointXYZ>::Ptr scene_processed;
-    float leaf_size; //leaf size used (tracker is interested in this to downsample model with same density as scene)
-
+    //////////////// Protected by mutex scenes /////////////
+    //untouched scene from kinect
+    PC::Ptr scene;
+    //scene after processing
+    PC::Ptr scene_processed;
     ///////////// Protected by mutex objects
     //cluster of objects found on scene
     std::vector<pcl::PointCloud<pcl::PointXYZ> > clusters;

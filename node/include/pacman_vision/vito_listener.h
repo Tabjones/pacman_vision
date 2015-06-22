@@ -30,11 +30,12 @@ class Listener
   friend class VisionNode;
 
   public:
-    Listener(ros::NodeHandle &n);
+    Listener(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~Listener();
   private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
+    boost::shared_ptr<Storage> storage;
 
     //eigen transform
     Eigen::Matrix4f left_2, left_3, left_4, left_5, left_6, left_7,

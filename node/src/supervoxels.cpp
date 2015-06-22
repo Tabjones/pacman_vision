@@ -3,11 +3,12 @@
 /////////////////
 // Supervoxels //
 /////////////////
-Supervoxels::Supervoxels(ros::NodeHandle &n)
+Supervoxels::Supervoxels(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
 {
   this->nh = ros::NodeHandle (n, "supervoxels");
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
+  this->storage = stor;
   this->scene.reset(new PC);
   this->clustered_scene.reset(new PC);
   this->pub_clustered_scene = this->nh.advertise<PC> ("clustered_scene", 2);

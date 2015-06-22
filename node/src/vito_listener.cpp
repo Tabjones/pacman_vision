@@ -4,11 +4,12 @@
 //////////////
 // Listener //
 //////////////
-Listener::Listener(ros::NodeHandle &n)
+Listener::Listener(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
 {
   this->nh = ros::NodeHandle (n, "listener");
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
+  this->storage = stor;
 }
 Listener::~Listener()
 {
