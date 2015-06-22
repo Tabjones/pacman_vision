@@ -1,4 +1,5 @@
 #ifndef _INCL_ESTIMATOR
+#define _INCL_ESTIMATOR
 
 // ROS headers
 #include <ros/ros.h>
@@ -43,6 +44,8 @@
 #include <boost/algorithm/string/trim.hpp>
 //PEL
 #include <pel.h> //also gets typedefs of PEL
+//Storage
+#include "pacman_vision/storage.h"
 
 #define D2R 0.017453293  //deg to rad conversion
 
@@ -52,7 +55,7 @@ class Estimator
 {
   typedef pcl::PointXYZ PET; //default point type
   typedef pcl::PointCloud<PET> PEC; //default point cloud with default point type
-  
+
   friend class VisionNode;
 
   public:
@@ -88,11 +91,10 @@ class Estimator
     int extract_clusters();
     //perform estimation
     void estimate();
-    //estimate service callback  
+    //estimate service callback
     bool cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res);
-    
+
     //custom spin method
     void spin_once();
 };
-#define _INCL_ESTIMATOR
 #endif

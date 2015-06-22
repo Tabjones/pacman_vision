@@ -1,4 +1,5 @@
 #ifndef _INCL_BROADCASTER
+#define _INCL_BROADCASTER
 // ROS headers
 #include <ros/ros.h>
 #include <ros/console.h>
@@ -20,6 +21,8 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <Eigen/Dense>
+//Storage
+#include "pacman_vision/storage.h"
 
 class VisionNode;
 
@@ -33,13 +36,13 @@ class Broadcaster
   private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
-    
+
     //bools to control what to broadcast
     bool tf, rviz_markers;
 
     //what to broadcast from estimator and/or tracker
     /////////////////////////////////////////////////
-    //eigen transforms 
+    //eigen transforms
     std::vector<Eigen::Matrix4f> estimated;
     //tf transforms
     std::vector<tf::Transform> transforms;
@@ -48,7 +51,7 @@ class Broadcaster
     //naming and id-ing of estimator objects
     std::vector<std::string> names;
     std::vector<std::string> ids;
-    
+
     //tf broadcaster
     tf::TransformBroadcaster tf_broadcaster;
     //rviz publisher
@@ -59,7 +62,6 @@ class Broadcaster
     //method to broadcast
     void broadcast_once();
     void compute_transforms();
-    
+
 };
-#define _INCL_BROADCASTER
 #endif

@@ -1,4 +1,5 @@
 #ifndef _INCL_TRACKER
+#define _INCL_TRACKER
 
 // ROS headers
 #include <ros/ros.h>
@@ -53,6 +54,8 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
+//Storage
+#include "pacman_vision/storage.h"
 
 #define D2R 0.017453293
 
@@ -81,7 +84,7 @@ class Tracker
     //tracker transforms
     Eigen::Matrix4f transform;
     Eigen::Matrix4f T_rotx, T_rotz, T_roty;
-    
+
     //name and id of object to be tracked
     std::string name;
     std::string id;
@@ -115,7 +118,7 @@ class Tracker
     double fitness;
     double corr_ratio;
     int disturbance_done;
-   
+
     //icp member
     pcl::IterativeClosestPoint<PTT, PTT,float> icp;
     //correspondences
@@ -129,22 +132,22 @@ class Tracker
     //filters
     pcl::PassThrough<PTT> pass;
     pcl::VoxelGrid<PTT> vg;
-    
+
     //rviz marker
     visualization_msgs::Marker marker;
     //tf and marker broadcaster
     tf::TransformBroadcaster tf_broadcaster;
     ros::Publisher rviz_marker_pub;
 
-    //track_object service callback  
+    //track_object service callback
     bool cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res);
-   
-    //track_object service callback  
+
+    //track_object service callback
     bool cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacman_vision_comm::stop_track::Response& res);
-    
+
     //grasp_verification service callback
     bool cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pacman_vision_comm::grasp_verification::Response& res);
-   
+
     //method to publish transform and marker of tracked object
     void broadcast_tracked_object();
 
@@ -155,5 +158,4 @@ class Tracker
     //custom spin method
     void spin_once();
 };
-#define _INCL_TRACKER
 #endif

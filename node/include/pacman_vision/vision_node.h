@@ -51,7 +51,7 @@ class VisionNode
 {
   typedef pcl::PointXYZRGB PT; //default point type
   typedef pcl::PointCloud<PT> PC; //default point cloud with default point type
-  
+
   public:
     VisionNode();
     //custom spin method
@@ -65,7 +65,7 @@ class VisionNode
     bool en_estimator, en_tracker, en_broadcaster, en_listener;
     //bool to initialize rqt_reconfigure with user parameters
     bool rqt_init;
-   
+
     // use kinect2 hd(1920x1080) <2>, qhd(960x540) <1>, or sd(530x270) <0>
     int kinect2_resolution;
 
@@ -78,7 +78,7 @@ class VisionNode
     Eigen::Matrix4f table_trans;
     //crop or not
     bool crop_r_arm, crop_l_arm, crop_r_hand, crop_l_hand;
-    
+
     //Service Server to retrieve processed scene
     ros::ServiceServer srv_get_scene;
     //Message Subscriber to read from openni2
@@ -90,10 +90,10 @@ class VisionNode
     PC::Ptr scene;
 
     //Shared pointers of modules
-    boost::shared_ptr<Estimator> estimator_module; 
-    boost::shared_ptr<Broadcaster> broadcaster_module; 
-    boost::shared_ptr<Listener> listener_module; 
-    boost::shared_ptr<Tracker> tracker_module; 
+    boost::shared_ptr<Estimator> estimator_module;
+    boost::shared_ptr<Broadcaster> broadcaster_module;
+    boost::shared_ptr<Listener> listener_module;
+    boost::shared_ptr<Tracker> tracker_module;
     //slave spinner threads for modules
     //estimator
     boost::thread estimator_driver;
@@ -107,10 +107,10 @@ class VisionNode
     //listenerr
     boost::thread listener_driver;
     void spin_listener();
-    
+
     //Service callback for srv_get_scene
     bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
-    //Message callback, for sub_openni 
+    //Message callback, for sub_openni
     void cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message);
 
     //filter parameters
@@ -122,7 +122,7 @@ class VisionNode
     dynamic_reconfigure::Server<pacman_vision::pacman_visionConfig> dyn_srv;
     //Callback
     void cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t level);
-    
+
     //boost mutexes to protect intra-module copy
     boost::mutex mtx_scene;
     boost::mutex mtx_estimator;
@@ -132,7 +132,7 @@ class VisionNode
 
     //method to enable/disable modules
     void check_modules();
-    
+
 };
 
 #define _INCL_NODE

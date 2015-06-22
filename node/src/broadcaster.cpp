@@ -20,7 +20,7 @@ Broadcaster::~Broadcaster()
 void Broadcaster::compute_transforms()
 {
   int size = estimated.size();
-  transforms.clear(); 
+  transforms.clear();
   markers.markers.clear();
   for (int i=0; i<size; ++i) //if size is zero dont do anything
   {

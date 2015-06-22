@@ -1,4 +1,5 @@
 #ifndef _INCL_SUPERVOXELS
+#define _INCL_SUPERVOXELS
 // ROS headers
 #include <ros/ros.h>
 #include <ros/console.h>
@@ -24,6 +25,8 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <Eigen/Dense>
+//Storage
+#include "pacman_vision/storage.h"
 
 class VisionNode;
 
@@ -70,7 +73,6 @@ class Supervoxels
     //clusterize service callback
     bool cb_clusterize(pacman_vision_comm::clusterize::Request& req, pacman_vision_comm::clusterize::Response& res);
 
-    
+
 };
-#define _INCL_SUPERVOXELS
 #endif
