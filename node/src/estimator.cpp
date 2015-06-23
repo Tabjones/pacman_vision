@@ -18,11 +18,11 @@ Estimator::Estimator(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
     ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
   this->srv_estimate = nh.advertiseService("estimate", &Estimator::cb_estimate, this);
   //init params
+  this->extract_clusters();
   calibration = false;
   iterations = 10;
   neighbors = 10;
   clus_tol = 0.05;
-  busy = false;
   pe.setParam("verbosity",2);
   pe.setParam("progItera",iterations);
   pe.setParam("icpReciprocal",1);
@@ -38,8 +38,12 @@ Estimator::~Estimator()
 
 int Estimator::extract_clusters()
 {
+  this->storage->read_scene_processed(this->scene);
   if (scene->empty())
+  {
+    ROS_WARN("[Estimator][%s] Processed scene is empty, cannot continue...", __func__);
     return -1;
+  }
   ROS_INFO("[Estimator][%s] Extracting object clusters with cluster tolerance of %g",__func__,clus_tol);
   //objects
   pcl::ExtractIndices<PX> extract;
@@ -55,14 +59,12 @@ int Estimator::extract_clusters()
   ec.setMaxClusterSize(scene->points.size());
   ec.extract(cluster_indices);
   int size = (int)cluster_indices.size();
-  clusters.clear();
-  clusters.resize(size);
-  names.clear();
-  names.resize(size);
-  ids.clear();
-  ids.resize(size);
-  estimations.clear();
-  estimations.resize(size);
+  clusters.reset (new std::vector<PXC> );
+  clusters->resize(size);
+  names.reset(new std::vector<std::pair<std::string, std::string> > );
+  names->resize(size);
+  estimations.reset(new std::vector<Eigen::Matrix4f> );
+  estimations->resize(size);
   int j=0;
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it, ++j)
   {
@@ -70,17 +72,7 @@ int Estimator::extract_clusters()
     extract.setInputCloud(scene);
     extract.setIndices(boost::make_shared<PointIndices>(*it));
     extract.setNegative(false);
-  /*
-    for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit)
-    {
-      object->points.push_back(table_top->points[*pit]);
-    }
-    object->width = object->points.size();
-    object->height = 1;
-    object->is_dense = true;
-    pcl::copyPointCloud(*object, clusters[j]);
-    */
-    extract.filter(clusters[j]);
+    extract.filter(clusters->at(j));
   }
   ROS_INFO("[Estimator][%s] Found %d clusters of possible objects.",__func__,size);
   return size;
@@ -88,41 +80,44 @@ int Estimator::extract_clusters()
 
 bool Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res)
 {
-  this->estimate();
-  geometry_msgs::Pose pose;
-  tf::Transform trans;
-  for (int i=0; i<estimations.size(); ++i)
+  if ( this->estimate() )
   {
-    fromEigen(estimations[i], pose, trans);
-    pacman_vision_comm::pe pose_est;
-    pose_est.pose = pose;
-    pose_est.name = names[i];
-    pose_est.id = ids[i];
-    pose_est.parent_frame = "/kinect2_rgb_optical_frame";
-    res.estimated.poses.push_back(pose_est);
+    geometry_msgs::Pose pose;
+    tf::Transform trans;
+    for (int i=0; i<estimations->size(); ++i)
+    {
+      fromEigen(estimations->at(i), pose, trans);
+      pacman_vision_comm::pe pose_est;
+      pose_est.pose = pose;
+      pose_est.name = names->at(i).first;
+      pose_est.id = names->at(i).second;
+      pose_est.parent_frame = "/kinect2_rgb_optical_frame";
+      res.estimated.poses.push_back(pose_est);
+    }
+    ROS_INFO("[Estimator][%s] Pose Estimation complete!", __func__);
+    return true;
   }
-  this->busy = false;
-  this->up_broadcaster = true;
-  this->up_tracker = true;
-  ROS_INFO("[Estimator][%s] Pose Estimation complete!", __func__);
-  return true;
+  else
+  {
+    ROS_WARN("[Estimator][%s] Pose Estimation failed!", __func__);
+    return false;
+  }
 }
 
-void Estimator::estimate()
+bool Estimator::estimate()
 {
-  this->busy = true; //tell other modules that estimator is computing new estimations
   int size = this->extract_clusters();
   if (size < 1)
   {
     ROS_ERROR("[Estimator][%s] No object clusters found in scene, aborting pose estimation...",__func__);
-    this->busy = false;
-    return;
+    return false;
   }
   pe.setDatabase(db_path);
   for (int i=0; i<size; ++i)
   {
+    //TODO change PEL a bit so it uses PointXYZ
     pcl::PointCloud<pcl::PointXYZRGBA> query;
-    pcl::copyPointCloud(clusters[i], query);
+    pcl::copyPointCloud(clusters->at(i), query);
     pe.setQuery("object", query);
     pe.generateLists();
     pe.refineCandidates();
@@ -133,29 +128,34 @@ void Estimator::estimate()
     std::vector<std::string> vst;
     boost::split (vst, name, boost::is_any_of("_"), boost::token_compress_on);
     if (this->calibration)
-      names[i] = "object";
+      names->at(i).first = "object";
     else
-      names[i] = vst.at(0);
-    pe.getEstimationTransformation(estimations[i]);
-    ids[i] = vst.at(0);
+      names->at(i).first = vst.at(0);
+    pe.getEstimationTransformation(estimations->at(i));
+    names->at(i).second = vst.at(0);
     ROS_INFO("[Estimator][%s] Found %s.",__func__,name.c_str());
   }
   //first check if we have more copy of the same object in names
-  for (int i=0; i<names.size(); ++i)
+  for (int i=0; i<names->size(); ++i)
   {
     int count(1);
-    string name_original = names[i];
+    string name_original = names->at(i).first;
     if (i>0)
     {
       for (int j=0; j<i; ++j)
       {
-        if (names[i].compare(names[j]) == 0)
+        if (names->at(i).first.compare(names->at(j).first) == 0)
         { //i-th name is equal to j-th name
-         names[i] = name_original + "_" + std::to_string(++count);
+         names->at(i).first = name_original + "_" + std::to_string(++count);
         }
       }
     }
   }
+  //Save estimations in Storage
+  this->storage->write_obj_clusters(this->clusters);
+  this->storage->write_obj_names(this->names);
+  this->storage->write_obj_transforms(this->estimations);
+  return true;
 }
 
 void Estimator::spin_once()

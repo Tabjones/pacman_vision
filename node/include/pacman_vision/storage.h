@@ -42,6 +42,8 @@ class Storage
     void write_scene (PC::Ptr &cloud);
     void read_scene_processed (PC::Ptr &cloud);
     void write_scene_processed (PC::Ptr &cloud);
+    void read_scene (PXC::Ptr &cloud);
+    void read_scene_processed (PXC::Ptr &cloud);
     //Read and write estimated objects
     void read_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs);
     void write_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs);

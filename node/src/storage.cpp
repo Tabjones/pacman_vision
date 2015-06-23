@@ -18,7 +18,21 @@ void Storage::read_scene(PC::Ptr &cloud)
   return;
 }
 
+void Storage::read_scene(PXC::Ptr &cloud)
+{
+  LOCK guard(scenes);
+  pcl::copyPointCloud(*scene, *cloud);
+  return;
+}
+
 void Storage::read_scene_processed(PC::Ptr &cloud)
+{
+  LOCK guard(scenes);
+  pcl::copyPointCloud(*scene_processed, *cloud);
+  return;
+}
+
+void Storage::read_scene_processed(PXC::Ptr &cloud)
 {
   LOCK guard(scenes);
   pcl::copyPointCloud(*scene_processed, *cloud);
@@ -40,6 +54,7 @@ void Storage::write_scene_processed(PC::Ptr &cloud)
     pcl::copyPointCloud(*cloud, *scene_processed);
   return;
 }
+
 void Storage::read_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
 {
   LOCK guard(objects);

@@ -66,12 +66,11 @@ class Estimator
     //Service Server
     ros::ServiceServer srv_estimate;
     //estimated transforms
-    std::vector<Eigen::Matrix4f> estimations;
+    boost::shared_ptr<std::vector<Eigen::Matrix4f> > estimations;
     //object clusters found on scene
-    std::vector<PXC> clusters;
+    boost::shared_ptr<std::vector<PXC> > clusters;
     //naming and id-ing of estimated objects
-    std::vector<std::string> names;
-    std::vector<std::string> ids;
+    boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > names; //name/id pairs
     //actual scene
     PXC::Ptr scene;
     //path to pel database
@@ -81,15 +80,14 @@ class Estimator
     bool calibration;
     int iterations, neighbors;
     double clus_tol;
-    bool busy, up_broadcaster, up_tracker;
 
     //PEL object
     PoseEstimation pe;
 
-    //method to extract clusters of objects in a table top scenario
+    //method to extract clusters of objects in a table top scenario with table already removed
     int extract_clusters();
     //perform estimation
-    void estimate();
+    bool estimate();
     //estimate service callback
     bool cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res);
 
