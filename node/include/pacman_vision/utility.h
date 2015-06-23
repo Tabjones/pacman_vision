@@ -28,6 +28,6 @@ typedef pcl::PointCloud<PN> PNC; //point normal cloud
 
 #define D2R 0.017453293  //deg to rad conversion
 
-typedef boost::strict_lock<boost::mutex> LOCK;
+typedef boost::lock_guard<boost::mutex> LOCK;
 
 #endif

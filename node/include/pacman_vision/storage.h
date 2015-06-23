@@ -42,6 +42,13 @@ class Storage
     void write_scene (PC::Ptr &cloud);
     void read_scene_processed (PC::Ptr &cloud);
     void write_scene_processed (PC::Ptr &cloud);
+    //Read and write estimated objects
+    void read_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs);
+    void write_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs);
+    void read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &trans);
+    void write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &trans);
+    void read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n);
+    void write_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n);
   private:
     //mutexes
     boost::mutex scenes;
@@ -52,9 +59,9 @@ class Storage
     PC::Ptr scene;
     //scene after processing
     PC::Ptr scene_processed;
-    ///////////// Protected by mutex objects
+    ///////////// Protected by mutex objects //////////////
     //cluster of objects found on scene
-    std::vector<pcl::PointCloud<pcl::PointXYZ> > clusters;
+    std::vector<PXC> clusters;
     //Estimated transform from estimator
     std::vector<Eigen::Matrix4f> estimations;
     //naming and id-ing of estimated objects from estimator

@@ -5,6 +5,7 @@ VisionNode::VisionNode()
   this->nh = ros::NodeHandle("pacman_vision");
   this->scene.reset(new PC);
   this->scene_processed.reset(new PC);
+  this->storage.reset(new Storage);
   //first call of dynamic reconfigure callback will only set gui to loaded parameters
   rqt_init = true;
   //service callback init
@@ -41,23 +42,20 @@ bool VisionNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacma
   if (req.save.compare("false") != 0)
   {
     std::string home = std::getenv("HOME");
-    mtx_scene.lock();
     pcl::io::savePCDFile( (home + "/" + req.save + ".pcd").c_str(), *scene_processed);
-    mtx_scene.unlock();
     ROS_INFO("[PaCMaN Vision][%s] Processed scene saved to %s",__func__, (home + "/" + req.save + ".pcd").c_str() );
   }
-  mtx_scene.lock();
   pcl::toROSMsg(*scene_processed, msg);
-  mtx_scene.unlock();
   res.scene = msg;
   ROS_INFO("[PaCMaN Vision][%s] Sent processed scene to service response.", __func__);
   return true;
 }
 
-void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
+void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
 {
-  mtx_scene.lock();
   pcl::fromROSMsg (*message, *(this->scene));
+  // Save untouched scene into storage
+  this->storage->write_scene(this->scene);
   PC::Ptr tmp (new PC);
   //filters
   //check if we need to filter scene
@@ -77,6 +75,7 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
         cb.setKeepOrganized(false);
       cb.setInputCloud (this->scene);
       Eigen::Vector4f min,max;
+      //hardcoded table dimensions TODO make it dynamic
       min << -0.1, -1.15, -0.1, 1;
       max << 0.825, 0.1, 1.5, 1;
       cb.setMin(min);
@@ -319,12 +318,13 @@ void VisionNode::cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message)
     }
   }
   //republish processed cloud
-  /* |passt   | voxelgrid   |segment | | arms or hands croppings                                                                  |    */
+  /* |passt   | voxelgrid   |segment | | arms or hands croppings                                 */
   if (filter || downsample || plane || ((crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand) && en_listener && listener_module) )
     pub_scene.publish(*scene_processed);
   else
     pub_scene.publish(*scene);
-  mtx_scene.unlock();
+  //save scene processed into storage
+  this->storage->write_scene_processed(this->scene_processed);
 }
 
 void VisionNode::check_modules()
@@ -630,7 +630,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
       topic = nh.resolveName("/kinect2/sd/points");
     else //unhandled default to sd
       topic = nh.resolveName("/kinect2/sd/points");
-    sub_openni = nh.subscribe(topic, 2, &VisionNode::cb_openni, this);
+    sub_kinect = nh.subscribe(topic, 2, &VisionNode::cb_kinect, this);
 
     config.tracker_disturbance = false;
     //listener
@@ -680,7 +680,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     else //unhandled default to sd
       topic = nh.resolveName("/kinect2/sd/points");
     //resubscribe (also kills previous subscription)
-    sub_openni = nh.subscribe(topic, 2, &VisionNode::cb_openni, this);
+    sub_kinect = nh.subscribe(topic, 2, &VisionNode::cb_kinect, this);
   }
   if (this->listener_module && this->en_listener)
   {

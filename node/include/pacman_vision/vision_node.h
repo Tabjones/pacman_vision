@@ -81,8 +81,8 @@ class VisionNode
 
     //Service Server to retrieve processed scene
     ros::ServiceServer srv_get_scene;
-    //Message Subscriber to read from openni2
-    ros::Subscriber sub_openni;
+    //Message Subscriber to read from kinect
+    ros::Subscriber sub_kinect;
     //Message Publisher to republish processed scene
     ros::Publisher pub_scene;
     //pointer to processed and acquired point cloud
@@ -112,8 +112,8 @@ class VisionNode
 
     //Service callback for srv_get_scene
     bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
-    //Message callback, for sub_openni
-    void cb_openni(const sensor_msgs::PointCloud2::ConstPtr& message);
+    //Message callback, for sub_kinect
+    void cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message);
 
     //filter parameters
     bool filter, downsample, keep_organized, plane;
