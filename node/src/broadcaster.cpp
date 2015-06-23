@@ -20,23 +20,25 @@ Broadcaster::~Broadcaster()
 
 void Broadcaster::compute_transforms()
 {
-  int size = estimated.size();
+  this->storage->read_obj_transforms(estimated);
+  this->storage->read_obj_names(names);
+  int size = estimated->size();
   transforms.clear();
   markers.markers.clear();
   for (int i=0; i<size; ++i) //if size is zero dont do anything
   {
     geometry_msgs::Pose pose;
     tf::Transform trans;
-    fromEigen(estimated[i], pose, trans);
+    fromEigen(estimated->at(i), pose, trans);
     transforms.push_back(trans);
     visualization_msgs::Marker marker;
     marker.header.frame_id = "/kinect2_rgb_optical_frame";
     marker.header.stamp = ros::Time();
-    marker.ns=ids[i].c_str();
-    if (ids[i].compare(names[i]) != 0)
+    marker.ns=names->at(i).second.c_str();
+    if (names->at(i).second.compare(names->at(i).first) != 0)
     {
       std::vector<std::string> vst;
-      boost::split(vst, names[i], boost::is_any_of("_"), boost::token_compress_on);
+      boost::split(vst, names->at(i).first, boost::is_any_of("_"), boost::token_compress_on);
       int id = std::stoi(vst.at(vst.size()-1));
       marker.id = id;
     }
@@ -46,7 +48,7 @@ void Broadcaster::compute_transforms()
     marker.scale.y=1;
     marker.scale.z=1;
     marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-    std::string mesh_path ("package://asus_scanner_models/" + ids[i] + "/" + ids[i] + ".stl");
+    std::string mesh_path ("package://asus_scanner_models/" + names->at(i).second + "/" + names->at(i).second + ".stl");
     marker.mesh_resource = mesh_path.c_str();
     marker.action = visualization_msgs::Marker::ADD;
     marker.pose = pose;
@@ -64,7 +66,7 @@ void Broadcaster::broadcast_once()
   if (tf)
   {
     for (int i = 0; i < transforms.size(); ++i)
-      tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), "/kinect2_rgb_optical_frame", names[i].c_str()));
+      tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), "/kinect2_rgb_optical_frame", names->at(i).first.c_str()));
   }
   if (rviz_markers)
   {

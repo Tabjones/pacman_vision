@@ -41,17 +41,16 @@ class Broadcaster
     //bools to control what to broadcast
     bool tf, rviz_markers;
 
-    //what to broadcast from estimator and/or tracker
+    //what to broadcast from estimator results and/or tracker
     /////////////////////////////////////////////////
     //eigen transforms
-    std::vector<Eigen::Matrix4f> estimated;
+    boost::shared_ptr<std::vector<Eigen::Matrix4f> > estimated;
     //tf transforms
     std::vector<tf::Transform> transforms;
     //rviz markers
     visualization_msgs::MarkerArray markers;
     //naming and id-ing of estimator objects
-    std::vector<std::string> names;
-    std::vector<std::string> ids;
+    boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > names; //names/id
 
     //tf broadcaster
     tf::TransformBroadcaster tf_broadcaster;
