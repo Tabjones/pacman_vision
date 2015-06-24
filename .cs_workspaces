@@ -1,0 +1,441 @@
+CS_LAST_WORKSPACE: PacmanVision_Code
+CS_WORKSPACE_BEGIN: PacmanVision_Config
+let SessionLoad = 1
+if &cp | set nocp | endif
+let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
+let v:this_session=expand("<sfile>:p")
+silent only
+exe "cd " . escape(expand("<sfile>:p:h"), ' ')
+if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
+  let s:wipebuf = bufnr('%')
+endif
+set shortmess=aoO
+badd +13 README.md
+badd +1 node/CMakeLists.txt
+badd +24 node/package.xml
+badd +24 node/cfg/pacman_vision.cfg
+badd +3 node/launch/pacman_vision.launch
+silent! argdel *
+edit README.md
+edit node/CMakeLists.txt
+edit node/package.xml
+let t:ctrlspace_label = 'Build/Readme'
+edit README.md
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+wincmd _ | wincmd |
+vsplit
+2wincmd h
+wincmd w
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+exe 'vert 1resize ' . ((&columns * 78 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 78 + 117) / 235)
+exe 'vert 3resize ' . ((&columns * 77 + 117) / 235)
+argglobal
+let s:l = 13 - ((12 * winheight(0) + 26) / 53)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+13
+normal! 057|
+wincmd w
+argglobal
+edit node/CMakeLists.txt
+let s:l = 1 - ((0 * winheight(0) + 26) / 53)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+1
+normal! 04|
+wincmd w
+argglobal
+edit node/package.xml
+let s:l = 16 - ((15 * winheight(0) + 26) / 53)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+16
+normal! 028|
+wincmd w
+2wincmd w
+exe 'vert 1resize ' . ((&columns * 78 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 78 + 117) / 235)
+exe 'vert 3resize ' . ((&columns * 77 + 117) / 235)
+tabedit node/cfg/pacman_vision.cfg
+edit node/cfg/pacman_vision.cfg
+edit node/launch/pacman_vision.launch
+let t:ctrlspace_label = 'Launch/dynamicCFG'
+edit node/cfg/pacman_vision.cfg
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+1wincmd h
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+argglobal
+let s:l = 24 - ((23 * winheight(0) + 26) / 53)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+24
+normal! 0
+wincmd w
+argglobal
+edit node/launch/pacman_vision.launch
+let s:l = 3 - ((2 * winheight(0) + 26) / 53)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+3
+normal! 0
+wincmd w
+2wincmd w
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+tabnext 1
+if exists('s:wipebuf')
+  silent exe 'bwipe ' . s:wipebuf
+endif
+unlet! s:wipebuf
+set winheight=1 winwidth=20 shortmess=filnxtToO
+let s:sx = expand("<sfile>:p:r")."x.vim"
+if file_readable(s:sx)
+  exe "source " . fnameescape(s:sx)
+endif
+let &so = s:so_save | let &siso = s:siso_save
+doautoall SessionLoadPost
+unlet SessionLoad
+" vim: set ft=vim :
+CS_WORKSPACE_END: PacmanVision_Config
+CS_WORKSPACE_BEGIN: PacmanVision_Code
+let SessionLoad = 1
+if &cp | set nocp | endif
+let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
+let v:this_session=expand("<sfile>:p")
+silent only
+exe "cd " . escape(expand("<sfile>:p:h"), ' ')
+if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
+  let s:wipebuf = bufnr('%')
+endif
+set shortmess=aoO
+badd +2 node/include/pacman_vision/vision_node.h
+badd +37 node/src/vision_node.cpp
+badd +1 node/src/broadcaster.cpp
+badd +2 node/include/pacman_vision/broadcaster.h
+badd +3 node/include/pacman_vision/estimator.h
+badd +1 node/src/estimator.cpp
+badd +1 node/include/pacman_vision/tracker.h
+badd +13 node/src/tracker.cpp
+badd +1 node/include/pacman_vision/vito_listener.h
+badd +1 node/src/vito_listener.cpp
+badd +9 node/include/pacman_vision/utility.h
+badd +1 node/src/utility.cpp
+badd +4 node/include/pacman_vision/supervoxels.h
+badd +1 node/src/supervoxels.cpp
+badd +6 node/include/pacman_vision/storage.h
+badd +4 node/src/storage.cpp
+silent! argdel *
+edit node/src/vision_node.cpp
+edit node/include/pacman_vision/vision_node.h
+let t:ctrlspace_label = 'Node'
+edit node/include/pacman_vision/vision_node.h
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+1wincmd h
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+argglobal
+let s:l = 2 - ((1 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+2
+normal! 0
+wincmd w
+argglobal
+edit node/src/vision_node.cpp
+let s:l = 3 - ((2 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+3
+normal! 0
+wincmd w
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+tabedit node/include/pacman_vision/estimator.h
+edit node/include/pacman_vision/estimator.h
+edit node/src/estimator.cpp
+let t:ctrlspace_label = 'Estimator'
+edit node/include/pacman_vision/estimator.h
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+1wincmd h
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+argglobal
+let s:l = 3 - ((2 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+3
+normal! 014|
+wincmd w
+argglobal
+edit node/src/estimator.cpp
+let s:l = 1 - ((0 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+1
+normal! 0
+wincmd w
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+tabedit node/include/pacman_vision/broadcaster.h
+edit node/src/broadcaster.cpp
+edit node/include/pacman_vision/broadcaster.h
+let t:ctrlspace_label = 'Broadcaster'
+edit node/include/pacman_vision/broadcaster.h
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+1wincmd h
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+argglobal
+let s:l = 2 - ((1 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+2
+normal! 0
+wincmd w
+argglobal
+edit node/src/broadcaster.cpp
+let s:l = 1 - ((0 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+1
+normal! 0
+wincmd w
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+tabedit node/include/pacman_vision/tracker.h
+edit node/src/tracker.cpp
+edit node/include/pacman_vision/tracker.h
+let t:ctrlspace_label = 'Tracker'
+edit node/include/pacman_vision/tracker.h
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+1wincmd h
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+argglobal
+let s:l = 1 - ((0 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+1
+normal! 0
+wincmd w
+argglobal
+edit node/src/tracker.cpp
+let s:l = 13 - ((12 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+13
+normal! 0
+wincmd w
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+tabedit node/include/pacman_vision/vito_listener.h
+edit node/include/pacman_vision/vito_listener.h
+edit node/src/vito_listener.cpp
+let t:ctrlspace_label = 'Listener'
+edit node/include/pacman_vision/vito_listener.h
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+1wincmd h
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+argglobal
+let s:l = 1 - ((0 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+1
+normal! 0
+wincmd w
+argglobal
+edit node/src/vito_listener.cpp
+let s:l = 1 - ((0 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+1
+normal! 0
+wincmd w
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+tabedit node/include/pacman_vision/utility.h
+edit node/include/pacman_vision/utility.h
+edit node/src/utility.cpp
+let t:ctrlspace_label = 'Utility'
+edit node/include/pacman_vision/utility.h
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+1wincmd h
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+argglobal
+let s:l = 10 - ((9 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+10
+normal! 021|
+wincmd w
+argglobal
+edit node/src/utility.cpp
+let s:l = 1 - ((0 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+1
+normal! 0
+wincmd w
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+tabedit node/include/pacman_vision/storage.h
+edit node/include/pacman_vision/storage.h
+edit node/src/storage.cpp
+let t:ctrlspace_label = 'Storage'
+edit node/include/pacman_vision/storage.h
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+1wincmd h
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+argglobal
+let s:l = 6 - ((5 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+6
+normal! 03|
+wincmd w
+argglobal
+edit node/src/storage.cpp
+let s:l = 5 - ((4 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+5
+normal! 0
+wincmd w
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+tabedit node/include/pacman_vision/supervoxels.h
+edit node/include/pacman_vision/supervoxels.h
+edit node/src/supervoxels.cpp
+let t:ctrlspace_label = 'SuperVoxels'
+edit node/include/pacman_vision/supervoxels.h
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+1wincmd h
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+argglobal
+let s:l = 4 - ((3 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+4
+normal! 0
+wincmd w
+argglobal
+edit node/src/supervoxels.cpp
+let s:l = 1 - ((0 * winheight(0) + 26) / 52)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+1
+normal! 010|
+wincmd w
+exe 'vert 1resize ' . ((&columns * 117 + 117) / 235)
+exe 'vert 2resize ' . ((&columns * 117 + 117) / 235)
+tabnext 7
+if exists('s:wipebuf')
+  silent exe 'bwipe ' . s:wipebuf
+endif
+unlet! s:wipebuf
+set winheight=1 winwidth=20 shortmess=filnxtToO
+let s:sx = expand("<sfile>:p:r")."x.vim"
+if file_readable(s:sx)
+  exe "source " . fnameescape(s:sx)
+endif
+let &so = s:so_save | let &siso = s:siso_save
+doautoall SessionLoadPost
+unlet SessionLoad
+" vim: set ft=vim :
+CS_WORKSPACE_END: PacmanVision_Code
