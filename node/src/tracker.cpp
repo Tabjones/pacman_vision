@@ -94,12 +94,12 @@ void Tracker::track()
       mc.add(model->points[i]);
     mc.get(model_centroid);
   }
-  pcl::Correspondences corr, filt, interm;
+  pcl::Correspondences corr, final_corr;
   ce->setInputTarget(target);
   ce->determineCorrespondences(corr);
   crd->setMaximumDistance(rej_distance);
-  crt->getRemainingCorrespondences(corr, interm);
-  crd->getRemainingCorrespondences(interm, filt);
+  //crt->getRemainingCorrespondences(corr, interm);
+  crd->getRemainingCorrespondences(corr, final_corr);
   //cro2o->getRemainingCorrespondences(interm, filt);
   //crsc->setInputTarget(target);
   icp.setInputTarget(target);
@@ -212,7 +212,7 @@ void Tracker::track()
     fitness = icp.getFitnessScore();
     this->transform = icp.getFinalTransformation();
   }
-  ROS_INFO("corr: %d, filt: %d, fitness: %g", (int)corr.size(), (int)filt.size(), fitness);
+  ROS_INFO("corr: %d, final_corr: %d, fitness: %g", (int)corr.size(), (int)final_corr.size(), fitness);
   //adjust distance and factor according to fitness
   if (fitness > 0.0008 ) //something is probably wrong
   {
@@ -291,9 +291,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   std::vector<std::string> vst;
   boost::split(vst, name, boost::is_any_of("_"), boost::token_compress_on);
   id = vst.at(0);
-  transform = estimations[index];
-  estimations.erase(estimations.begin() + index);
-  names.erase(names.begin() +index);
+  this->storage->read_obj_transform_by_index(index, transform);
   boost::filesystem::path model_path (models_path + "/" + id + "/" + id + ".pcd");
   if (boost::filesystem::exists(model_path) && boost::filesystem::is_regular_file(model_path))
   {
@@ -312,7 +310,6 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   vg.setInputCloud (orig_model);
   vg.setLeafSize(leaf, leaf, leaf);
   vg.filter (*model);
-  //pcl::io::savePCDFile("/home/tabjones/Desktop/model.pcd", *model); //TODO tmp
   //Get the minimum and maximum values on each of the 3 (x-y-z) dimensions of model
   //also get model centroid
   pcl::CentroidPoint<PX> mc;
@@ -337,24 +334,24 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   icp.setMaximumIterations(50);
   icp.setTransformationEpsilon(1e-9);
   icp.setEuclideanFitnessEpsilon(1e-9);
+  //Correspondence Estimator
   ce->setInputSource(model);
   icp.setCorrespondenceEstimation(ce);
+  //Correspondence Rejector(s)
   crd->setMaximumDistance(rej_distance);
-
   //crsc->setInputSource(model);
   //crsc->setInlierThreshold(0.02);
   //crsc->setMaximumIterations(5);
   //crsc->setRefineModel(true);
-
-  crt->setOverlapRatio(1);
-  crt->setMinCorrespondences(200);
-  //icp.addCorrespondenceRejector(crt);
+  // crt->setOverlapRatio(1);
+  // crt->setMinCorrespondences(200);
+  // icp.addCorrespondenceRejector(crt);
   icp.addCorrespondenceRejector(crd);
   //icp.addCorrespondenceRejector(cro2o);
-
   icp.setInputSource(model);
-  //do one step of icp
+  //Transformation Estimation
   icp.setTransformationEstimation(teDQ);
+
   //init rviz marker
   marker.header.frame_id = "/kinect2_rgb_optical_frame";
   marker.ns = std::string(id + "_tracked").c_str();
@@ -372,7 +369,6 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   marker.color.a = 1.0f;
   marker.lifetime = ros::Duration(1);
   //we are ready to start
-  to_estimator = true;
   started = true;
   return true;
 }

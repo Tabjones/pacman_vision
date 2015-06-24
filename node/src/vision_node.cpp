@@ -724,7 +724,7 @@ void VisionNode::spin_once()
 void VisionNode::shutdown()
 {
   en_tracker = en_broadcaster = en_estimator = en_listener = false;
-  check_modules();
+  this->check_modules();
   boost::this_thread::sleep(boost::posix_time::seconds(1));
 }
 

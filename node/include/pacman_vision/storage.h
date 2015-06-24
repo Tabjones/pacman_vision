@@ -52,7 +52,9 @@ class Storage
     void read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n);
     void write_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n);
     //Search for a specific object name and return its index
-    void search_obj_name (std::string n, int &id);
+    void search_obj_name (std::string n, int &idx);
+    //Read and object transform by its index
+    void read_obj_transform_by_index (int idx, Eigen::Matrix4f &trans);
   private:
     //mutexes
     boost::mutex scenes;

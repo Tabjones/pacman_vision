@@ -172,7 +172,7 @@ void Storage::write_obj_names (boost::shared_ptr<std::vector<std::pair<std::stri
   return;
 }
 
-void Storage::search_obj_name(std::string n, int &id)
+void Storage::search_obj_name(std::string n, int &idx)
 {
   LOCK guard(objects);
   id = -1;
@@ -181,6 +181,20 @@ void Storage::search_obj_name(std::string n, int &id)
     if (names[i].first.compare(n) == 0)
     {
       id = i;
+      return;
+    }
+  }
+  return;
+}
+
+void Storage::read_obj_transform_by_index(int idx, Eigen::Matrix4f &trans)
+{
+  LOCK guard(objects);
+  for (int i=0; i<estimations.size(); ++i)
+  {
+    if ( i == idx)
+    {
+      trans = estimations[i];
       return;
     }
   }

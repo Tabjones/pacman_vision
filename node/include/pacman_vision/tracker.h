@@ -83,11 +83,9 @@ class Tracker
     //name and id of object to be tracked
     std::string name;
     std::string id;
-    //index of tracked object
+    //index of tracked object (referred to storage estimations)
     int index;
-    //pool of estimated objects from estimator
-    std::vector<std::string> names;
-    std::vector<Eigen::Matrix4f> estimations;
+
     //actual scene
     PXC::Ptr scene;
     //actual model
@@ -104,7 +102,7 @@ class Tracker
     float leaf, old_leaf;
     int error_count, disturbance_counter, centroid_counter;
     //tracker transform estimation type
-    // unused
+    // unused so far (TODO possible improvements)
     int type;
     //boundingbox of object computed from model
     float x1,x2,y1,y2,z1,z2;
