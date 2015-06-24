@@ -44,9 +44,10 @@ Tracker::~Tracker()
 //tracker step
 void Tracker::track()
 {
+  this->storage->read_scene_processed(scene);
   if (error_count >= 30)
   {
-    //failed 10 times in a row
+    //failed 30 times in a row
     ROS_ERROR("[Tracker][%s] Object is lost ... stopping tracker...",__func__);
     started = false;
     lost_it = true;
@@ -55,7 +56,7 @@ void Tracker::track()
   Eigen::Matrix4f inv_trans;
   PXC::Ptr target (new PXC);
   PXC::Ptr tmp (new PXC);
-  inv_trans = transform.inverse();
+  inv_trans = transform->inverse();
   //boundingbox
   pcl::transformPointCloud(*scene, *tmp, inv_trans);
   pass.setInputCloud(tmp);
@@ -78,7 +79,7 @@ void Tracker::track()
     ++error_count;
     return;
   }
-  pcl::transformPointCloud(*tmp, *target, transform);
+  pcl::transformPointCloud(*tmp, *target, *transform);
   //align
   //user changed leaf size
   if (old_leaf != leaf)
@@ -109,21 +110,21 @@ void Tracker::track()
     for (int i=0; i<target->points.size(); ++i)
       tc.add(target->points[i]);
     PX target_centroid, mc_transformed;
-    mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(transform));
+    mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(*transform));
     tc.get(target_centroid);
     Eigen::Matrix4f Tcen, guess;
     Tcen << 1, 0, 0,  (target_centroid.x - mc_transformed.x),
             0, 1, 0,  (target_centroid.y - mc_transformed.y),
             0, 0, 1,  (target_centroid.z - mc_transformed.z),
             0, 0, 0,  1;
-    guess = Tcen*transform;
+    guess = Tcen*(*transform);
     ROS_WARN("CENTROID TRANSLATION !!");
     icp.align(*tmp, guess);
     centroid_counter = 0;
     if (icp.getFitnessScore() < 0.001 )
     {
       fitness = icp.getFitnessScore();
-      this->transform = icp.getFinalTransformation();
+      *(this->transform) = icp.getFinalTransformation();
     }
   }
   else if (disturbance_counter >= 10 || manual_disturbance)
@@ -203,16 +204,17 @@ void Tracker::track()
     if (icp.getFitnessScore() < 0.001 )
     {
       fitness = icp.getFitnessScore();
-      this->transform = icp.getFinalTransformation();
+      *(this->transform) = icp.getFinalTransformation();
     }
   }
   else
   {
-    icp.align(*tmp, transform);
+    icp.align(*tmp, *transform);
     fitness = icp.getFitnessScore();
-    this->transform = icp.getFinalTransformation();
+    *(this->transform) = icp.getFinalTransformation();
   }
   ROS_INFO("corr: %d, final_corr: %d, fitness: %g", (int)corr.size(), (int)final_corr.size(), fitness);
+  this->storage->write_tracked_transform(this->transform);
   //adjust distance and factor according to fitness
   if (fitness > 0.0008 ) //something is probably wrong
   {
@@ -243,21 +245,22 @@ void Tracker::track()
 
 void Tracker::find_object_in_scene()
 {
+  this->storage->read_scene_processed(scene);
   if (scene->points.size() > model->points.size()/3)
   {
     pcl::CentroidPoint<PX> tc;
     for (int i=0; i<scene->points.size(); ++i)
       tc.add(scene->points[i]);
     PX target_centroid, mc_transformed;
-    mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(transform));
+    mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(*transform));
     tc.get(target_centroid);
     Eigen::Matrix4f Tcen, guess;
     Tcen << 1, 0, 0,  (target_centroid.x - mc_transformed.x),
             0, 1, 0,  (target_centroid.y - mc_transformed.y),
             0, 0, 1,  (target_centroid.z - mc_transformed.z),
             0, 0, 0,  1;
-    guess = Tcen*transform;
-    transform = guess;
+    guess = Tcen*(*transform);
+    *transform = guess;
     this->started = true;
     this->lost_it = false;
     this->disturbance_counter = 0;
@@ -368,6 +371,10 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   marker.color.b = 0.3f;
   marker.color.a = 1.0f;
   marker.lifetime = ros::Duration(1);
+  //write tracker info to storage
+  this->storage->write_tracked_id(this->id);
+  this->storage->write_tracked_name(this->name);
+  this->storage->write_tracked_transform(this->transform);
   //we are ready to start
   started = true;
   return true;
@@ -377,7 +384,7 @@ void Tracker::broadcast_tracked_object()
 {
   geometry_msgs::Pose pose;
   tf::Transform trans;
-  fromEigen(transform, pose, trans);
+  fromEigen(*transform, pose, trans);
   marker.header.stamp = ros::Time();
   marker.pose = pose;
   rviz_marker_pub.publish(marker);
@@ -469,8 +476,10 @@ bool Tracker::cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacm
 {
   this->started = false;
   this->lost_it = false;
-  this->to_estimator = true;
   index = -1;
+  std::string no_track = "NOT TRACKING";
+  this->storage->write_tracked_id(no_track);
+  this->storage->write_tracked_id(no_track);
   return true;
 }
 
@@ -478,6 +487,7 @@ bool Tracker::cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacm
 bool Tracker::cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pacman_vision_comm::grasp_verification::Response& res)
 {
   //TODO
+  return true;
 }
 
 

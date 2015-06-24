@@ -37,7 +37,7 @@ class Storage
   public:
     Storage();
 
-    //Read and write methods
+    //Read and write scene methods
     void read_scene (PC::Ptr &cloud);
     void write_scene (PC::Ptr &cloud);
     void read_scene_processed (PC::Ptr &cloud);
@@ -54,7 +54,14 @@ class Storage
     //Search for a specific object name and return its index
     void search_obj_name (std::string n, int &idx);
     //Read and object transform by its index
-    void read_obj_transform_by_index (int idx, Eigen::Matrix4f &trans);
+    void read_obj_transform_by_index (int idx, boost::shared_ptr<Eigen::Matrix4f> &trans);
+    //Read and write tracked object transform, id and name
+    void read_tracked_transform(boost::shared_ptr<Eigen::Matrix4f> &transf);
+    void write_tracked_transform(boost::shared_ptr<Eigen::Matrix4f> &transf);
+    void read_tracked_name(std::string &n);
+    void write_tracked_name(std::string &n);
+    void read_tracked_id(std::string &id);
+    void write_tracked_id(std::string &id);
   private:
     //mutexes
     boost::mutex scenes;
@@ -72,13 +79,12 @@ class Storage
     std::vector<Eigen::Matrix4f> estimations;
     //naming and id-ing of estimated objects from estimator
     std::vector<std::pair<std::string, std::string> > names; //name,ID
-    //path to PEL database on disk
-    boost::filesystem::path pel_db_path;
 
     //////////// Protected by mutex tracked
     //tracker actual transform
     Eigen::Matrix4f tracked_transform;
     std::string tracked_id;
+    std::string tracked_name;
 
 };
 #endif

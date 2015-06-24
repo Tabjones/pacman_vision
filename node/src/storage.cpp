@@ -9,6 +9,8 @@ Storage::Storage()
 {
   this->scene.reset(new PC);
   this->scene_processed.reset(new PC);
+  this->tracked_id = "NOT TRACKING";
+  this->tracked_name = "NOT TRACKING";
 }
 
 void Storage::read_scene(PC::Ptr &cloud)
@@ -175,28 +177,76 @@ void Storage::write_obj_names (boost::shared_ptr<std::vector<std::pair<std::stri
 void Storage::search_obj_name(std::string n, int &idx)
 {
   LOCK guard(objects);
-  id = -1;
+  idx = -1;
   for (int i=0; i<names.size(); ++i)
   {
     if (names[i].first.compare(n) == 0)
     {
-      id = i;
+      idx = i;
       return;
     }
   }
   return;
 }
 
-void Storage::read_obj_transform_by_index(int idx, Eigen::Matrix4f &trans)
+void Storage::read_obj_transform_by_index(int idx, boost::shared_ptr<Eigen::Matrix4f> &trans)
 {
+  if (!trans)
+    trans.reset(new Eigen::Matrix4Xf);
   LOCK guard(objects);
   for (int i=0; i<estimations.size(); ++i)
   {
     if ( i == idx)
     {
-      trans = estimations[i];
+      *trans = estimations[i];
       return;
     }
   }
+  return;
+}
+void Storage::read_tracked_transform(boost::shared_ptr<Eigen::Matrix4f> &transf)
+{
+  if (!transf)
+    transf.reset(new Eigen::Matrix4f);
+  LOCK guard(tracked);
+  *transf = tracked_transform;
+  return;
+}
+
+void Storage::write_tracked_transform(boost::shared_ptr<Eigen::Matrix4f> &transf)
+{
+  if (!transf)
+  {
+    ROS_WARN("[Storage][%s] Passed transform is empty, not writing anything...", __func__);
+    return;
+  }
+  LOCK guard(tracked);
+  this->tracked_transform = *transf;
+  return;
+}
+
+void Storage::read_tracked_name(std::string &n)
+{
+  LOCK guard(tracked);
+  n = this->tracked_name;
+  return;
+}
+
+void Storage::write_tracked_name(std::string &n)
+{
+  LOCK guard(tracked);
+  this->tracked_name = n;
+  return;
+}
+void Storage::read_tracked_id(std::string &id)
+{
+  LOCK guard(tracked);
+  id = this->tracked_id;
+  return;
+}
+void Storage::write_tracked_id(std::string &id)
+{
+  LOCK guard(tracked);
+  this->tracked_id = id;
   return;
 }

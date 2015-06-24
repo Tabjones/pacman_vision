@@ -77,7 +77,7 @@ class Tracker
     ros::ServiceServer srv_stop;
 
     //tracker transforms
-    Eigen::Matrix4f transform;
+    boost::shared_ptr<Eigen::Matrix4f> transform;
     Eigen::Matrix4f T_rotx, T_rotz, T_roty;
 
     //name and id of object to be tracked
