@@ -27,7 +27,7 @@ Tracker::Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PX,PX,float>);
  // crsc.reset( new pcl::registration::CorrespondenceRejectorSampleConsensus<PX>);
 
-  started = lost_it = to_estimator = false;
+  started = lost_it = false;
   leaf = 0.02f;
   factor = 1.5f;
   rej_distance = 0.025f;
@@ -281,14 +281,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
     return false;
   }
   std::string models_path (ros::package::getPath("asus_scanner_models"));
-  for (int i=0; i<names.size(); ++i)
-  {
-    if (names[i].compare(req.name) == 0)
-    {
-      index = i;
-      break;
-    }
-  }
+  this->storage->search_obj_name(req.name, index);
   if (index == -1)
   {
     ROS_ERROR("[Tracker][%s] Cannot find %s from the pool of already estimated objects, check spelling or run an estimation first!", __func__, req.name.c_str());

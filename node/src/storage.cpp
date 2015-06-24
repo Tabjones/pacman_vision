@@ -75,7 +75,7 @@ void Storage::read_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
   }
   return;
 }
-void write_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
+void Storage::write_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
 {
   LOCK guard(objects);
   if (objs)
@@ -95,7 +95,7 @@ void write_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
   ROS_WARN("[Storage][%s] Passed clusters are empty! Not writing anything", __func__);
   return;
 }
-void read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &trans)
+void Storage::read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &trans)
 {
   LOCK guard(objects);
   if (!trans)
@@ -114,7 +114,7 @@ void read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &tran
   }
   return;
 }
-void write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &trans)
+void Storage::write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &trans)
 {
   LOCK guard(objects);
   if (trans)
@@ -133,7 +133,7 @@ void write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &tra
   ROS_WARN("[Storage][%s] Passed transformations are empty! Not writing anything", __func__);
   return;
 }
-void read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n)
+void Storage::read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n)
 {
   LOCK guard(objects);
   if (!n)
@@ -152,7 +152,7 @@ void read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::s
   }
   return;
 }
-void write_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n)
+void Storage::write_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n)
 {
   LOCK guard(objects);
   if (n)
@@ -169,5 +169,20 @@ void write_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::
     }
   }
   ROS_WARN("[Storage][%s] Passed names are empty! Not writing anything", __func__);
+  return;
+}
+
+void Storage::search_obj_name(std::string n, int &id)
+{
+  LOCK guard(objects);
+  id = -1;
+  for (int i=0; i<names.size(); ++i)
+  {
+    if (names[i].first.compare(n) == 0)
+    {
+      id = i;
+      return;
+    }
+  }
   return;
 }

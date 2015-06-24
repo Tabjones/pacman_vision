@@ -98,7 +98,7 @@ class Tracker
     PX model_centroid;
 
     //config//
-    bool started, lost_it, manual_disturbance, to_estimator;
+    bool started, lost_it, manual_disturbance ;
     //factor to bounding box dimensions
     float factor;
     float leaf, old_leaf;
