@@ -54,7 +54,7 @@ class Storage
     //Search for a specific object name and return its index
     void search_obj_name (std::string n, int &idx);
     //Read and object transform by its index
-    void read_obj_transform_by_index (int idx, boost::shared_ptr<Eigen::Matrix4f> &trans);
+    bool read_obj_transform_by_index (int idx, boost::shared_ptr<Eigen::Matrix4f> &trans);
     //Read and write tracked object transform, id and name
     void read_tracked_transform(boost::shared_ptr<Eigen::Matrix4f> &transf);
     void write_tracked_transform(boost::shared_ptr<Eigen::Matrix4f> &transf);
@@ -62,29 +62,51 @@ class Storage
     void write_tracked_name(std::string &n);
     void read_tracked_id(std::string &id);
     void write_tracked_id(std::string &id);
+    //Read and write arms/hands transforms
+    void read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
+    void write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
+    void read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
+    void write_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
+    void read_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
+    void write_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
+    void read_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
+    void write_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
   private:
-    //mutexes
-    boost::mutex scenes;
-    boost::mutex objects;
-    boost::mutex tracked;
-    //////////////// Protected by mutex scenes /////////////
     //untouched scene from kinect
     PC::Ptr scene;
+    boost::mutex mtx_scene;
     //scene after processing
     PC::Ptr scene_processed;
-    ///////////// Protected by mutex objects //////////////
+    boost::mutex mtx_scene_processed;
     //cluster of objects found on scene
     std::vector<PXC> clusters;
+    boost::mutex mtx_clusters;
     //Estimated transform from estimator
     std::vector<Eigen::Matrix4f> estimations;
+    boost::mutex mtx_estimations;
     //naming and id-ing of estimated objects from estimator
     std::vector<std::pair<std::string, std::string> > names; //name,ID
-
-    //////////// Protected by mutex tracked
+    boost::mutex mtx_names;
     //tracker actual transform
     Eigen::Matrix4f tracked_transform;
+    boost::mutex mtx_tracked_transform;
+    //Tracked object id (if not tracking it gets set to "NOT TRACKING")
     std::string tracked_id;
+    boost::mutex mtx_tracked_id;
+    //Tracked object name (if not tracking it gets set to "NOT TRACKING")
     std::string tracked_name;
-
+    boost::mutex mtx_tracked_name;
+    //Vito Left arm transforms
+    std::vector<Eigen::Matrix4f> left_arm;
+    boost::mutex mtx_left_arm;
+    //Vito Right arm transforms
+    std::vector<Eigen::Matrix4f> right_arm;
+    boost::mutex mtx_right_arm;
+    //Vito Left hand transform
+    Eigen::Matrix4f left_hand;
+    boost::mutex mtx_left_hand;
+    //Vito Right hand transform
+    Eigen::Matrix4f right_hand;
+    boost::mutex mtx_right_hand;
 };
 #endif

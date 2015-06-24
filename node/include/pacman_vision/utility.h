@@ -8,6 +8,8 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_datatypes.h>
 #include <Eigen/Dense>
+#include <boost/range/algorithm.hpp>
+
 //convert from eigen matrix to tf and pose
 void fromEigen(Eigen::Matrix4f &source, geometry_msgs::Pose &dest, tf::Transform &tf_dest);
 //converto from pose to eigen matrix and tf

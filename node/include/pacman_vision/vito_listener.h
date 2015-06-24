@@ -37,18 +37,19 @@ class Listener
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
     boost::shared_ptr<Storage> storage;
 
+    std::vector<std::string> arm_naming;
     //eigen transform
-    Eigen::Matrix4f left_2, left_3, left_4, left_5, left_6, left_7,
-                    right_2, right_3, right_4, right_5, right_6, right_7,
-                    table, left_hand, right_hand;
+    boost::shared_ptr<std::vector<Eigen::Matrix4f> > left_arm, right_arm ;
+    boost::shared_ptr<Eigen::Matrix4f> left_hand, right_hand, table;
     //tf transforms
-    tf::StampedTransform left_tf_2, left_tf_3, left_tf_4, left_tf_5, left_tf_6, left_tf_7,
-                         right_tf_2, right_tf_3, right_tf_4, right_tf_5, right_tf_6, right_tf_7,
-                         table_tf, left_tf_hand, right_tf_hand;
+    std::vector<tf::StampedTransform> left_arm_tf, right_arm_tf;
+    tf::StampedTransform left_hand_tf, right_hand_tf, table_tf;
 
     //tf listener
     tf::TransformListener tf_listener;
 
+    //behaviour
+    bool listen_left_arm, listen_right_arm, listen_left_hand, listen_right_hand;
     //custom spinner
     void spin_once();
 
