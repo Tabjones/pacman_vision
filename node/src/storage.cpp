@@ -257,6 +257,18 @@ void Storage::write_tracked_id(std::string &id)
 
 void Storage::read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
 {
+  LOCK guard(mtx_left_arm);
+  if (!arm)
+    arm.reset(new std::vector<Eigen::Matrix4f>);
+  else
+    arm->clear();
+  if (this->left_arm.empty())
+  {
+    ROS_WARN("[Storage][%s] Vito Left Arm transforms from Storage are empty! Not reading anything", __func__);
+    return;
+  }
+  boost::copy(left_arm, back_inserter(*arm));
+  return;
 }
     void write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
     void read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
