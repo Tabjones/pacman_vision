@@ -62,7 +62,7 @@ class Storage
     void write_tracked_name(std::string &n);
     void read_tracked_id(std::string &id);
     void write_tracked_id(std::string &id);
-    //Read and write arms/hands transforms
+    //Read and write arms/hands/table transforms
     void read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
     void write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
     void read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
@@ -71,6 +71,8 @@ class Storage
     void write_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
     void read_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
     void write_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
+    void read_table(boost::shared_ptr<Eigen::Matrix4f> &t);
+    void write_table(boost::shared_ptr<Eigen::Matrix4f> &t);
   private:
     //untouched scene from kinect
     PC::Ptr scene;
@@ -108,5 +110,8 @@ class Storage
     //Vito Right hand transform
     Eigen::Matrix4f right_hand;
     boost::mutex mtx_right_hand;
+    //Vito Table transformation
+    Eigen::Matrix4f table;
+    boost::mutex mtx_table;
 };
 #endif

@@ -270,10 +270,106 @@ void Storage::read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &ar
   boost::copy(left_arm, back_inserter(*arm));
   return;
 }
-    void write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
-    void read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
-    void write_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm);
-    void read_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
-    void write_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
-    void read_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
-    void write_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
+void Storage::write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
+{
+  if (arm)
+  {
+    if (!arm->empty())
+    {
+      LOCK guard(mtx_left_arm);
+      left_arm.clear();
+      boost::copy(*arm, back_inserter(left_arm));
+      return;
+    }
+  }
+  ROS_WARN("[Storage][%s] Passed Arm transforms are empty! Not writing anything in Storage", __func__);
+  return;
+}
+void Storage::read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
+{
+  LOCK guard(mtx_right_arm);
+  if (!arm)
+    arm.reset(new std::vector<Eigen::Matrix4f>);
+  else
+    arm->clear();
+  if (this->right_arm.empty())
+  {
+    ROS_WARN("[Storage][%s] Vito Right Arm transforms from Storage are empty! Not reading anything", __func__);
+    return;
+  }
+  boost::copy(right_arm, back_inserter(*arm));
+  return;
+}
+void Storage::write_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
+{
+  if (arm)
+  {
+    if (!arm->empty())
+    {
+      LOCK guard(mtx_right_arm);
+      right_arm.clear();
+      boost::copy(*arm, back_inserter(right_arm));
+      return;
+    }
+  }
+  ROS_WARN("[Storage][%s] Passed Arm transforms are empty! Not writing anything in Storage", __func__);
+  return;
+}
+void Storage::read_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
+{
+  LOCK guard(mtx_left_hand);
+  if (!hand)
+   hand.reset(new Eigen::Matrix4f);
+  *hand = this->left_hand;
+  return;
+}
+
+void Storage::write_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
+{
+  if (hand)
+  {
+    LOCK guard(mtx_left_hand);
+    this->left_hand = *hand;
+    return;
+  }
+  ROS_WARN("[Storage][%s] Passed Hand transformation is empty! Not writing anything in Storage", __func__);
+  return;
+}
+void Storage::read_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
+{
+  LOCK guard(mtx_right_hand);
+  if (!hand)
+    hand.reset(new Eigen::Matrix4f);
+  *hand = this->right_hand;
+  return;
+}
+void Storage::write_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
+{
+  if (hand)
+  {
+    LOCK guard(mtx_right_hand);
+    this->right_hand = *hand;
+    return;
+  }
+  ROS_WARN("[Storage][%s] Passed Hand transformation is empty! Not writing anything in Storage", __func__);
+  return;
+}
+void Storage::read_table(boost::shared_ptr<Eigen::Matrix4f> &t)
+{
+  LOCK guard(mtx_table);
+  if (!t)
+    t.reset(new Eigen::Matrix4f);
+  *t = this->table;
+  return;
+}
+void Storage::write_table(boost::shared_ptr<Eigen::Matrix4f> &t)
+{
+  if (t)
+  {
+    LOCK guard(mtx_table);
+    this->table = *t;
+    return;
+  }
+  ROS_WARN("[Storage][%s] Passed Table transformation is empty! Not writing anything in Storage", __func__);
+  return;
+}

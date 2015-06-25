@@ -51,7 +51,7 @@ void Listener::listen_table()
     ROS_WARN("[Listener][%s] Can not find Table Transformation...", __func__);
     return;
   }
-  //TODO write table
+  this->storage->write_table(this->table);
   return;
 }
 
@@ -76,7 +76,7 @@ void Listener::listen_once()
       ROS_WARN("[Listener][%s] Can not find Vito Left Arm Transforms, disabling lookup...", __func__);
       listen_left_arm = false;
     }
-    //TODO write left arm
+    this->storage->write_left_arm(this->left_arm);
   }
   if (listen_right_arm)
   {
@@ -96,7 +96,7 @@ void Listener::listen_once()
       ROS_WARN("[Listener][%s] Can not find Vito Right Arm Transforms, disabling lookup...", __func__);
       listen_right_arm = false;
     }
-    //TODO write right arm
+    this->storage->write_right_arm(this->right_arm);
   }
   if (listen_left_hand)
   {
@@ -112,7 +112,7 @@ void Listener::listen_once()
      ROS_WARN("[Listener][%s] Can not find Vito Left Hand Transformation, disabling lookup...", __func__);
      listen_left_hand = false;
    }
-   //TODO write left hand
+   this->storage->write_left_hand(this->left_hand);
   }
   if (listen_right_hand)
   {
@@ -128,7 +128,7 @@ void Listener::listen_once()
      ROS_WARN("[Listener][%s] Can not find Vito Right Hand Transformation, disabling lookup...", __func__);
      listen_right_hand = false;
    }
-   //TODO write right hand
+   this->storage->write_right_hand(this->right_hand);
   }
   return;
 }
