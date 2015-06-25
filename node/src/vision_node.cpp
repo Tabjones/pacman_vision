@@ -3,17 +3,15 @@
 VisionNode::VisionNode()
 {
   this->nh = ros::NodeHandle("pacman_vision");
-  this->scene.reset(new PC);
-  this->scene_processed.reset(new PC);
   this->storage.reset(new Storage);
+  this->scene.reset(new PC);
   //first call of dynamic reconfigure callback will only set gui to loaded parameters
   rqt_init = true;
   //service callback init
   srv_get_scene = nh.advertiseService("get_scene_processed", &VisionNode::cb_get_scene, this);
   pub_scene = nh.advertise<PC> ("scene_processed", 3);
-  table_trans.setIdentity();
-
-  crop_r_arm = crop_l_arm = crop_r_hand = crop_l_hand = false;
+  //TODO possibly add them to dynamic reconfigure
+  crop_r_arm = crop_l_arm = crop_r_hand = crop_l_hand = use_table_trans = false;
   //init node params
   nh.param<bool>("enable_estimator", en_estimator, false);
   nh.param<bool>("enable_tracker", en_tracker, false);
@@ -38,21 +36,31 @@ VisionNode::VisionNode()
 
 bool VisionNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res)
 {
-  sensor_msgs::PointCloud2 msg;
-  if (req.save.compare("false") != 0)
+  if (this->scene_processed)
   {
-    std::string home = std::getenv("HOME");
-    pcl::io::savePCDFile( (home + "/" + req.save + ".pcd").c_str(), *scene_processed);
-    ROS_INFO("[PaCMaN Vision][%s] Processed scene saved to %s",__func__, (home + "/" + req.save + ".pcd").c_str() );
+    sensor_msgs::PointCloud2 msg;
+    if (req.save.compare("false") != 0)
+    {
+      std::string home = std::getenv("HOME");
+      pcl::io::savePCDFile( (home + "/" + req.save + ".pcd").c_str(), *scene_processed);
+      ROS_INFO("[PaCMaN Vision][%s] Processed scene saved to %s",__func__, (home + "/" + req.save + ".pcd").c_str() );
+    }
+    pcl::toROSMsg(*scene_processed, msg);
+    res.scene = msg;
+    ROS_INFO("[PaCMaN Vision][%s] Sent processed scene to service response.", __func__);
+    return true;
   }
-  pcl::toROSMsg(*scene_processed, msg);
-  res.scene = msg;
-  ROS_INFO("[PaCMaN Vision][%s] Sent processed scene to service response.", __func__);
-  return true;
+  else
+  {
+    ROS_WARN("[PaCMaN Vision][%s] No Processed Scene to send to Service!", __func__);
+    return false;
+  }
 }
 
 void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
 {
+  if (!this->scene_processed)
+    this->scene_processed.reset( new PC);
   pcl::fromROSMsg (*message, *(this->scene));
   // Save untouched scene into storage
   this->storage->write_scene(this->scene);
@@ -62,12 +70,13 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
   if (filter)
   {
     PassThrough<PT> pass;
-    //check if have a listener and thus a table transform and hands
-    if (en_listener && listener_module)
+    //check if have a table transform
+    if (table_trans && use_table_trans)
     {
+      this->storage->read_table(table_trans);
       pcl::CropBox<PT> cb;
       Eigen::Matrix4f inv_trans;
-      inv_trans = table_trans.inverse();
+      inv_trans = table_trans->inverse();
       //check if we need to maintain scene organized
       if (keep_organized)
         cb.setKeepOrganized(true);
@@ -75,7 +84,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
         cb.setKeepOrganized(false);
       cb.setInputCloud (this->scene);
       Eigen::Vector4f min,max;
-      //hardcoded table dimensions TODO make it dynamic
+      //hardcoded table dimensions TODO make it dynamic reconfigurable if possible
       min << -0.1, -1.15, -0.1, 1;
       max << 0.825, 0.1, 1.5, 1;
       cb.setMin(min);
@@ -155,7 +164,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       pcl::copyPointCloud(*(this->scene_processed), *input);
     else
       pcl::copyPointCloud(*(this->scene), *input);
-    if (crop_l_arm)
+    if (crop_l_arm && left_arm)
     {
       //left2
       cb.setInputCloud(input);
@@ -164,7 +173,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = left_2.inverse();
+      inv_trans = left_arm->at(0).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter (*(tmp));
       //left3
@@ -174,7 +183,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = left_3.inverse();
+      inv_trans = left_arm->at(1).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*input);
       //left4
@@ -184,7 +193,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = left_4.inverse();
+      inv_trans = left_arm->at(2).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*tmp);
       //left5
@@ -194,7 +203,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = left_5.inverse();
+      inv_trans = left_arm->at(3).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*input);
       //left6
@@ -204,7 +213,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = left_6.inverse();
+      inv_trans = left_arm->at(4).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*tmp);
       //left7
@@ -214,13 +223,13 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = left_7.inverse();
+      inv_trans = left_arm->at(5).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*input);
       if (!crop_r_arm && !crop_r_hand && !crop_l_hand)
         pcl::copyPointCloud(*input, *(this->scene_processed));
     }
-    if (crop_r_arm)
+    if (crop_r_arm && right_arm)
     {
       //right2
       cb.setInputCloud(input);
@@ -229,7 +238,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = right_2.inverse();
+      inv_trans = right_arm->at(0).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*tmp);
       //right3
@@ -239,7 +248,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = right_3.inverse();
+      inv_trans = right_arm->at(1).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*input);
       //right4
@@ -249,7 +258,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = right_4.inverse();
+      inv_trans = right_arm->at(2).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*tmp);
       //right5
@@ -259,7 +268,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = right_5.inverse();
+      inv_trans = right_arm->at(3).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*input);
       //right6
@@ -269,7 +278,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = right_6.inverse();
+      inv_trans = right_arm->at(4).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*tmp);
       //right7
@@ -279,13 +288,13 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = right_7.inverse();
+      inv_trans = right_arm->at(5).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*input);
       if (!crop_r_hand && !crop_l_hand)
         pcl::copyPointCloud(*input, *(this->scene_processed));
     }
-    if (crop_r_hand)
+    if (crop_r_hand && right_hand)
     {
       //right hand //TODO hand measures
       cb.setInputCloud(input);
@@ -294,16 +303,16 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = right_hand.inverse();
+      inv_trans = right_hand->inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*tmp);
       if (!crop_l_hand)
         pcl::copyPointCloud(*tmp, *(this->scene_processed));
     }
-    if (crop_l_hand)
+    if (crop_l_hand && left_hand)
     {
       //left_hand
-      if (crop_r_hand)
+      if (crop_r_hand && right_hand)
         cb.setInputCloud(tmp);
       else
         cb.setInputCloud(input);
@@ -312,14 +321,14 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       cb.setMin(min);
       cb.setMax(max);
       cb.setNegative(true); //crop what's inside
-      inv_trans = left_hand.inverse();
+      inv_trans = left_hand->inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*(this->scene_processed));
     }
   }
   //republish processed cloud
   /* |passt   | voxelgrid   |segment | | arms or hands croppings                                 */
-  if (filter || downsample || plane || ((crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand) && en_listener && listener_module) )
+  if (filter || downsample || plane || crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand )
     pub_scene.publish(*scene_processed);
   else
     pub_scene.publish(*scene);
@@ -333,7 +342,7 @@ void VisionNode::check_modules()
   if (this->en_estimator && !this->estimator_module)
   {
     ROS_WARN("[PaCMaN Vision] Started Estimator module");
-    this->estimator_module.reset( new Estimator(this->nh) );
+    this->estimator_module.reset( new Estimator(this->nh, this->storage) );
     //spawn a thread to handle the module spinning
     estimator_driver = boost::thread(&VisionNode::spin_estimator, this);
   }
@@ -350,7 +359,7 @@ void VisionNode::check_modules()
   if (this->en_broadcaster && !this->broadcaster_module)
   {
     ROS_WARN("[PaCMaN Vision] Started Broadcaster module");
-    this->broadcaster_module.reset( new Broadcaster(this->nh) );
+    this->broadcaster_module.reset( new Broadcaster(this->nh, this->storage) );
     //spawn a thread to handle the module spinning
     broadcaster_driver = boost::thread(&VisionNode::spin_broadcaster, this);
   }
@@ -367,7 +376,7 @@ void VisionNode::check_modules()
   if (this->en_tracker && !this->tracker_module)
   {
     ROS_WARN("[PaCMaN Vision] Started Tracker module");
-    this->tracker_module.reset( new Tracker(this->nh) );
+    this->tracker_module.reset( new Tracker(this->nh, this->storage) );
     //spawn a thread to handle the module spinning
     tracker_driver = boost::thread(&VisionNode::spin_tracker, this);
   }
@@ -384,7 +393,7 @@ void VisionNode::check_modules()
   if (this->en_listener && !this->listener_module)
   {
     ROS_WARN("[PaCMaN Vision] Started Vito Listener module");
-    this->listener_module.reset( new Listener(this->nh) );
+    this->listener_module.reset( new Listener(this->nh, this->storage) );
     //spawn a thread to handle the module spinning
     listener_driver = boost::thread(&VisionNode::spin_listener, this);
   }
@@ -401,27 +410,32 @@ void VisionNode::check_modules()
 ////////////////////////////////
 void VisionNode::spin_estimator()
 {
+  ROS_INFO("[Estimator] Estimator module will try to perform a Pose Estimation on each object found in the Processed Scene.");
+  ROS_INFO("[Estimator] It isolates possible objects by means of Euclidean Clustering, thus a plane segmentation should be performed on the scene.");
+  ROS_INFO("[Estimator] Estimator needs an object database, previously created, which must be put into database folder. More info is available on the Module Readme.");
+  int count_to_spam (0);
   //spin until we disable it or it dies somehow
   while (this->en_estimator && this->estimator_module)
   {
-    //push down filtered cloud to estimator
-    //lock variables so no-one else can touch what is copied
-    mtx_scene.lock();
-    mtx_estimator.lock();
-    if(this->filter || this->downsample || this->plane)
+    if(count_to_spam > 50)
     {
-      copyPointCloud(*(this->scene_processed), *(this->estimator_module->scene));
+      count_to_spam = 0;
+      if(!plane)
+      {
+        ROS_WARN("[Estimator] Estimator module will not function properly without plane segmentation.");
+        ROS_WARN("[Estimator] Please enable at least plane segmentation for scene processing.");
+      }
+      if(downsample && (leaf < 0.001 || leaf > 0.01))
+      {
+        ROS_WARN("[Estimator] Estimator module uses a prebuilt database of poses with its own downsampling leaf size.");
+        ROS_WARN("[Estimator] Database downsampling leaf size should be 0.005, thus it is not recommended to use a scene leaf size too far from that value.");
+        ROS_WARN("[Estimator] Now, scene leaf size is %g", leaf);
+      }
     }
-    else
-    {
-      ROS_WARN("[PaCMaN Vision] Estimator module will not function properly without scene filtering, enable at least plane segmentation");
-      copyPointCloud(*scene, *(this->estimator_module->scene));
-    }
-    //release lock
-    mtx_estimator.unlock();
-    mtx_scene.unlock();
+    //This module actually does nothing directly, it just waits for user to call the service
     this->estimator_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //estimator could try to go at 20Hz (no need to process those services faster)
+    boost::this_thread::sleep(boost::posix_time::milliseconds(100)); //estimator could try to go at 10Hz (no need to process those services faster)
+    ++count_to_spam;
   }
   //estimator got stopped
   return;
@@ -432,27 +446,7 @@ void VisionNode::spin_broadcaster()
   //spin until we disable it or it dies somehow
   while (this->en_broadcaster && this->broadcaster_module)
   {
-    //check if we have an estimator and or a tracker
-    if (this->en_estimator && this->estimator_module)
-    { //we have an estimator module running
-      //check if it is not busy computing and it has some new estimations to upload
-      if (!this->estimator_module->busy && this->estimator_module->up_broadcaster)
-      {
-        mtx_estimator.lock();
-        mtx_broadcaster.lock();
-        broadcaster_module->estimated.clear();
-        broadcaster_module->names.clear();
-        broadcaster_module->ids.clear();
-        boost::copy(estimator_module->estimations, back_inserter(broadcaster_module->estimated));
-        boost::copy(estimator_module->names, back_inserter(broadcaster_module->names));
-        boost::copy(estimator_module->ids, back_inserter(broadcaster_module->ids));
-        mtx_broadcaster.unlock();
-        estimator_module->up_broadcaster = false;
-        mtx_estimator.unlock();
-        //process new data
-        broadcaster_module->compute_transforms();
-      }
-    }
+    broadcaster_module->compute_transforms();
     //do the broadcasting
     this->broadcaster_module->broadcast_once();
     //spin
@@ -465,130 +459,74 @@ void VisionNode::spin_broadcaster()
 
 void VisionNode::spin_tracker()
 {
+  int count_to_spam (0);
+  ROS_INFO("[Tracker] Tracker module will try to track an already Pose Estimated object (from Estimator) as it moves around.");
+  ROS_INFO("[Tracker] An object model (its complete mesh and point cloud) must be present inside asus_scanner_models ROS package.");
   //spin until we disable it or it dies somehow
   while (this->en_tracker && this->tracker_module)
   {
-    //push down filtered cloud to tracker
-    //lock variables so no-one else can touch what is copied
-    mtx_scene.lock();
-    mtx_tracker.lock();
-    if (filter || downsample || plane)
-    {
-      copyPointCloud(*(this->scene_processed), *(this->tracker_module->scene));
+    if (downsample)
       this->tracker_module->leaf = this->leaf;
-    }
     else
     {
-      ROS_WARN("[PaCMaN Vision] Tracker module will not function properly without scene filtering, enable at least downsampling");
-      copyPointCloud(*(this->scene), *(this->tracker_module->scene));
-      this->tracker_module->leaf = this->leaf;
-    }
-    //release lock
-    mtx_tracker.unlock();
-    mtx_scene.unlock();
-    //check if we have an estimator running
-    if (this->en_estimator && this->estimator_module)
-    { //we have an estimator module running
-      //check if it is not busy computing and it has some new estimations to upload
-      if (!this->estimator_module->busy && this->estimator_module->up_tracker)
+      if (count_to_spam > 50)
       {
-        if (!tracker_module->started && !tracker_module->lost_it)
-        { //we copy only if tracker is not started already, otherwise we dont care
-          mtx_estimator.lock();
-          mtx_tracker.lock();
-          tracker_module->estimations.clear();
-          tracker_module->names.clear();
-          boost::copy(estimator_module->estimations, back_inserter(tracker_module->estimations));
-          boost::copy(estimator_module->names, back_inserter(tracker_module->names));
-          mtx_tracker.unlock();
-          mtx_estimator.unlock();
-        }
-        estimator_module->up_tracker=false;
+        ROS_WARN("[Tracker] Tracker module will not function properly without scene downsampling, please enable it.");
+        count_to_spam = 0;
       }
     }
-    //spin
+    //spin it
     if (this->tracker_module->started)
     {
-      if (tracker_module->to_estimator && this->en_estimator && this->estimator_module)
+      if (this->en_estimator && this->estimator_module)
       {
-        if (!this->estimator_module->busy)
-        {
-          mtx_estimator.lock();
-        //TODO FIx this wont work if user disable estimator during tracking and then enables it again (it will segfault!)
-          this->estimator_module->estimations.erase(estimator_module->estimations.begin() + tracker_module->index);
-          this->estimator_module->names.erase(estimator_module->names.begin() + tracker_module->index);
-          this->estimator_module->ids.erase(estimator_module->ids.begin() + tracker_module->index);
-          this->estimator_module->up_broadcaster = true;
-          mtx_estimator.unlock();
-        }
-        //if estimator was busy it is computing again so no point in forwarding tracker transform
-        tracker_module->to_estimator = false;
+        //Better to temporary disable Estimator while tracker is tracking
+        //so it doesnt mess up with estimated objects is storage
+        this->estimator_module->disabled = true;
       }
-    //  boost::timer t;
       this->tracker_module->track();
-    //  cout<<"Tracker Step: "<<t.elapsed()<<std::endl;
       this->tracker_module->broadcast_tracked_object();
     }
     else if (this->tracker_module->lost_it && !this->tracker_module->started)
     {
-      //The object is lost...  what now!? Lets ask Vito where the hands are
-      tracker_module->find_object_in_scene();
+      //The object is lost...  what now!? Lets try to find it
+      this->tracker_module->find_object_in_scene();
     }
-    else if (!tracker_module->started && !tracker_module->lost_it && tracker_module->to_estimator)
+    else
     {
+      //Tracker is not started
       if (this->en_estimator && this->estimator_module)
       {
-        if (!estimator_module->busy)
-        {
-          mtx_estimator.lock();
-          this->estimator_module->estimations.push_back(tracker_module->transform);
-          this->estimator_module->names.push_back(tracker_module->name);
-          this->estimator_module->ids.push_back(tracker_module->id);
-          this->estimator_module->up_broadcaster = true;
-          this->estimator_module->up_tracker = true;
-          mtx_estimator.unlock();
-        }
-        tracker_module->to_estimator = false;
+        //Re-enable Estimator if it was disabled, tracker is not tracking anymore
+        this->estimator_module->disabled = false;
       }
     }
+    ++count_to_spam;
     this->tracker_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go at 100Hz
-  }//end while
-  if (this->estimator_module && this->en_estimator)
-    this->estimator_module->up_tracker = true;
+    boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go as fast as possible
+  }
   //tracker got stopped
   return;
 }
 
 void VisionNode::spin_listener()
 {
-  //fetch table transform
+  int count_to_table (0);
+  ROS_INFO("[Listener] Listener module will try to read Vito Robot arms and hands transformations to perform hands/arms cropping on the processed scene.");
+  //instant fetch of table transform, it will refetch it later
   listener_module->listen_table();
   this->listener_module->spin_once();
-  mtx_scene.lock();
-  this->table_trans = listener_module->table;
-  mtx_scene.unlock();
   //spin until we disable it or it dies somehow
   while (this->en_listener && this->listener_module)
   {
+    if (count_to_table > 1000)
+    {
+      //Re-read table, as a precaution, but it should not have been changed
+      listener_module->listen_table();
+      count_to_table = 0;
+    }
     //do the listening
     this->listener_module->listen_once();
-    mtx_scene.lock();
-    this->left_2 = listener_module->left_2;
-    this->left_3 = listener_module->left_3;
-    this->left_4 = listener_module->left_4;
-    this->left_5 = listener_module->left_5;
-    this->left_6 = listener_module->left_6;
-    this->left_7 = listener_module->left_7;
-    this->right_2 = listener_module->right_2;
-    this->right_3 = listener_module->right_3;
-    this->right_4 = listener_module->right_4;
-    this->right_5 = listener_module->right_5;
-    this->right_6 = listener_module->right_6;
-    this->right_7 = listener_module->right_7;
-    this->right_hand = listener_module->right_hand;
-    this->left_hand = listener_module->left_hand;
-    mtx_scene.unlock();
     //spin
     this->listener_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //listener could try to go at 20Hz

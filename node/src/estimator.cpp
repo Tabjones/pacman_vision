@@ -20,6 +20,7 @@ Estimator::Estimator(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   //init params
   this->extract_clusters();
   calibration = false;
+  disabled = false;
   iterations = 10;
   neighbors = 10;
   clus_tol = 0.05;
@@ -80,6 +81,12 @@ int Estimator::extract_clusters()
 
 bool Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res)
 {
+  if (this->disabled)
+  {
+    //Module was temporary disabled, notify the sad user, then exit
+    ROS_ERROR("[Estimator][%s] Estimator module is temporary disabled, exiting...", __func__);
+    return false;
+  }
   if ( this->estimate() )
   {
     geometry_msgs::Pose pose;

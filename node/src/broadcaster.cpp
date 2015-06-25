@@ -20,8 +20,11 @@ Broadcaster::~Broadcaster()
 
 void Broadcaster::compute_transforms()
 {
-  this->storage->read_obj_transforms(estimated);
-  this->storage->read_obj_names(names);
+  if (!this->storage->read_obj_transforms(estimated) || !this->storage->read_obj_names(names) )
+  {
+    ROS_WARN("[Broadcaster][%s] Can not read estimated objects to broadcast. Did you run an estimation with Estimator module ?", __func__);
+    return;
+  }
   int size = estimated->size();
   transforms.clear();
   markers.markers.clear();

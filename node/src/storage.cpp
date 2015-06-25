@@ -11,55 +11,55 @@ Storage::Storage()
   this->tracked_name = "NOT TRACKING";
 }
 
-void Storage::read_scene(PC::Ptr &cloud)
+bool Storage::read_scene(PC::Ptr &cloud)
 {
   if (scene)
   {
     LOCK guard(mtx_scene);
     pcl::copyPointCloud(*scene, *cloud);
-    return;
+    return true;
   }
   ROS_WARN("[Storage][%s] Scene from Storage is empty! Not reading anything", __func__);
-  return;
+  return false;
 }
 
-void Storage::read_scene(PXC::Ptr &cloud)
+bool Storage::read_scene(PXC::Ptr &cloud)
 {
   if (scene)
   {
     LOCK guard(mtx_scene);
     pcl::copyPointCloud(*scene, *cloud);
-    return;
+    return true;
   }
   ROS_WARN("[Storage][%s] Scene from Storage is empty! Not reading anything", __func__);
-  return;
+  return false;
 }
 
-void Storage::read_scene_processed(PC::Ptr &cloud)
+bool Storage::read_scene_processed(PC::Ptr &cloud)
 {
   if (scene_processed)
   {
     LOCK guard(mtx_scene_processed);
     pcl::copyPointCloud(*scene_processed, *cloud);
-    return;
+    return true;
   }
   ROS_WARN("[Storage][%s] Scene Processed from Storage is empty! Not reading anything", __func__);
-  return;
+  return false;
 }
 
-void Storage::read_scene_processed(PXC::Ptr &cloud)
+bool Storage::read_scene_processed(PXC::Ptr &cloud)
 {
   if(scene_processed)
   {
     LOCK guard(mtx_scene_processed);
     pcl::copyPointCloud(*scene_processed, *cloud);
-    return;
+    return true;
   }
   ROS_WARN("[Storage][%s] Scene Processed from Storage is empty! Not reading anything", __func__);
-  return;
+  return false;
 }
 
-void Storage::write_scene(PC::Ptr &cloud)
+bool Storage::write_scene(PC::Ptr &cloud)
 {
   if (cloud)
   {
@@ -67,13 +67,13 @@ void Storage::write_scene(PC::Ptr &cloud)
     if (!scene)
       scene.reset(new PC);
     pcl::copyPointCloud(*cloud, *scene);
-    return;
+    return true;
   }
   ROS_WARN("[Storage][%s] Passed cloud is empty! Not writing anything in Storage", __func__);
-  return;
+  return false;
 }
 
-void Storage::write_scene_processed(PC::Ptr &cloud)
+bool Storage::write_scene_processed(PC::Ptr &cloud)
 {
   if (cloud)
   {
@@ -81,13 +81,13 @@ void Storage::write_scene_processed(PC::Ptr &cloud)
     if (!scene_processed)
       scene_processed.reset(new PC);
     pcl::copyPointCloud(*cloud, *scene_processed);
-    return;
+    return true;
   }
   ROS_WARN("[Storage][%s] Passed cloud is empty! Not writing anything in Storage", __func__);
-  return;
+  return false;
 }
 
-void Storage::read_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
+bool Storage::read_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
 {
   LOCK guard(mtx_clusters);
   if (!objs)
@@ -97,12 +97,12 @@ void Storage::read_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
   if (this->clusters.empty())
   {
     ROS_WARN("[Storage][%s] Clusters from Storage are empty! Not reading anything", __func__);
-    return;
+    return false;
   }
   boost::copy(clusters, back_inserter(*objs));
-  return;
+  return true;
 }
-void Storage::write_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
+bool Storage::write_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
 {
   if (objs)
   {
@@ -111,13 +111,13 @@ void Storage::write_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs)
       LOCK guard(mtx_clusters);
       this->clusters.clear();
       boost::copy(*objs, back_inserter(clusters));
-      return;
+      return true;
     }
   }
   ROS_WARN("[Storage][%s] Passed clusters are empty! Not writing anything", __func__);
-  return;
+  return false;
 }
-void Storage::read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &trans)
+bool Storage::read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &trans)
 {
   LOCK guard(mtx_estimations);
   if (!trans)
@@ -127,12 +127,12 @@ void Storage::read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f
   if (this->estimations.empty())
   {
     ROS_WARN("[Storage][%s] Estimations from Storage are empty! Not reading anything", __func__);
-    return;
+    return false;
   }
   boost::copy(estimations, back_inserter(*trans));
-  return;
+  return true;
 }
-void Storage::write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &trans)
+bool Storage::write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f> > &trans)
 {
   if (trans)
   {
@@ -141,13 +141,13 @@ void Storage::write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4
       LOCK guard(mtx_estimations);
       this->estimations.clear();
       boost::copy(*trans, back_inserter(estimations));
-      return;
+      return true;
     }
   }
   ROS_WARN("[Storage][%s] Passed transformations are empty! Not writing anything", __func__);
-  return;
+  return false;
 }
-void Storage::read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n)
+bool Storage::read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n)
 {
   LOCK guard(mtx_names);
   if (!n)
@@ -157,12 +157,12 @@ void Storage::read_obj_names (boost::shared_ptr<std::vector<std::pair<std::strin
   if (this->names.empty())
   {
     ROS_WARN("[Storage][%s] Names of objects from Storage are empty! Not reading anything", __func__);
-    return;
+    return false;
   }
   boost::copy(names, back_inserter(*n));
-  return;
+  return true;
 }
-void Storage::write_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n)
+bool Storage::write_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > &n)
 {
   if (n)
   {
@@ -171,14 +171,14 @@ void Storage::write_obj_names (boost::shared_ptr<std::vector<std::pair<std::stri
       LOCK guard(mtx_names);
       this->names.clear();
       boost::copy(*n, back_inserter(names));
-      return;
+      return true;
     }
   }
   ROS_WARN("[Storage][%s] Passed names are empty! Not writing anything", __func__);
-  return;
+  return false;
 }
 
-void Storage::search_obj_name(std::string n, int &idx)
+bool Storage::search_obj_name(std::string n, int &idx)
 {
   LOCK guard(mtx_names);
   idx = -1;
@@ -187,10 +187,10 @@ void Storage::search_obj_name(std::string n, int &idx)
     if (names[i].first.compare(n) == 0)
     {
       idx = i;
-      return;
+      return true;
     }
   }
-  return;
+  return false;
 }
 
 bool Storage::read_obj_transform_by_index(int idx, boost::shared_ptr<Eigen::Matrix4f> &trans)
@@ -208,54 +208,24 @@ bool Storage::read_obj_transform_by_index(int idx, boost::shared_ptr<Eigen::Matr
   }
   return false;
 }
-void Storage::read_tracked_transform(boost::shared_ptr<Eigen::Matrix4f> &transf)
+bool Storage::write_obj_transform_by_index(int idx, boost::shared_ptr<Eigen::Matrix4f> &trans)
 {
-  if (!transf)
-    transf.reset(new Eigen::Matrix4f);
-  LOCK guard(mtx_tracked_transform);
-  *transf = tracked_transform;
-  return;
-}
-
-void Storage::write_tracked_transform(boost::shared_ptr<Eigen::Matrix4f> &transf)
-{
-  if (!transf)
+  if (!trans)
   {
-    ROS_WARN("[Storage][%s] Passed transform is empty, not writing anything...", __func__);
-    return;
+    ROS_WARN("[Storage][%s] Passed transform is empty! Not writing anything", __func__);
+    return false;
   }
-  LOCK guard(mtx_tracked_transform);
-  this->tracked_transform = *transf;
-  return;
+  LOCK guard(mtx_estimations);
+  if (idx >=0 && idx < (estimations.size()-1))
+  {
+    estimations.at(idx) = *trans;
+    return true;
+  }
+  ROS_WARN("[Storage][%s] Passed index is invalid, or estimations are not available", __func__);
+  return false;
 }
 
-void Storage::read_tracked_name(std::string &n)
-{
-  LOCK guard(mtx_tracked_name);
-  n = this->tracked_name;
-  return;
-}
-
-void Storage::write_tracked_name(std::string &n)
-{
-  LOCK guard(mtx_tracked_name);
-  this->tracked_name = n;
-  return;
-}
-void Storage::read_tracked_id(std::string &id)
-{
-  LOCK guard(mtx_tracked_id);
-  id = this->tracked_id;
-  return;
-}
-void Storage::write_tracked_id(std::string &id)
-{
-  LOCK guard(mtx_tracked_id);
-  this->tracked_id = id;
-  return;
-}
-
-void Storage::read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
+bool Storage::read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
 {
   LOCK guard(mtx_left_arm);
   if (!arm)
@@ -265,12 +235,12 @@ void Storage::read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &ar
   if (this->left_arm.empty())
   {
     ROS_WARN("[Storage][%s] Vito Left Arm transforms from Storage are empty! Not reading anything", __func__);
-    return;
+    return false;
   }
   boost::copy(left_arm, back_inserter(*arm));
-  return;
+  return true;
 }
-void Storage::write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
+bool Storage::write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
 {
   if (arm)
   {
@@ -279,13 +249,13 @@ void Storage::write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &a
       LOCK guard(mtx_left_arm);
       left_arm.clear();
       boost::copy(*arm, back_inserter(left_arm));
-      return;
+      return true;
     }
   }
   ROS_WARN("[Storage][%s] Passed Arm transforms are empty! Not writing anything in Storage", __func__);
-  return;
+  return false;
 }
-void Storage::read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
+bool Storage::read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
 {
   LOCK guard(mtx_right_arm);
   if (!arm)
@@ -295,12 +265,12 @@ void Storage::read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &a
   if (this->right_arm.empty())
   {
     ROS_WARN("[Storage][%s] Vito Right Arm transforms from Storage are empty! Not reading anything", __func__);
-    return;
+    return false;
   }
   boost::copy(right_arm, back_inserter(*arm));
-  return;
+  return true;
 }
-void Storage::write_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
+bool Storage::write_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &arm)
 {
   if (arm)
   {
@@ -309,11 +279,11 @@ void Storage::write_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f> > &
       LOCK guard(mtx_right_arm);
       right_arm.clear();
       boost::copy(*arm, back_inserter(right_arm));
-      return;
+      return true;
     }
   }
   ROS_WARN("[Storage][%s] Passed Arm transforms are empty! Not writing anything in Storage", __func__);
-  return;
+  return false;
 }
 void Storage::read_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
 {
@@ -324,16 +294,16 @@ void Storage::read_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
   return;
 }
 
-void Storage::write_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
+bool Storage::write_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
 {
   if (hand)
   {
     LOCK guard(mtx_left_hand);
     this->left_hand = *hand;
-    return;
+    return true;
   }
   ROS_WARN("[Storage][%s] Passed Hand transformation is empty! Not writing anything in Storage", __func__);
-  return;
+  return false;
 }
 void Storage::read_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
 {
@@ -343,16 +313,16 @@ void Storage::read_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
   *hand = this->right_hand;
   return;
 }
-void Storage::write_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
+bool Storage::write_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
 {
   if (hand)
   {
     LOCK guard(mtx_right_hand);
     this->right_hand = *hand;
-    return;
+    return true;
   }
   ROS_WARN("[Storage][%s] Passed Hand transformation is empty! Not writing anything in Storage", __func__);
-  return;
+  return false;
 }
 void Storage::read_table(boost::shared_ptr<Eigen::Matrix4f> &t)
 {
@@ -362,14 +332,14 @@ void Storage::read_table(boost::shared_ptr<Eigen::Matrix4f> &t)
   *t = this->table;
   return;
 }
-void Storage::write_table(boost::shared_ptr<Eigen::Matrix4f> &t)
+bool Storage::write_table(boost::shared_ptr<Eigen::Matrix4f> &t)
 {
   if (t)
   {
     LOCK guard(mtx_table);
     this->table = *t;
-    return;
+    return true;
   }
   ROS_WARN("[Storage][%s] Passed Table transformation is empty! Not writing anything in Storage", __func__);
-  return;
+  return false;
 }

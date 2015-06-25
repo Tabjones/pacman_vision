@@ -71,13 +71,14 @@ class VisionNode
 
     //transforms to crop out vito arms and hands
     //only use them if vito listener is active
-    Eigen::Matrix4f left_2,left_3, left_4, left_5, left_6, left_7,
-                    right_2, right_3, right_4, right_5, right_6, right_7,
-                    left_hand, right_hand;
+    boost::shared_ptr<std::vector<Eigen::Matrix4f> > left_arm, right_arm;
+    boost::shared_ptr<Eigen::Matrix4f> left_hand, right_hand;
     //table transform from vito listener
-    Eigen::Matrix4f table_trans;
+    boost::shared_ptr<Eigen::Matrix4f> table_trans;
     //crop or not
     bool crop_r_arm, crop_l_arm, crop_r_hand, crop_l_hand;
+    //use table transformation to apply passthrough or not
+    bool use_table_trans;
 
     //Service Server to retrieve processed scene
     ros::ServiceServer srv_get_scene;

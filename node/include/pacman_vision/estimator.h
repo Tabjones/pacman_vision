@@ -77,7 +77,7 @@ class Estimator
     boost::filesystem::path db_path;
 
     //class behaviour
-    bool calibration;
+    bool calibration, disabled;
     int iterations, neighbors;
     double clus_tol;
 

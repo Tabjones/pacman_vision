@@ -34,7 +34,6 @@ Tracker::Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   index = -1;
   manual_disturbance = false;
   disturbance_counter= centroid_counter = error_count = disturbance_done = 0;
-  ROS_INFO("[Tracker] Tracker module tries to follow an already estimated object around the scene. For it to work properly please enable at least downsampling");
 }
 Tracker::~Tracker()
 {
@@ -80,8 +79,11 @@ void Tracker::track()
     return;
   }
   pcl::transformPointCloud(*tmp, *target, *transform);
-  //align
-  //user changed leaf size
+  /*
+   *  Alignment
+   */
+
+  //check if user changed leaf size
   if (old_leaf != leaf)
   {
     vg.setInputCloud (orig_model);
@@ -118,9 +120,9 @@ void Tracker::track()
             0, 0, 1,  (target_centroid.z - mc_transformed.z),
             0, 0, 0,  1;
     guess = Tcen*(*transform);
-    ROS_WARN("CENTROID TRANSLATION !!");
     icp.align(*tmp, guess);
     centroid_counter = 0;
+    ROS_WARN("[Tracker][%s] Centroid Translation Performed!",__func__);
     if (icp.getFitnessScore() < 0.001 )
     {
       fitness = icp.getFitnessScore();
@@ -166,7 +168,7 @@ void Tracker::track()
     if (disturbance_done >5 || manual_disturbance)
     {
       manual_disturbance = false;
-      ROS_ERROR("HEAVY DISTURBANCE !!");
+      ROS_WARN("[Tracker][%s] Triggered Heavy Disturbance!",__func__);
       Eigen::AngleAxisf rothz (3.14159/2, Eigen::Vector3f::UnitZ());
       Eigen::AngleAxisf rothx (3.14159/2, Eigen::Vector3f::UnitX());
       Eigen::AngleAxisf rothy (3.14159/2, Eigen::Vector3f::UnitY());
@@ -197,7 +199,8 @@ void Tracker::track()
       }
       disturbance_done = 0;
     }
-    ROS_WARN("DISTURBANCE !! %g %g", angx/D2R, angz/D2R);
+    else
+      ROS_WARN("[Tracker][%s] Triggered Disturbance! With angles %g, %g",__func__,  angx/D2R, angz/D2R);
     icp.align(*tmp, disturbed);
     ++disturbance_done;
     disturbance_counter = 0;
@@ -214,7 +217,7 @@ void Tracker::track()
     *(this->transform) = icp.getFinalTransformation();
   }
   ROS_INFO("corr: %d, final_corr: %d, fitness: %g", (int)corr.size(), (int)final_corr.size(), fitness);
-  this->storage->write_tracked_transform(this->transform);
+  this->storage->write_obj_transform_by_index(index, this->transform);
   //adjust distance and factor according to fitness
   if (fitness > 0.0008 ) //something is probably wrong
   {
@@ -228,7 +231,7 @@ void Tracker::track()
     ++centroid_counter;
     return;
   }
-  else if (fitness < 0.0005)
+  else if (fitness < 0.0005) //all looks good, lower factors and distances
   {
     rej_distance -=0.005;
     if(rej_distance < 0.025)
@@ -285,7 +288,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   }
   std::string models_path (ros::package::getPath("asus_scanner_models"));
   this->storage->search_obj_name(req.name, index);
-  if (index == -1)
+  if ( !this->storage->search_obj_name(req.name, index) )
   {
     ROS_ERROR("[Tracker][%s] Cannot find %s from the pool of already estimated objects, check spelling or run an estimation first!", __func__, req.name.c_str());
     return false;
@@ -294,7 +297,11 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   std::vector<std::string> vst;
   boost::split(vst, name, boost::is_any_of("_"), boost::token_compress_on);
   id = vst.at(0);
-  this->storage->read_obj_transform_by_index(index, transform);
+  if ( !this->storage->read_obj_transform_by_index(index, transform) )
+  {
+    ROS_ERROR("[Tracker][%s] Cannot find %s transform from the pool of already estimated transforms, check spelling or run an estimation first!", __func__, req.name.c_str());
+    return false;
+  }
   boost::filesystem::path model_path (models_path + "/" + id + "/" + id + ".pcd");
   if (boost::filesystem::exists(model_path) && boost::filesystem::is_regular_file(model_path))
   {
@@ -306,7 +313,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   }
   else
   {
-    ROS_ERROR("[Tracker][%s] Request model (%s) does not exists in asus_scanner_models package",__func__, model_path.stem().c_str());
+    ROS_ERROR("[Tracker][%s] Requested model (%s) does not exists in asus_scanner_models package",__func__, model_path.stem().c_str());
     return false;
   }
   old_leaf = leaf;
@@ -371,10 +378,6 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   marker.color.b = 0.3f;
   marker.color.a = 1.0f;
   marker.lifetime = ros::Duration(1);
-  //write tracker info to storage
-  this->storage->write_tracked_id(this->id);
-  this->storage->write_tracked_name(this->name);
-  this->storage->write_tracked_transform(this->transform);
   //we are ready to start
   started = true;
   return true;
@@ -476,10 +479,8 @@ bool Tracker::cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacm
 {
   this->started = false;
   this->lost_it = false;
+  this->storage->write_obj_transform_by_index(index, transform);
   index = -1;
-  std::string no_track = "NOT TRACKING";
-  this->storage->write_tracked_id(no_track);
-  this->storage->write_tracked_id(no_track);
   return true;
 }
 

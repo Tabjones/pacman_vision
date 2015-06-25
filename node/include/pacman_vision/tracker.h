@@ -1,5 +1,5 @@
 #ifndef _INCL_TRACKER
-
+#define _INCL_TRACKER
 // ROS headers
 #include <ros/ros.h>
 #include <ros/console.h>
@@ -99,8 +99,10 @@ class Tracker
     bool started, lost_it, manual_disturbance ;
     //factor to bounding box dimensions
     float factor;
+    //leaf size to downsample model cloud
     float leaf, old_leaf;
-    int error_count, disturbance_counter, centroid_counter;
+    //counters for errors
+    int error_count, disturbance_counter, centroid_counter, disturbance_done;
     //tracker transform estimation type
     // unused so far (TODO possible improvements)
     int type;
@@ -108,11 +110,10 @@ class Tracker
     float x1,x2,y1,y2,z1,z2;
     //distance threshold for rejector
     float rej_distance;
+    // ICP fitness
     double fitness;
-    double corr_ratio;
-    int disturbance_done;
 
-    //icp member
+    //icp object
     pcl::IterativeClosestPoint<PX, PX,float> icp;
     //correspondences
     pcl::registration::CorrespondenceEstimation<PX, PX, float>::Ptr ce;
@@ -120,7 +121,7 @@ class Tracker
     pcl::registration::CorrespondenceRejectorTrimmed::Ptr crt;
     pcl::registration::CorrespondenceRejectorOneToOne::Ptr cro2o;
     pcl::registration::TransformationEstimationDualQuaternion<PX,PX,float>::Ptr teDQ;
-//    pcl::registration::CorrespondenceRejectorSampleConsensus< PX >::Ptr crsc;
+//  pcl::registration::CorrespondenceRejectorSampleConsensus< PX >::Ptr crsc;
 
     //filters
     pcl::PassThrough<PX> pass;
@@ -135,7 +136,7 @@ class Tracker
     //track_object service callback
     bool cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res);
 
-    //track_object service callback
+    //stop tracker service callback
     bool cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacman_vision_comm::stop_track::Response& res);
 
     //grasp_verification service callback
@@ -151,5 +152,4 @@ class Tracker
     //custom spin method
     void spin_once();
 };
-#define _INCL_TRACKER
 #endif
