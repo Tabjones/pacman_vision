@@ -26,14 +26,11 @@ void Broadcaster::compute_transforms()
     return;
   }
   int size = estimated->size();
-  transforms.clear();
-  markers.markers.clear();
+  transforms.resize(size);
   for (int i=0; i<size; ++i) //if size is zero dont do anything
   {
     geometry_msgs::Pose pose;
-    tf::Transform trans;
-    fromEigen(estimated->at(i), pose, trans);
-    transforms.push_back(trans);
+    fromEigen(estimated->at(i), pose, transforms[i]);
     visualization_msgs::Marker marker;
     marker.header.frame_id = "/kinect2_rgb_optical_frame";
     marker.header.stamp = ros::Time();
@@ -62,6 +59,90 @@ void Broadcaster::compute_transforms()
     marker.lifetime = ros::Duration(1);
     markers.markers.push_back(marker);
   }
+}
+
+void Broadcaster::create_box_marker(visualization_msgs::Marker &box)
+{
+  //bounding box visualization TODO
+  box.type = visualization_msgs::Marker::LINE_STRIP;
+  box.header.frame_id = "/kinect2_rgb_optical_frame";
+  box.header.stamp = ros::Time();
+  box.ns = "bounding_box";
+  box.id = 0;
+  box.scale.x = 0.002;
+  box.pose = pose;
+  box.action = visualization_msgs::Marker::ADD;
+  box.color.r = 0.0f;
+  box.color.g = 0.0f;
+  box.color.b = 1.0f;
+  box.color.a = 1.0f;
+  box.lifetime = ros::Duration(1);
+  geometry_msgs::Point p;
+  p.x = factor*x1;
+  p.y = factor*y1;
+  p.z = -factor*z1;
+  box.points.push_back(p);
+  p.x = factor*x2;
+  p.y = factor*y1;
+  p.z = -factor*z1;
+  box.points.push_back(p);
+  p.x = factor*x2;
+  p.y = factor*y2;
+  p.z = -factor*z1;
+  box.points.push_back(p);
+  p.x = factor*x1;
+  p.y = factor*y2;
+  p.z = -factor*z1;
+  box.points.push_back(p);
+  p.x = factor*x1;
+  p.y = factor*y1;
+  p.z = -factor*z1;
+  box.points.push_back(p);
+  p.x = factor*x1;
+  p.y = factor*y1;
+  p.z = factor*z2;
+  box.points.push_back(p);
+  p.x = factor*x2;
+  p.y = factor*y1;
+  p.z = factor*z2;
+  box.points.push_back(p);
+  p.x = factor*x2;
+  p.y = factor*y1;
+  p.z = -factor*z1;
+  box.points.push_back(p);
+  p.x = factor*x2;
+  p.y = factor*y1;
+  p.z = factor*z2;
+  box.points.push_back(p);
+  p.x = factor*x2;
+  p.y = factor*y2;
+  p.z = factor*z2;
+  box.points.push_back(p);
+  p.x = factor*x2;
+  p.y = factor*y2;
+  p.z = -factor*z1;
+  box.points.push_back(p);
+  p.x = factor*x2;
+  p.y = factor*y2;
+  p.z = factor*z2;
+  box.points.push_back(p);
+  p.x = factor*x1;
+  p.y = factor*y2;
+  p.z = factor*z2;
+  box.points.push_back(p);
+  p.x = factor*x1;
+  p.y = factor*y2;
+  p.z = -factor*z1;
+  box.points.push_back(p);
+  p.x = factor*x1;
+  p.y = factor*y2;
+  p.z = factor*z2;
+  box.points.push_back(p);
+  p.x = factor*x1;
+  p.y = factor*y1;
+  p.z = factor*z2;
+  box.points.push_back(p);
+  rviz_marker_pub.publish(box);
 }
 
 void Broadcaster::broadcast_once()

@@ -7,8 +7,7 @@
 //Constructor
 Storage::Storage()
 {
-  this->tracked_id = "NOT TRACKING";
-  this->tracked_name = "NOT TRACKING";
+  this->index = -1;
 }
 
 bool Storage::read_scene(PC::Ptr &cloud)
@@ -342,4 +341,16 @@ bool Storage::write_table(boost::shared_ptr<Eigen::Matrix4f> &t)
   }
   ROS_WARN("[Storage][%s] Passed Table transformation is empty! Not writing anything in Storage", __func__);
   return false;
+}
+void Storage::read_tracked_index(int &idx)
+{
+  LOCK guard(mtx_index);
+  idx = this->index;
+  return;
+}
+void Storage::write_tracked_index(int idx)
+{
+  LOCK guard(mtx_index);
+  this->index = idx;
+  return;
 }

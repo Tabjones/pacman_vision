@@ -62,6 +62,7 @@ class Broadcaster
     //method to broadcast
     void broadcast_once();
     void compute_transforms();
+    void create_box_marker(visualization_msgs::Marker &box);
 
 };
 #endif

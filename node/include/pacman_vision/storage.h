@@ -68,6 +68,9 @@ class Storage
     bool write_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
     void read_table(boost::shared_ptr<Eigen::Matrix4f> &t);
     bool write_table(boost::shared_ptr<Eigen::Matrix4f> &t);
+    //Read/write index of tracked object
+    void read_tracked_index(int &idx);
+    void write_tracked_index(int idx);
   private:
     //untouched scene from kinect
     PC::Ptr scene;
@@ -99,5 +102,8 @@ class Storage
     //Vito Table transformation
     Eigen::Matrix4f table;
     boost::mutex mtx_table;
+    //Tracked object index (referred to vector of estimations), set to -1 if not tracking
+    int index;
+    boost::mutex mtx_index;
 };
 #endif

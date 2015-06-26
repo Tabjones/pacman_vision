@@ -446,12 +446,15 @@ void VisionNode::spin_broadcaster()
   //spin until we disable it or it dies somehow
   while (this->en_broadcaster && this->broadcaster_module)
   {
+    //Clear previous markers
+    broadcaster_module->markers.markers.clear();
+    //TODO
     broadcaster_module->compute_transforms();
     //do the broadcasting
     this->broadcaster_module->broadcast_once();
     //spin
     this->broadcaster_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //broadcaster could try to go at 20Hz
+    boost::this_thread::sleep(boost::posix_time::milliseconds(33)); //broadcaster could try to go at 30Hz
   }
   //broadcaster got stopped
   return;
