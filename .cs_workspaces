@@ -1,4 +1,4 @@
-CS_LAST_WORKSPACE: PacmanVision_Code
+CS_LAST_WORKSPACE: PacmanVision_Config
 CS_WORKSPACE_BEGIN: PacmanVision_Config
 let SessionLoad = 1
 if &cp | set nocp | endif
