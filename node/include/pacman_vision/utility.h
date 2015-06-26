@@ -10,6 +10,10 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_datatypes.h>
+//PCL
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/common/io.h>
 // General Utils
 #include <cmath>
 #include <fstream>

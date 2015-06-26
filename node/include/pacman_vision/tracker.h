@@ -17,8 +17,6 @@
 #include <pcl/ModelCoefficients.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/io/pcd_io.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
 #include <pcl/registration/icp.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>

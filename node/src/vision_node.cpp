@@ -460,7 +460,7 @@ void VisionNode::spin_broadcaster()
     if(limits && filter)
     {
       visualization_msgs::Marker box_marker;
-      if(this->broadcaster_module->create_box_marker( box_marker, limits))
+      if(this->broadcaster_module->create_box_marker(box_marker, limits))
       {
         box_marker.color.r = 1.0f;
         box_marker.color.g = 0.0f;
@@ -635,7 +635,6 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   this->limits->y2 = config.pass_ymax;
   this->limits->z1 = config.pass_zmin;
   this->limits->z2 = config.pass_zmax;
-  this->storage->write_filter_limits(limits);
   this->leaf = config.leaf_size;
   if (this->kinect2_resolution != config.point_cloud_resolution)
   {
@@ -670,7 +669,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   }
   if (this->broadcaster_module && this->en_broadcaster)
   {
-    this->broadcaster_module->tf = config.broadcaster_tf;
+    this->broadcaster_module->obj_tf = config.broadcaster_tf;
     this->broadcaster_module->rviz_markers = config.broadcaster_rviz_markers;
   }
   if (this->tracker_module && this->en_tracker)

@@ -195,7 +195,7 @@ bool Storage::search_obj_name(std::string n, int &idx)
 bool Storage::read_obj_transform_by_index(int idx, boost::shared_ptr<Eigen::Matrix4f> &trans)
 {
   if (!trans)
-    trans.reset(new Eigen::Matrix4Xf);
+    trans.reset(new Eigen::Matrix4f);
   LOCK guard(mtx_estimations);
   for (int i=0; i<estimations.size(); ++i)
   {
@@ -354,32 +354,32 @@ void Storage::write_tracked_index(int idx)
   this->index = idx;
   return;
 }
-void Storage::read_filter_limits(boost::shared_ptr<Box> &b)
+void Storage::read_tracked_box(boost::shared_ptr<Box> &b)
 {
   if(!b)
     b.reset(new Box);
-  LOCK guard(mtx_limits);
-  b->x1 = limits.x1;
-  b->x2 = limits.x2;
-  b->y1 = limits.y1;
-  b->y2 = limits.y2;
-  b->z1 = limits.z1;
-  b->z2 = limits.z2;
+  LOCK guard(mtx_bbox);
+  b->x1 = bbox.x1;
+  b->x2 = bbox.x2;
+  b->y1 = bbox.y1;
+  b->y2 = bbox.y2;
+  b->z1 = bbox.z1;
+  b->z2 = bbox.z2;
   return;
 }
-bool Storage::write_filter_limits(boost::shared_ptr<Box> &b)
+bool Storage::write_tracked_box(boost::shared_ptr<Box> &b)
 {
   if (b)
   {
-    LOCK guard(mtx_limits);
-    limits.x1= b->x1;
-    limits.x2= b->x2;
-    limits.y1= b->y1;
-    limits.y2= b->y2;
-    limits.z1= b->z1;
-    limits.z2= b->z2;
+    LOCK guard(mtx_bbox);
+    bbox.x1= b->x1;
+    bbox.x2= b->x2;
+    bbox.y1= b->y1;
+    bbox.y2= b->y2;
+    bbox.z1= b->z1;
+    bbox.z2= b->z2;
     return true;
   }
-  ROS_WARN("[Storage][%s] Passed Filter limits are empty! Not writing anything in Storage", __func__);
+  ROS_WARN("[Storage][%s] Passed BoundingBox limits are empty! Not writing anything in Storage", __func__);
   return false;
 }
