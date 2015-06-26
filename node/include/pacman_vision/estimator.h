@@ -1,14 +1,8 @@
 #ifndef _INCL_ESTIMATOR
 #define _INCL_ESTIMATOR
 
-// ROS headers
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <ros/package.h>
-#include <ros/callback_queue.h>
-#include <ros/callback_queue_interface.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/TransformStamped.h>
+//Utility
+#include "pacman_vision/utility.h"
 //PCL
 #include <pcl/common/centroid.h>
 #include <pcl/common/eigen.h>
@@ -31,22 +25,10 @@
 #include "pacman_vision_comm/estimate.h"
 #include "pacman_vision_comm/pe.h"
 #include "pacman_vision_comm/peArray.h"
-//general utilities
-#include <cmath>
-#include <fstream>
-#include <string>
-#include <stdlib.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/date_time.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
 //PEL
 #include <pel.h> //also gets typedefs of PEL
 //Storage
 #include "pacman_vision/storage.h"
-#include "pacman_vision/utility.h"
 
 
 class VisionNode;

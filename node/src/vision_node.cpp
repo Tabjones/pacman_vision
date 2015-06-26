@@ -5,6 +5,7 @@ VisionNode::VisionNode()
   this->nh = ros::NodeHandle("pacman_vision");
   this->storage.reset(new Storage);
   this->scene.reset(new PC);
+  this->limits.reset(new Box);
   //first call of dynamic reconfigure callback will only set gui to loaded parameters
   rqt_init = true;
   //service callback init
@@ -22,12 +23,12 @@ VisionNode::VisionNode()
   nh.param<bool>("plane_segmentation", plane, false);
   nh.param<bool>("keep_organized", keep_organized, false);
   nh.param<int>("kinect2_resolution", kinect2_resolution, 1);
-  nh.param<double>("pass_xmax", xmax, 0.5);
-  nh.param<double>("pass_xmin", xmin, -0.5);
-  nh.param<double>("pass_ymax", ymax, 0.5);
-  nh.param<double>("pass_ymin", ymin, -0.5);
-  nh.param<double>("pass_zmax", zmax, 1.0);
-  nh.param<double>("pass_zmin", zmin, 0.3);
+  nh.param<double>("pass_xmax", limits->x2, 0.5);
+  nh.param<double>("pass_xmin", limits->x1, -0.5);
+  nh.param<double>("pass_ymax", limits->y2, 0.5);
+  nh.param<double>("pass_ymin", limits->y1, -0.5);
+  nh.param<double>("pass_zmax", limits->z2, 1.0);
+  nh.param<double>("pass_zmin", limits->z1, 0.3);
   nh.param<double>("leaf_size", leaf, 0.01);
   nh.param<double>("plane_tolerance", plane_tol, 0.004);
   //set callback for dynamic reconfigure
@@ -102,15 +103,15 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
         pass.setKeepOrganized(false);
       pass.setInputCloud (this->scene);
       pass.setFilterFieldName ("z");
-      pass.setFilterLimits (zmin, zmax);
+      pass.setFilterLimits (limits->z1, limits->z2);
       pass.filter (*tmp);
       pass.setInputCloud (tmp);
       pass.setFilterFieldName ("y");
-      pass.setFilterLimits (ymin, ymax);
+      pass.setFilterLimits (limits->y1, limits->y2);
       pass.filter (*t);
       pass.setInputCloud (t);
       pass.setFilterFieldName ("x");
-      pass.setFilterLimits (xmin, xmax);
+      pass.setFilterLimits (limits->x1, limits->x2);
       pass.filter (*(this->scene_processed));
     }
   }
@@ -448,9 +449,36 @@ void VisionNode::spin_broadcaster()
   {
     //Clear previous markers
     broadcaster_module->markers.markers.clear();
-    //TODO
-    broadcaster_module->compute_transforms();
-    //do the broadcasting
+    //Check if we have to publish estimated objects or tracked one
+    if ((this->en_estimator && this->estimator_module) || (this->tracker_module && this->en_tracker))
+    {
+      //this takes care of markers and TFs of all pose estimated objects, plus tracked object
+      broadcaster_module->elaborate_estimated_objects();
+    }
+
+    //publish Passthrough filter limits as a box
+    if(limits && filter)
+    {
+      visualization_msgs::Marker box_marker;
+      if(this->broadcaster_module->create_box_marker( box_marker, limits))
+      {
+        box_marker.color.r = 1.0f;
+        box_marker.color.g = 0.0f;
+        box_marker.color.b = 0.0f;
+        box_marker.color.a = 1.0f;
+        box_marker.pose.position.x=0;
+        box_marker.pose.position.y=0;
+        box_marker.pose.position.z=0;
+        box_marker.pose.orientation.x=0;
+        box_marker.pose.orientation.y=0;
+        box_marker.pose.orientation.z=0;
+        box_marker.pose.orientation.w=1;
+        box_marker.ns = "PassThrough Filter Limits";
+        box_marker.id = 1;
+        this->broadcaster_module->markers.markers.push_back(box_marker);
+      }
+    }
+    //Actually do the broadcasting. This also sets timestamps of all markers pushed inside the array
     this->broadcaster_module->broadcast_once();
     //spin
     this->broadcaster_module->spin_once();
@@ -488,7 +516,6 @@ void VisionNode::spin_tracker()
         this->estimator_module->disabled = true;
       }
       this->tracker_module->track();
-      this->tracker_module->broadcast_tracked_object();
     }
     else if (this->tracker_module->lost_it && !this->tracker_module->started)
     {
@@ -533,6 +560,7 @@ void VisionNode::spin_listener()
     //spin
     this->listener_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //listener could try to go at 20Hz
+    ++count_to_table;
   }
   //listener got stopped
   return;
@@ -554,12 +582,12 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.plane_tolerance = plane_tol;
     config.keep_organized = keep_organized;
     config.leaf_size = leaf;
-    config.pass_xmax = xmax;
-    config.pass_xmin = xmin;
-    config.pass_ymax = ymax;
-    config.pass_ymin = ymin;
-    config.pass_zmax = zmax;
-    config.pass_zmin = zmin;
+    config.pass_xmax = limits->x2;
+    config.pass_xmin = limits->x1;
+    config.pass_ymax = limits->y2;
+    config.pass_ymin = limits->y1;
+    config.pass_zmax = limits->z2;
+    config.pass_zmin = limits->z1;
     config.point_cloud_resolution = kinect2_resolution;
     //subscribe to pointcloud topic
     std::string topic;
@@ -601,12 +629,13 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   this->plane_tol = config.plane_tolerance;
   this->downsample = config.downsampling;
   this->keep_organized = config.keep_organized;
-  this->xmin = config.pass_xmin;
-  this->xmax = config.pass_xmax;
-  this->ymin = config.pass_ymin;
-  this->ymax = config.pass_ymax;
-  this->zmin = config.pass_zmin;
-  this->zmax = config.pass_zmax;
+  this->limits->x1 = config.pass_xmin;
+  this->limits->x2 = config.pass_xmax;
+  this->limits->y1 = config.pass_ymin;
+  this->limits->y2 = config.pass_ymax;
+  this->limits->z1 = config.pass_zmin;
+  this->limits->z2 = config.pass_zmax;
+  this->storage->write_filter_limits(limits);
   this->leaf = config.leaf_size;
   if (this->kinect2_resolution != config.point_cloud_resolution)
   {

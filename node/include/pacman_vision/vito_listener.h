@@ -1,25 +1,9 @@
 #ifndef _INCL_LISTENER
 #define _INCL_LISTENER
+//Utility
+#include "pacman_vision/utility.h"
 // ROS headers
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <ros/package.h>
 #include <tf/transform_listener.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <ros/callback_queue.h>
-#include <ros/callback_queue_interface.h>
-//general utilities
-#include <cmath>
-#include <fstream>
-#include <string>
-#include <stdlib.h>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/date_time.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
-#include <Eigen/Dense>
 //Storage
 #include "pacman_vision/storage.h"
 

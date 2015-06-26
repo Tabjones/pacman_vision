@@ -2,15 +2,12 @@
 #define _INCL_NODE
 
 // ROS headers
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <ros/package.h>
-#include <ros/spinner.h>
 #include <dynamic_reconfigure/server.h>
 #include <pcl_ros/point_cloud.h>
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud_conversion.h>
+#include <visualization_msgs/Marker.h>
 //PCL
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/crop_box.h>
@@ -30,23 +27,13 @@
 #include "pacman_vision_comm/get_scene.h"
 #include "pacman_vision/pacman_visionConfig.h"
 
-//general utilities
-#include <cmath>
-#include <fstream>
-#include <string>
-#include <stdlib.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/date_time.hpp>
-#include <boost/timer.hpp>
-
+#include "pacman_vision/utility.h"
+#include "pacman_vision/storage.h"
+//Modules
 #include "pacman_vision/estimator.h"
 #include "pacman_vision/broadcaster.h"
 #include "pacman_vision/vito_listener.h"
 #include "pacman_vision/tracker.h"
-#include "pacman_vision/utility.h"
-#include "pacman_vision/storage.h"
 #include "pacman_vision/supervoxels.h"
 
 class VisionNode
@@ -118,7 +105,8 @@ class VisionNode
 
     //filter parameters
     bool filter, downsample, keep_organized, plane;
-    double xmin,xmax,ymin,ymax,zmin,zmax,leaf,plane_tol;
+    boost::shared_ptr<Box> limits;
+    double leaf,plane_tol;
 
     //Dynamic Reconfigure//
     //Server

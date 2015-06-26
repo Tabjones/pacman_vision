@@ -1,5 +1,4 @@
 #include "pacman_vision/tracker.h"
-#include "pacman_vision/utility.h"
 
 ///////////////////
 //Tracker Class//
@@ -18,8 +17,9 @@ Tracker::Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   this->srv_track_object = nh.advertiseService("track_object", &Tracker::cb_track_object, this);
   this->srv_stop = nh.advertiseService("stop_track", &Tracker::cb_stop_tracker, this);
   this->srv_grasp = nh.advertiseService("grasp_verification", &Tracker::cb_grasp, this);
+  this->bounding_box.reset(new Box);
+  this->bounding_box_original.reset(new Box);
 
-  this->rviz_marker_pub = nh.advertise<visualization_msgs::Marker>("tracked_object", 1);
   ce.reset( new pcl::registration::CorrespondenceEstimation<PX, PX, float>);
   crd.reset( new pcl::registration::CorrespondenceRejectorDistance);
   crt.reset( new pcl::registration::CorrespondenceRejectorTrimmed);
@@ -56,20 +56,28 @@ void Tracker::track()
   PXC::Ptr target (new PXC);
   PXC::Ptr tmp (new PXC);
   inv_trans = transform->inverse();
-  //boundingbox
+  //BoundingBox
+  bounding_box->x1 = factor * bounding_box_original->x1;
+  bounding_box->x2 = factor * bounding_box_original->x2;
+  bounding_box->y1 = factor * bounding_box_original->y1;
+  bounding_box->y2 = factor * bounding_box_original->y2;
+  bounding_box->z1 = - factor * bounding_box_original->z1; //zmin would certainly be positive, due to model, we need it negative TODO: add a check when zmin gets computed
+  bounding_box->z2 = factor * bounding_box_original->z2;
   pcl::transformPointCloud(*scene, *tmp, inv_trans);
   pass.setInputCloud(tmp);
   pass.setFilterFieldName("x");
-  pass.setFilterLimits(factor*x1, factor*x2);
+  pass.setFilterLimits(bounding_box->x1, bounding_box->x2);
   pass.filter(*tmp);
   pass.setInputCloud(tmp);
   pass.setFilterFieldName("y");
-  pass.setFilterLimits(factor*y1, factor*y2);
+  pass.setFilterLimits(bounding_box->y1, bounding_box->y2);
   pass.filter(*tmp);
   pass.setInputCloud(tmp);
   pass.setFilterFieldName("z");
-  pass.setFilterLimits(-factor*z1, factor*z2); //z1 is positive due to model, adding a minus
+  pass.setFilterLimits(bounding_box->z1, bounding_box->z2);
   pass.filter(*tmp);
+  //Also save bounding box to Storage, so that Broadcaster can publish it
+  this->storage->write_tracked_box(bounding_box);
   if (tmp->points.size() <= 30)
   {
     ROS_ERROR("[Tracker][%s] Not enought points in bounding box, retryng with larger bounding box", __func__);
@@ -331,12 +339,12 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
     zvec.push_back(model->points[i].z);
     mc.add(model->points[i]);
   }
-  x1 = *std::min_element(xvec.begin(), xvec.end());
-  y1 = *std::min_element(yvec.begin(), yvec.end());
-  z1 = *std::min_element(zvec.begin(), zvec.end());
-  x2 = *std::max_element(xvec.begin(), xvec.end());
-  y2 = *std::max_element(yvec.begin(), yvec.end());
-  z2 = *std::max_element(zvec.begin(), zvec.end());
+  bounding_box_original->x1 = *std::min_element(xvec.begin(), xvec.end());
+  bounding_box_original->y1 = *std::min_element(yvec.begin(), yvec.end());
+  bounding_box_original->z1 = *std::min_element(zvec.begin(), zvec.end());
+  bounding_box_original->x2 = *std::max_element(xvec.begin(), xvec.end());
+  bounding_box_original->y2 = *std::max_element(yvec.begin(), yvec.end());
+  bounding_box_original->z2 = *std::max_element(zvec.begin(), zvec.end());
   mc.get(model_centroid);
 
   //init icps
@@ -362,37 +370,10 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
   //Transformation Estimation
   icp.setTransformationEstimation(teDQ);
 
-  //init rviz marker
-  marker.header.frame_id = "/kinect2_rgb_optical_frame";
-  marker.ns = std::string(id + "_tracked").c_str();
-  marker.id = 0;
-  marker.scale.x=1;
-  marker.scale.y=1;
-  marker.scale.z=1;
-  marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-  std::string mesh_path ("package://asus_scanner_models/" + id + "/" + id + ".stl");
-  marker.mesh_resource = mesh_path.c_str();
-  marker.action = visualization_msgs::Marker::ADD;
-  marker.color.r = 1.0f;
-  marker.color.g = 0.0f;
-  marker.color.b = 0.3f;
-  marker.color.a = 1.0f;
-  marker.lifetime = ros::Duration(1);
   this->storage->write_tracked_index(index);
   //we are ready to start
   started = true;
   return true;
-}
-
-void Tracker::broadcast_tracked_object()
-{
-  geometry_msgs::Pose pose;
-  tf::Transform trans;
-  fromEigen(*transform, pose, trans);
-  marker.header.stamp = ros::Time();
-  marker.pose = pose;
-  rviz_marker_pub.publish(marker);
-  tf_broadcaster.sendTransform(tf::StampedTransform(trans, ros::Time::now(), "/kinect2_rgb_optical_frame", std::string(name + "_tracked").c_str()));
 }
 
 bool Tracker::cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacman_vision_comm::stop_track::Response& res)

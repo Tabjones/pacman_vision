@@ -1,5 +1,4 @@
 #include "pacman_vision/estimator.h"
-#include "pacman_vision/utility.h"
 
 ///////////////////
 //Estimator Class//

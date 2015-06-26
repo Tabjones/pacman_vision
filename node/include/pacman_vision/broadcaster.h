@@ -1,26 +1,10 @@
 #ifndef _INCL_BROADCASTER
 #define _INCL_BROADCASTER
+//Utility
+#include "pacman_vision/utility.h"
 // ROS headers
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <ros/package.h>
 #include <tf/transform_broadcaster.h>
-#include <geometry_msgs/TransformStamped.h>
 #include <visualization_msgs/MarkerArray.h>
-#include <ros/callback_queue.h>
-#include <ros/callback_queue_interface.h>
-//general utilities
-#include <cmath>
-#include <fstream>
-#include <string>
-#include <stdlib.h>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/date_time.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
-#include <Eigen/Dense>
 //Storage
 #include "pacman_vision/storage.h"
 
@@ -39,19 +23,19 @@ class Broadcaster
     boost::shared_ptr<Storage> storage;
 
     //bools to control what to broadcast
-    bool tf, rviz_markers;
+    bool obj_tf, rviz_markers;
 
     //what to broadcast from estimator results and/or tracker
-    /////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////
     //eigen transforms
     boost::shared_ptr<std::vector<Eigen::Matrix4f> > estimated;
     //tf transforms
     std::vector<tf::Transform> transforms;
-    //rviz markers
-    visualization_msgs::MarkerArray markers;
     //naming and id-ing of estimator objects
     boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > names; //names/id
 
+    // ALL rviz markers to publish
+    visualization_msgs::MarkerArray markers;
     //tf broadcaster
     tf::TransformBroadcaster tf_broadcaster;
     //rviz publisher
@@ -61,8 +45,8 @@ class Broadcaster
     void spin_once();
     //method to broadcast
     void broadcast_once();
-    void compute_transforms();
-    void create_box_marker(visualization_msgs::Marker &box);
+    void elaborate_estimated_objects();
+    bool create_box_marker(visualization_msgs::Marker &box, boost::shared_ptr<Box> &limits);
 
 };
 #endif

@@ -1,15 +1,7 @@
 #ifndef _INCL_TRACKER
 #define _INCL_TRACKER
-// ROS headers
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <ros/package.h>
-#include <ros/callback_queue.h>
-#include <ros/callback_queue_interface.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <tf/transform_broadcaster.h>
-#include <visualization_msgs/Marker.h>
+//Utility
+#include "pacman_vision/utility.h"
 //PCL
 #include <pcl/common/centroid.h>
 #include <pcl/common/eigen.h>
@@ -38,22 +30,11 @@
 #include "pacman_vision_comm/stop_track.h"
 #include "pacman_vision_comm/grasp_verification.h"
 //general utilities
-#include <cmath>
 #include <ctime>
-#include <fstream>
 #include <algorithm>
-#include <Eigen/Dense>
-#include <string>
-#include <stdlib.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/date_time.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
-
+//Storage
 #include "pacman_vision/storage.h"
 
 class VisionNode;
@@ -106,8 +87,10 @@ class Tracker
     //tracker transform estimation type
     // unused so far (TODO possible improvements)
     int type;
-    //boundingbox of object computed from model
-    float x1,x2,y1,y2,z1,z2;
+    //boundingbox of object computed from model (undeformed)
+    boost::shared_ptr<Box> bounding_box_original;
+    //and scaled by factor
+    boost::shared_ptr<Box> bounding_box;
     //distance threshold for rejector
     float rej_distance;
     // ICP fitness
@@ -127,12 +110,6 @@ class Tracker
     pcl::PassThrough<PX> pass;
     pcl::VoxelGrid<PX> vg;
 
-    //rviz marker
-    visualization_msgs::Marker marker;
-    //tf and marker broadcaster
-    tf::TransformBroadcaster tf_broadcaster;
-    ros::Publisher rviz_marker_pub;
-
     //track_object service callback
     bool cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res);
 
@@ -141,9 +118,6 @@ class Tracker
 
     //grasp_verification service callback
     bool cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pacman_vision_comm::grasp_verification::Response& res);
-
-    //method to publish transform and marker of tracked object
-    void broadcast_tracked_object();
 
     //tracker methods
     void track();

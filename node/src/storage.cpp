@@ -354,3 +354,32 @@ void Storage::write_tracked_index(int idx)
   this->index = idx;
   return;
 }
+void Storage::read_filter_limits(boost::shared_ptr<Box> &b)
+{
+  if(!b)
+    b.reset(new Box);
+  LOCK guard(mtx_limits);
+  b->x1 = limits.x1;
+  b->x2 = limits.x2;
+  b->y1 = limits.y1;
+  b->y2 = limits.y2;
+  b->z1 = limits.z1;
+  b->z2 = limits.z2;
+  return;
+}
+bool Storage::write_filter_limits(boost::shared_ptr<Box> &b)
+{
+  if (b)
+  {
+    LOCK guard(mtx_limits);
+    limits.x1= b->x1;
+    limits.x2= b->x2;
+    limits.y1= b->y1;
+    limits.y2= b->y2;
+    limits.z1= b->z1;
+    limits.z2= b->z2;
+    return true;
+  }
+  ROS_WARN("[Storage][%s] Passed Filter limits are empty! Not writing anything in Storage", __func__);
+  return false;
+}

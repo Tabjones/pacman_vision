@@ -1,35 +1,6 @@
 #ifndef _INCL_STORAGE
 #define _INCL_STORAGE
-
-// ROS headers
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <ros/package.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <tf/transform_broadcaster.h>
-#include <visualization_msgs/Marker.h>
-#include <visualization_msgs/MarkerArray.h>
-//PCL
-#include <pcl/common/centroid.h>
-#include <pcl/common/eigen.h>
-#include <pcl/common/common.h>
-#include <pcl/search/kdtree.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-//general utilities
-#include <cmath>
-#include <fstream>
-#include <algorithm>
-#include <Eigen/Dense>
-#include <string>
-#include <stdlib.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/date_time.hpp>
-
+//Utility
 #include "pacman_vision/utility.h"
 
 class Storage
@@ -71,6 +42,9 @@ class Storage
     //Read/write index of tracked object
     void read_tracked_index(int &idx);
     void write_tracked_index(int idx);
+    //Read/Write tracked object boundingbox
+    void read_tracked_box(boost::shared_ptr<Box> &b);
+    bool write_tracked_box(boost::shared_ptr<Box> &b);
   private:
     //untouched scene from kinect
     PC::Ptr scene;
@@ -78,7 +52,7 @@ class Storage
     //scene after processing
     PC::Ptr scene_processed;
     boost::mutex mtx_scene_processed;
-    //cluster of objects found on scene
+    //cluster of objects found on scene (TODO currently unused by anyone)
     std::vector<PXC> clusters;
     boost::mutex mtx_clusters;
     //Estimated transform from estimator
@@ -87,6 +61,12 @@ class Storage
     //naming and id-ing of estimated objects from estimator
     std::vector<std::pair<std::string, std::string> > names; //name,ID
     boost::mutex mtx_names;
+    //Tracked object index (referred to vector of estimations), set to -1 if not tracking
+    int index;
+    boost::mutex mtx_index;
+    //Tracked object boundingbox
+    Box bbox;
+    boost::mutex mtx_bbox;
     //Vito Left arm transforms
     std::vector<Eigen::Matrix4f> left_arm;
     boost::mutex mtx_left_arm;
@@ -102,8 +82,5 @@ class Storage
     //Vito Table transformation
     Eigen::Matrix4f table;
     boost::mutex mtx_table;
-    //Tracked object index (referred to vector of estimations), set to -1 if not tracking
-    int index;
-    boost::mutex mtx_index;
 };
 #endif

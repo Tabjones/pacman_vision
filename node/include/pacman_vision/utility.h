@@ -4,12 +4,28 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <ros/package.h>
+#include <ros/spinner.h>
+#include <ros/callback_queue.h>
+#include <ros/callback_queue_interface.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_datatypes.h>
-#include <Eigen/Dense>
-#include <boost/range/algorithm.hpp>
+// General Utils
+#include <cmath>
+#include <fstream>
+#include <string>
+#include <stdlib.h>
 #include <boost/thread.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/date_time.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/timer.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/range/algorithm.hpp>
+#include <Eigen/Dense>
+
+#define D2R 0.017453293  //deg to rad conversion
 
 //convert from eigen matrix to tf and pose
 void fromEigen(Eigen::Matrix4f &source, geometry_msgs::Pose &dest, tf::Transform &tf_dest);
@@ -29,8 +45,13 @@ typedef pcl::PointCloud<PX> PXC; //point cloud with PX type
 typedef pcl::PointNormal PN; //point normal type
 typedef pcl::PointCloud<PN> PNC; //point normal cloud
 
-#define D2R 0.017453293  //deg to rad conversion
+typedef boost::lock_guard<boost::mutex> LOCK; //default lock type
 
-typedef boost::lock_guard<boost::mutex> LOCK;
+//Data structure for box, defined by bounduaries
+struct Box{
+  double x1,x2;
+  double y1,y2;
+  double z1,z2;
+};
 
 #endif
