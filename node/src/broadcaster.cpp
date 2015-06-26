@@ -98,6 +98,7 @@ bool Broadcaster::create_box_marker(visualization_msgs::Marker &box, boost::shar
   }
   box.type = visualization_msgs::Marker::LINE_LIST;
   box.header.frame_id = "/kinect2_rgb_optical_frame";
+  box.header.stamp = ros::Time();
   //adjust these two values later if needed
   box.ns = "box";
   box.id = 0;

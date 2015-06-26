@@ -450,7 +450,7 @@ void VisionNode::spin_broadcaster()
     //Clear previous markers
     broadcaster_module->markers.markers.clear();
     //Check if we have to publish estimated objects or tracked one
-    if ((this->en_estimator && this->estimator_module) || (this->tracker_module && this->en_tracker))
+    if (  (this->en_estimator && this->estimator_module) || (this->tracker_module && this->en_tracker) )
     {
       //this takes care of markers and TFs of all pose estimated objects, plus tracked object
       broadcaster_module->elaborate_estimated_objects();
