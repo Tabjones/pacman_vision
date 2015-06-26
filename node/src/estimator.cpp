@@ -121,10 +121,7 @@ bool Estimator::estimate()
   pe.setDatabase(db_path);
   for (int i=0; i<size; ++i)
   {
-    //TODO change PEL a bit so it uses PointXYZ
-    pcl::PointCloud<pcl::PointXYZRGBA> query;
-    pcl::copyPointCloud(clusters->at(i), query);
-    pe.setQuery("object", query);
+    pe.setQuery("object", clusters->at(i));
     pe.generateLists();
     pe.refineCandidates();
     boost::shared_ptr<Candidate> pest (new Candidate);
