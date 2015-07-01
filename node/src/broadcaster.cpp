@@ -9,7 +9,7 @@ Broadcaster::Broadcaster(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
   this->storage = stor;
-  obj_tf = rviz_markers = true;
+  obj_tf = rviz_markers = false;
   rviz_markers_pub = nh.advertise<visualization_msgs::MarkerArray>("broadcasted_markers", 1);
 }
 Broadcaster::~Broadcaster()
@@ -71,9 +71,9 @@ void Broadcaster::elaborate_estimated_objects()
       box_marker.ns = "Tracked Object Bounding Box";
       box_marker.id = 0;
       tf::Transform t;
-      Eigen::Matrix4f inv = estimated->at(i).inverse();
+      //Eigen::Matrix4f inv = estimated->at(i).inverse();
       //overwrite object pose, it was already saved into marker
-      fromEigen(inv, pose, t);
+      fromEigen(estimated->at(i), pose, t);
       box_marker.pose=pose;
       this->markers.markers.push_back(box_marker);
     }
