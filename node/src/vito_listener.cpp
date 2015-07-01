@@ -10,7 +10,8 @@ Listener::Listener(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
   this->storage = stor;
-  listen_left_arm = listen_right_arm = listen_left_hand = listen_right_hand = true;
+  nh.param("/pacman_vision/crop_left_arm", listen_left_arm, false);
+  //TODO = listen_right_arm = listen_left_hand = listen_right_hand = true;
   //initializing arm naming
   arm_naming.resize(6);
   arm_naming[0]= "_arm_2_link";

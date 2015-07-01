@@ -22,14 +22,14 @@ VisionNode::VisionNode()
   nh.param<bool>("downsampling", downsample, false);
   nh.param<bool>("plane_segmentation", plane, false);
   nh.param<bool>("keep_organized", keep_organized, false);
-  nh.param<int>("kinect2_resolution", kinect2_resolution, 1);
+  nh.param<int>("point_cloud_resolution", kinect2_resolution, 1);
   nh.param<double>("pass_xmax", limits->x2, 0.5);
   nh.param<double>("pass_xmin", limits->x1, -0.5);
   nh.param<double>("pass_ymax", limits->y2, 0.5);
   nh.param<double>("pass_ymin", limits->y1, -0.5);
   nh.param<double>("pass_zmax", limits->z2, 1.0);
   nh.param<double>("pass_zmin", limits->z1, 0.3);
-  nh.param<double>("leaf_size", leaf, 0.01);
+  nh.param<double>("downsamp_leaf_size", leaf, 0.01);
   nh.param<double>("plane_tolerance", plane_tol, 0.004);
   //set callback for dynamic reconfigure
   this->dyn_srv.setCallback(boost::bind(&VisionNode::cb_reconfigure, this, _1, _2));
@@ -207,7 +207,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       inv_trans = left_arm->at(3).inverse();
       cb.setTransform(Eigen::Affine3f(inv_trans));
       cb.filter(*input);
-      //left6
+      //left6shared_ptr<
       cb.setInputCloud(input);
       min << -0.0711,-0.0555,-0.0711,1;
       max << 0.0711,0.0795,0.057,1;
@@ -576,19 +576,19 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.enable_broadcaster = en_broadcaster;
     config.enable_listener = en_listener;
     config.enable_tracker= en_tracker;
-    config.downsampling = downsample;
-    config.passthrough = filter;
-    config.plane_segmentation = plane;
-    config.plane_tolerance = plane_tol;
-    config.keep_organized = keep_organized;
-    config.leaf_size = leaf;
-    config.pass_xmax = limits->x2;
-    config.pass_xmin = limits->x1;
-    config.pass_ymax = limits->y2;
-    config.pass_ymin = limits->y1;
-    config.pass_zmax = limits->z2;
-    config.pass_zmin = limits->z1;
-    config.point_cloud_resolution = kinect2_resolution;
+    config.groups.base_node_filters.downsampling = downsample;
+    config.groups.base_node_filters.passthrough = filter;
+    config.groups.base_node_filters.plane_segmentation = plane;
+    config.groups.base_node_filters.plane_tolerance = plane_tol;
+    config.groups.base_node_filters.keep_organized = keep_organized;
+    config.groups.base_node_filters.leaf_size = leaf;
+    config.groups.base_node_filters.pass_xmax = limits->x2;
+    config.groups.base_node_filters.pass_xmin = limits->x1;
+    config.groups.base_node_filters.pass_ymax = limits->y2;
+    config.groups.base_node_filters.pass_ymin = limits->y1;
+    config.groups.base_node_filters.pass_zmax = limits->z2;
+    config.groups.base_node_filters.pass_zmin = limits->z1;
+    config.groups.base_node_filters.point_cloud_resolution = kinect2_resolution;
     //subscribe to pointcloud topic
     std::string topic;
     if (kinect2_resolution == 2)
@@ -601,44 +601,49 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
       topic = nh.resolveName("/kinect2/sd/points");
     sub_kinect = nh.subscribe(topic, 5, &VisionNode::cb_kinect, this);
 
-    config.tracker_disturbance = false;
     //listener
-    nh.getParam("listener_crop_right_arm", config.listener_crop_right_arm);
-    nh.getParam("listener_crop_left_arm", config.listener_crop_left_arm);
-    nh.getParam("listener_crop_right_hand", config.listener_crop_right_hand);
-    nh.getParam("listener_crop_left_hand", config.listener_crop_left_hand);
+    nh.getParam("crop_right_arm", config.groups.listener_module.crop_right_arm);
+    nh.getParam("crop_left_arm", config.groups.listener_module.crop_left_arm);
+    nh.getParam("crop_right_hand", config.groups.listener_module.crop_right_hand);
+    nh.getParam("crop_left_hand", config.groups.listener_module.crop_left_hand);
     //estimator
-    nh.getParam("estimator_object_calibration", config.estimator_object_calibration);
-    nh.getParam("estimator_iterations", config.estimator_iterations);
-    nh.getParam("estimator_neighbors", config.estimator_neighbors);
-    nh.getParam("estimator_clus_tol", config.estimator_clus_tol);
+    nh.getParam("object_calibration", config.groups.estimator_module.object_calibration);
+    nh.getParam("iterations", config.groups.estimator_module.iterations);
+    nh.getParam("neighbors", config.groups.estimator_module.neighbors);
+    nh.getParam("cluster_tol", config.groups.estimator_module.cluster_tol);
     //broadcaster
-    nh.getParam("broadcaster_tf", config.broadcaster_tf);
-    nh.getParam("broadcaster_rviz_markers", config.broadcaster_rviz_markers);
+    nh.getParam("publish_tf", config.groups.broadcaster_module.publish_tf);
+    nh.getParam("estimated_objects", config.groups.broadcaster_module.estimated_objects);
+    nh.getParam("passthrough_limits", config.groups.broadcaster_module.passthrough_limits);
+    nh.getParam("tracker_bounding_box", config.groups.broadcaster_module.tracker_bounding_box);
     //tracker
-    nh.getParam("tracker_estimation_type", config.tracker_estimation_type);
+    config.groups.tracker_module.tracker_disturbance = false;
+    nh.getParam("estimation_type", config.groups.tracker_module.estimation_type);
+    //Finish gui initialization
     this->rqt_init = false;
     ROS_WARN("[PaCMaN Vision] Rqt-Reconfigure Default Values Initialized");
   }
-  this->en_estimator = config.enable_estimator;
-  this->en_tracker = config.enable_tracker;
-  this->en_broadcaster = config.enable_broadcaster;
-  this->en_listener = config.enable_listener;
-  this->filter = config.passthrough;
-  this->plane = config.plane_segmentation;
-  this->plane_tol = config.plane_tolerance;
-  this->downsample = config.downsampling;
-  this->keep_organized = config.keep_organized;
-  this->limits->x1 = config.pass_xmin;
-  this->limits->x2 = config.pass_xmax;
-  this->limits->y1 = config.pass_ymin;
-  this->limits->y2 = config.pass_ymax;
-  this->limits->z1 = config.pass_zmin;
-  this->limits->z2 = config.pass_zmax;
-  this->leaf = config.leaf_size;
-  if (this->kinect2_resolution != config.point_cloud_resolution)
+  //Normal behaviour
+  this->en_estimator    = config.enable_estimator;
+  this->en_tracker      = config.enable_tracker;
+  this->en_broadcaster  = config.enable_broadcaster;
+  this->en_listener     = config.enable_listener;
+  //filters
+  this->downsample      = config.groups.base_node_filters.downsampling;
+  this->filter          = config.groups.base_node_filters.passthrough;
+  this->plane           = config.groups.base_node_filters.plane_segmentation;
+  this->plane_tol       = config.groups.base_node_filters.plane_tolerance;
+  this->keep_organized  = config.groups.base_node_filters.keep_organized;
+  this->leaf            = config.groups.base_node_filters.leaf_size;
+  this->limits->x2      = config.groups.base_node_filters.pass_xmax;
+  this->limits->x1      = config.groups.base_node_filters.pass_xmin;
+  this->limits->y2      = config.groups.base_node_filters.pass_ymax;
+  this->limits->y1      = config.groups.base_node_filters.pass_ymin;
+  this->limits->z2      = config.groups.base_node_filters.pass_zmax;
+  this->limits->z1      = config.groups.base_node_filters.pass_zmin;
+  if (this->kinect2_resolution != config.groups.base_node_filters.point_cloud_resolution)
   {
-    this->kinect2_resolution = config.point_cloud_resolution;
+    this->kinect2_resolution = config.groups.base_node_filters.point_cloud_resolution;
     std::string topic;
     if (kinect2_resolution == 2)
       topic = nh.resolveName("/kinect2/hd/points");
@@ -651,37 +656,41 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     //resubscribe (also kills previous subscription)
     sub_kinect = nh.subscribe(topic, 2, &VisionNode::cb_kinect, this);
   }
+  //Listener Module
   if (this->listener_module && this->en_listener)
   {
-    this->crop_r_arm = config.listener_crop_right_arm;
-    this->crop_l_arm = config.listener_crop_left_arm;
-    this->crop_r_hand = config.listener_crop_right_hand;
-    this->crop_l_hand = config.listener_crop_left_hand;
+    this->crop_r_arm    = config.groups.listener_module.crop_right_arm;
+    this->crop_l_arm    = config.groups.listener_module.crop_left_arm;
+    this->crop_r_hand   = config.groups.listener_module.crop_right_hand;
+    this->crop_l_hand   = config.groups.listener_module.crop_left_hand;
   }
+  //Estimator Module
   if (this->estimator_module && this->en_estimator)
   {
-    this->estimator_module->calibration = config.estimator_object_calibration;
-    this->estimator_module->iterations = config.estimator_iterations;
-    this->estimator_module->pe.setParam("progItera",estimator_module->iterations);
-    this->estimator_module->neighbors = config.estimator_neighbors;
+    this->estimator_module->calibration = config.groups.estimator_module.object_calibration;
+    this->estimator_module->iterations  = config.groups.estimator_module.iterations;
+    this->estimator_module->neighbors   = config.groups.estimator_module.neighbors;
+    this->estimator_module->clus_tol    = config.groups.estimator_module.cluster_tol;
     this->estimator_module->pe.setParam("kNeighbors",estimator_module->neighbors);
-    this->estimator_module->clus_tol = static_cast<double>(config.estimator_clus_tol);
+    this->estimator_module->pe.setParam("progItera",estimator_module->iterations);
   }
   if (this->broadcaster_module && this->en_broadcaster)
   {
-    this->broadcaster_module->obj_tf = config.broadcaster_tf;
-    this->broadcaster_module->rviz_markers = config.broadcaster_rviz_markers;
+    this->broadcaster_module->obj_tf      = config.groups.broadcaster_module.publish_tf;
+    this->broadcaster_module->obj_markers = config.groups.broadcaster_module.estimated_objects;
+    this->broadcaster_module->pass_limits = config.groups.broadcaster_module.passthrough_limits;
+    this->broadcaster_module->tracker_bb  = config.groups.broadcaster_module.tracker_bounding_box;
   }
   if (this->tracker_module && this->en_tracker)
   {
-    this->tracker_module->type = config.tracker_estimation_type;
-    if (config.tracker_disturbance)
+    this->tracker_module->type = config.groups.tracker_module.estimation_type;
+    if (config.groups.tracker_module.tracker_disturbance)
     {
       tracker_module->manual_disturbance = true;
-      config.tracker_disturbance = false;
+      config.groups.tracker_module.tracker_disturbance = false;
     }
   }
-  ROS_INFO("[PaCMaN Vision] Reconfigure request accepted");
+  ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
 }
 
 void VisionNode::spin_once()

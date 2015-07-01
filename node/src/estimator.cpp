@@ -17,12 +17,11 @@ Estimator::Estimator(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
     ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
   this->srv_estimate = nh.advertiseService("estimate", &Estimator::cb_estimate, this);
   //init params
-  this->extract_clusters();
-  calibration = false;
+  nh.param<bool>("/pacman_vision/object_calibration", calibration, false);
   disabled = false;
-  iterations = 10;
-  neighbors = 10;
-  clus_tol = 0.05;
+  nh.param<int>("/pacman_vison/iterations", iterations, 10);
+  nh.param<int>("/pacman_vision/neighbors", neighbors, 10);
+  nh.param<double>("/pacman_vision/cluster_tol", clus_tol, 0.05);
   pe.setParam("verbosity",2);
   pe.setParam("progItera",iterations);
   pe.setParam("icpReciprocal",1);

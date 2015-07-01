@@ -9,7 +9,10 @@ Broadcaster::Broadcaster(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
   this->storage = stor;
-  obj_tf = rviz_markers = false;
+  nh.param<bool>("/pacman_vision/publish_tf", obj_tf, false);
+  nh.param<bool>("/pacman_vision/estimated_objects", obj_markers, false);
+  nh.param<bool>("/pacman_vision/passthrough_limits", pass_limits, false);
+  nh.param<bool>("/pacman_vision/tracker_bounding_box", tracker_bb, false);
   rviz_markers_pub = nh.advertise<visualization_msgs::MarkerArray>("broadcasted_markers", 1);
 }
 Broadcaster::~Broadcaster()
@@ -71,7 +74,6 @@ void Broadcaster::elaborate_estimated_objects()
       box_marker.ns = "Tracked Object Bounding Box";
       box_marker.id = 0;
       tf::Transform t;
-      //Eigen::Matrix4f inv = estimated->at(i).inverse();
       //overwrite object pose, it was already saved into marker
       fromEigen(estimated->at(i), pose, t);
       box_marker.pose=pose;
@@ -204,7 +206,7 @@ void Broadcaster::broadcast_once()
     for (int i = 0; i < transforms.size(); ++i)
       tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), "/kinect2_rgb_optical_frame", names->at(i).first.c_str()));
   }
-  if (rviz_markers)
+  if (obj_markers || pass_limits || tracker_bb)
   {
     for (int i = 0; i< markers.markers.size(); ++i)
       markers.markers[i].header.stamp = ros::Time();

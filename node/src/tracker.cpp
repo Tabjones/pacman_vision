@@ -4,6 +4,8 @@
 //Tracker Class//
 ///////////////////
 
+//TODO implement estimation_type param, already exists (/pacman_vison/estimation_type)
+
 //Constructor
 Tracker::Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
 {
