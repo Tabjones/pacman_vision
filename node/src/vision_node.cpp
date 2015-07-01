@@ -10,7 +10,7 @@ VisionNode::VisionNode()
   rqt_init = true;
   //service callback init
   srv_get_scene = nh.advertiseService("get_scene_processed", &VisionNode::cb_get_scene, this);
-  pub_scene = nh.advertise<PC> ("scene_processed", 3);
+  pub_scene = nh.advertise<PC> ("scene_processed", 5);
   //TODO possibly add them to dynamic reconfigure
   crop_r_arm = crop_l_arm = crop_r_hand = crop_l_hand = use_table_trans = false;
   //init node params
@@ -599,7 +599,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
       topic = nh.resolveName("/kinect2/sd/points");
     else //unhandled default to sd
       topic = nh.resolveName("/kinect2/sd/points");
-    sub_kinect = nh.subscribe(topic, 2, &VisionNode::cb_kinect, this);
+    sub_kinect = nh.subscribe(topic, 5, &VisionNode::cb_kinect, this);
 
     config.tracker_disturbance = false;
     //listener
