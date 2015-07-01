@@ -47,7 +47,7 @@ Visualization Manager:
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: RGB8
-      Decay Time: 0.1
+      Decay Time: 0
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -56,7 +56,7 @@ Visualization Manager:
       Min Intensity: -999999
       Name: Processed Scene
       Position Transformer: XYZ
-      Queue Size: 2
+      Queue Size: 5
       Selectable: true
       Size (Pixels): 2
       Size (m): 0.003
@@ -100,33 +100,18 @@ Visualization Manager:
       Name: Markers
       Namespaces:
         PassThrough Filter Limits: true
-        bowlA: true
-        mugD: true
-        pot: true
-      Queue Size: 100
+      Queue Size: 10
       Value: true
     - Class: rviz/TF
       Enabled: true
       Frame Timeout: 1
       Frames:
         All Enabled: false
-        bowlA:
-          Value: true
-        bowlA_2:
-          Value: true
-        bowlA_3:
-          Value: true
-        bowlA_4:
-          Value: true
         kinect2_ir_optical_frame:
-          Value: false
+          Value: true
         kinect2_link:
-          Value: false
+          Value: true
         kinect2_rgb_optical_frame:
-          Value: true
-        mugD:
-          Value: true
-        pot:
           Value: true
       Marker Scale: 0.5
       Name: Transformations
@@ -136,19 +121,7 @@ Visualization Manager:
       Tree:
         kinect2_link:
           kinect2_rgb_optical_frame:
-            bowlA:
-              {}
-            bowlA_2:
-              {}
-            bowlA_3:
-              {}
-            bowlA_4:
-              {}
             kinect2_ir_optical_frame:
-              {}
-            mugD:
-              {}
-            pot:
               {}
       Update Interval: 0
       Value: true
@@ -156,7 +129,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Fixed Frame: kinect2_rgb_optical_frame
-    Frame Rate: 30
+    Frame Rate: 100
   Name: root
   Tools:
     - Class: rviz/Interact
@@ -176,7 +149,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.59308
+      Distance: 1.84926
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -188,10 +161,10 @@ Visualization Manager:
         Z: 0.668666
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -0.924796
+      Pitch: -1.2748
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.67866
+      Yaw: 4.70366
     Saved: ~
 Window Geometry:
   Displays:

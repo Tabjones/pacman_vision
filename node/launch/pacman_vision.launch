@@ -1,13 +1,18 @@
 <?xml version="1.0"?>
 <launch>
 
-  <!-- Configurations -->
+  <!-- ========================== -->
+  <!--        Configuration       -->
+  <!-- ========================== -->
 
   <!-- launch_kinect2 -->
-  <arg name="launch_kinect2" default="true" doc="true if you want to include kinect2_bridge" />
+  <arg name="launch_kinect2" default="true" doc="true if you want to include kinect2_bridge launch file" />
 
   <!-- kinect2_max_depth -->
-  <arg name="kinect2_max_depth" default="2.0" doc="Maximum distance in meters to consider when creating the point clouds from kinect2. Smaller values increase performance, reducing total number of points processed. Ignored if launch_kinect2 is false." />
+  <arg name="kinect2_max_depth" default="12.0" doc="Maximum distance in meters to consider when creating the point clouds from kinect2. Smaller values increase performance, reducing total number of points processed. Ignored if launch_kinect2 is false." />
+
+  <!-- kinect2_calib_path -->
+  <arg name="kinect2_calib_path" default="$(find kinect2_bridge)/data/" doc="Path to calibration data for Kinect2" />
 
   <!-- run_reconfigure:  If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters.-->
   <arg name="run_reconfigure" default="true" doc="If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters." />
@@ -21,7 +26,13 @@
   <!-- load:  Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder).-->
   <arg name="load" default="default" doc="Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder of this node)."/>
 
-  <!-- Implementation -->
+  <!-- separate_term: Launch the node in a separate Terminal (Terminator) -->
+  <arg name="separate_term" default="true" doc="Launch PaCMan Vision into a separate Terminator instance. Usefull to clearly read output."/>
+
+
+  <!-- ========================== -->
+  <!--        Implementation      -->
+  <!-- ========================== -->
 
   <group if="$(arg launch_kinect2)">
     <!-- Launch kinect2 with custom driver parameters -->
@@ -31,13 +42,15 @@
       <arg name="depth_method"           value="opencl" />
       <arg name="reg_method"             value="opencl" />
       <arg name="max_depth"              value="$(arg kinect2_max_depth)" />
+      <arg name="calib_path"             value="$(arg kinect2_calib_path)"/>
     </include>
   </group>
 
   <rosparam command="load" file="$(find pacman_vision)/params/$(arg load).yaml"/>
 
   <!-- pacman vision node  -->
-  <node name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" />
+  <node name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" launch-prefix="terminator -x --title='PaCMan Vision' --new-tab" if="$(arg separate_term)"/>
+  <node name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" unless="$(arg separate_term)"/>
 
   <!-- rviz -->
   <group if="$(arg run_rviz)">
