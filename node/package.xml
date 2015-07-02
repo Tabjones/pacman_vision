@@ -6,7 +6,7 @@
 
   <maintainer email="fspinelli@gmail.com">Tabjones</maintainer>
   <license>PaCMaN</license>
-  <author email="fspinelli@gmail.com">Tabjones</author> -->
+  <author email="fspinelli@gmail.com">Tabjones</author>
 
   <!-- Use build_depend for packages you need at compile time: -->
   <!-- Use buildtool_depend for build tool packages: -->
