@@ -680,8 +680,12 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.setParam("tracker_disturbance", false);
     nh.getParam("estimation_type", config.groups.tracker_module.estimation_type);
     //Supervoxels
-    //TODO
-
+    nh.getParam("use_service", config.groups.supervoxels_module.use_service);
+    nh.getParam("voxel_resolution", config.groups.supervoxels_module.voxel_resolution);
+    nh.getParam("seed_resolution", config.groups.supervoxels_module.seed_resolution);
+    nh.getParam("color_importance", config.groups.supervoxels_module.color_importance);
+    nh.getParam("spatial_importance", config.groups.supervoxels_module.spatial_importance);
+    nh.getParam("normal_importance", config.groups.supervoxels_module.normal_importance);
     //Finish gui initialization
     this->rqt_init = false;
     ROS_WARN("[PaCMaN Vision] Rqt-Reconfigure Default Values Initialized");
@@ -765,6 +769,12 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   if (this->supervoxels_module && this->en_supervoxels)
   {
     //TODO
+    this->supervoxels_module->serviced = config.groups.supervoxels_module.use_service;
+    nh.getParam("voxel_resolution", config.groups.supervoxels_module.voxel_resolution);
+    nh.getParam("seed_resolution", config.groups.supervoxels_module.seed_resolution);
+    nh.getParam("color_importance", config.groups.supervoxels_module.color_importance);
+    nh.getParam("spatial_importance", config.groups.supervoxels_module.spatial_importance);
+    nh.getParam("normal_importance", config.groups.supervoxels_module.normal_importance);
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
 }
