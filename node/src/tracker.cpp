@@ -4,8 +4,6 @@
 //Tracker Class//
 ///////////////////
 
-//TODO implement estimation_type param, already exists (/pacman_vison/estimation_type)
-
 //Constructor
 Tracker::Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
 {
@@ -22,6 +20,7 @@ Tracker::Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   this->bounding_box.reset(new Box);
   this->bounding_box_original.reset(new Box);
 
+  nh.param<int>("/pacman_vision/estimation_type", type, 0);
   ce.reset( new pcl::registration::CorrespondenceEstimation<PX, PX, float>);
   crd.reset( new pcl::registration::CorrespondenceRejectorDistance);
   crt.reset( new pcl::registration::CorrespondenceRejectorTrimmed);

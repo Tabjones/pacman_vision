@@ -1,8 +1,0 @@
-pacman_vision: {broadcaster_rviz_markers: true, broadcaster_tf: true, downsampling: true, enable_broadcaster: true,
-  enable_estimator: true, enable_listener: false, enable_tracker: true, estimator_clus_tol: 0.05,
-  estimator_iterations: 5, estimator_neighbors: 10, estimator_object_calibration: false,
-  keep_organized: false, leaf_size: 0.01, listener_crop_left_arm: false, listener_crop_left_hand: false,
-  listener_crop_leftt_arm: false, listener_crop_right_arm: false, listener_crop_right_hand: false,
-  pass_xmax: 0.3, pass_xmin: -0.3, pass_ymax: 0.3, pass_ymin: -0.3, pass_zmax: 1.5,
-  pass_zmin: 0.3, passthrough: true, plane_segmentation: true, plane_tolerance: 0.01,
-  point_cloud_resolution: 1, tracker_disturbance: false, tracker_estimation_type: 0}

@@ -65,19 +65,22 @@ void Broadcaster::elaborate_estimated_objects()
       marker.color.g = 0.0f;
       marker.color.b = 0.3f;
       marker.color.a = 1.0f;
-      //publish also bounding box of tracked object
-      //We need to create it first
-      visualization_msgs::Marker box_marker;
-      boost::shared_ptr<Box> bb;
-      this->storage->read_tracked_box(bb);
-      this->create_box_marker(box_marker, bb);
-      box_marker.ns = "Tracked Object Bounding Box";
-      box_marker.id = 0;
-      tf::Transform t;
-      //overwrite object pose, it was already saved into marker
-      fromEigen(estimated->at(i), pose, t);
-      box_marker.pose=pose;
-      this->markers.markers.push_back(box_marker);
+      if(tracker_bb)
+      {
+        //publish also bounding box of tracked object
+        //We need to create it first
+        visualization_msgs::Marker box_marker;
+        boost::shared_ptr<Box> bb;
+        this->storage->read_tracked_box(bb);
+        this->create_box_marker(box_marker, bb);
+        box_marker.ns = "Tracked Object Bounding Box";
+        box_marker.id = 0;
+        tf::Transform t;
+        //overwrite object pose, it was already saved into marker
+        fromEigen(estimated->at(i), pose, t);
+        box_marker.pose=pose;
+        this->markers.markers.push_back(box_marker);
+      }
     }
     else
     {

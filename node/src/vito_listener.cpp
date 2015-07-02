@@ -3,15 +3,16 @@
 //////////////
 // Listener //
 //////////////
-//TODO Find a way to reactivate listening of specific parts after a certain time after it was disabled
 Listener::Listener(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
 {
   this->nh = ros::NodeHandle (n, "listener");
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
   this->storage = stor;
-  nh.param("/pacman_vision/crop_left_arm", listen_left_arm, false);
-  //TODO = listen_right_arm = listen_left_hand = listen_right_hand = true;
+  nh.param<bool>("/pacman_vision/crop_left_arm", listen_left_arm, false);
+  nh.param<bool>("/pacman_vision/crop_right_arm", listen_right_arm, false);
+  nh.param<bool>("/pacman_vision/crop_left_hand", listen_left_hand, false);
+  nh.param<bool>("/pacman_vision/crop_right_hand", listen_right_hand, false);
   //initializing arm naming
   arm_naming.resize(6);
   arm_naming[0]= "_arm_2_link";

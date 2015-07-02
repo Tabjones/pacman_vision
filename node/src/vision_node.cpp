@@ -11,8 +11,6 @@ VisionNode::VisionNode()
   //service callback init
   srv_get_scene = nh.advertiseService("get_scene_processed", &VisionNode::cb_get_scene, this);
   pub_scene = nh.advertise<PC> ("scene_processed", 5);
-  //TODO possibly add them to dynamic reconfigure
-  crop_r_arm = crop_l_arm = crop_r_hand = crop_l_hand = use_table_trans = false;
   //init node params
   nh.param<bool>("enable_estimator", en_estimator, false);
   nh.param<bool>("enable_tracker", en_tracker, false);
@@ -30,6 +28,11 @@ VisionNode::VisionNode()
   nh.param<double>("pass_zmax", limits->z2, 1.0);
   nh.param<double>("pass_zmin", limits->z1, 0.3);
   nh.param<double>("downsamp_leaf_size", leaf, 0.01);
+  nh.param<bool>("crop_right_arm", crop_r_arm, false);
+  nh.param<bool>("crop_left_arm", crop_l_arm, false);
+  nh.param<bool>("crop_right_hand", crop_r_hand, false);
+  nh.param<bool>("crop_left_hand", crop_l_hand, false);
+  nh.param<bool>("use_table_transform", use_table_trans, false);
   nh.param<double>("plane_tolerance", plane_tol, 0.004);
   //set callback for dynamic reconfigure
   this->dyn_srv.setCallback(boost::bind(&VisionNode::cb_reconfigure, this, _1, _2));
@@ -72,26 +75,29 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
   {
     PassThrough<PT> pass;
     //check if have a table transform
-    if (table_trans && use_table_trans)
+    if (use_table_trans)
     {
       this->storage->read_table(table_trans);
-      pcl::CropBox<PT> cb;
-      Eigen::Matrix4f inv_trans;
-      inv_trans = table_trans->inverse();
-      //check if we need to maintain scene organized
-      if (keep_organized)
-        cb.setKeepOrganized(true);
-      else
-        cb.setKeepOrganized(false);
-      cb.setInputCloud (this->scene);
-      Eigen::Vector4f min,max;
-      //hardcoded table dimensions TODO make it dynamic reconfigurable if possible
-      min << -0.1, -1.15, -0.1, 1;
-      max << 0.825, 0.1, 1.5, 1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter (*(this->scene_processed));
+      if (table_trans)
+      {
+        pcl::CropBox<PT> cb;
+        Eigen::Matrix4f inv_trans;
+        inv_trans = table_trans->inverse();
+        //check if we need to maintain scene organized
+        if (keep_organized)
+          cb.setKeepOrganized(true);
+        else
+          cb.setKeepOrganized(false);
+        cb.setInputCloud (this->scene);
+        Eigen::Vector4f min,max;
+        //hardcoded table dimensions TODO make it dynamic reconfigurable if possible
+        min << -0.1, -1.15, -0.1, 1;
+        max << 0.825, 0.1, 1.5, 1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter (*(this->scene_processed));
+      }
     }
     else
     {
@@ -153,7 +159,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
     extract.filter(*tmp);
     pcl::copyPointCloud(*tmp, *(this->scene_processed));
   }
-  //crop arms if listener set it
+  //crop arms if listener is active and we set it
   if ( (crop_r_arm || crop_l_arm || crop_r_hand || crop_l_hand) && this->en_listener && this->listener_module )
   {
     PC::Ptr input (new PC);
@@ -165,166 +171,180 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
       pcl::copyPointCloud(*(this->scene_processed), *input);
     else
       pcl::copyPointCloud(*(this->scene), *input);
-    if (crop_l_arm && left_arm)
+    if (crop_l_arm)
     {
-      //left2
-      cb.setInputCloud(input);
-      min << -0.06, -0.06, -0.06, 1;
-      max << 0.06, 0.0938, 0.1915, 1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = left_arm->at(0).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter (*(tmp));
-      //left3
-      cb.setInputCloud(tmp);
-      min << -0.06,-0.06,0,1;
-      max << 0.06,0.0938,0.2685,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = left_arm->at(1).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*input);
-      //left4
-      cb.setInputCloud(input);
-      min << -0.06,-0.0938,-0.06,1;
-      max << 0.06,0.06,0.1915,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = left_arm->at(2).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*tmp);
-      //left5
-      cb.setInputCloud(tmp);
-      min << -0.06,-0.0555,0,1;
-      max << 0.06,0.06,0.2585,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = left_arm->at(3).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*input);
-      //left6shared_ptr<
-      cb.setInputCloud(input);
-      min << -0.0711,-0.0555,-0.0711,1;
-      max << 0.0711,0.0795,0.057,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = left_arm->at(4).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*tmp);
-      //left7
-      cb.setInputCloud(tmp);
-      min << -0.04,-0.0399,-0.031,1;
-      max << 0.04,0.0399,0,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = left_arm->at(5).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*input);
-      if (!crop_r_arm && !crop_r_hand && !crop_l_hand)
-        pcl::copyPointCloud(*input, *(this->scene_processed));
+      if( this->storage->read_left_arm(left_arm) )
+      {
+        //left2
+        cb.setInputCloud(input);
+        min << -0.06, -0.06, -0.06, 1;
+        max << 0.06, 0.0938, 0.1915, 1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = left_arm->at(0).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter (*(tmp));
+        //left3
+        cb.setInputCloud(tmp);
+        min << -0.06,-0.06,0,1;
+        max << 0.06,0.0938,0.2685,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = left_arm->at(1).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*input);
+        //left4
+        cb.setInputCloud(input);
+        min << -0.06,-0.0938,-0.06,1;
+        max << 0.06,0.06,0.1915,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = left_arm->at(2).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*tmp);
+        //left5
+        cb.setInputCloud(tmp);
+        min << -0.06,-0.0555,0,1;
+        max << 0.06,0.06,0.2585,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = left_arm->at(3).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*input);
+        //left6shared_ptr<
+        cb.setInputCloud(input);
+        min << -0.0711,-0.0555,-0.0711,1;
+        max << 0.0711,0.0795,0.057,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = left_arm->at(4).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*tmp);
+        //left7
+        cb.setInputCloud(tmp);
+        min << -0.04,-0.0399,-0.031,1;
+        max << 0.04,0.0399,0,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = left_arm->at(5).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*input);
+        if (!crop_r_arm && !crop_r_hand && !crop_l_hand)
+          pcl::copyPointCloud(*input, *(this->scene_processed));
+      }
     }
-    if (crop_r_arm && right_arm)
+    if (crop_r_arm)
     {
-      //right2
-      cb.setInputCloud(input);
-      min << -0.06, -0.06, -0.06, 1;
-      max << 0.06, 0.0938, 0.1915, 1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = right_arm->at(0).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*tmp);
-      //right3
-      cb.setInputCloud(tmp);
-      min << -0.06,-0.06,0,1;
-      max << 0.06,0.0938,0.2685,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = right_arm->at(1).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*input);
-      //right4
-      cb.setInputCloud(input);
-      min << -0.06,-0.0938,-0.06,1;
-      max << 0.06,0.06,0.1915,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = right_arm->at(2).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*tmp);
-      //right5
-      cb.setInputCloud(tmp);
-      min << -0.06,-0.0555,0,1;
-      max << 0.06,0.06,0.2585,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = right_arm->at(3).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*input);
-      //right6
-      cb.setInputCloud(input);
-      min << -0.0711,-0.0555,-0.0711,1;
-      max << 0.0711,0.0795,0.057,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = right_arm->at(4).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*tmp);
-      //right7
-      cb.setInputCloud(tmp);
-      min << -0.04,-0.0399,-0.031,1;
-      max << 0.04,0.0399,0,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = right_arm->at(5).inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*input);
-      if (!crop_r_hand && !crop_l_hand)
-        pcl::copyPointCloud(*input, *(this->scene_processed));
+      if ( this->storage->read_right_arm(right_arm) )
+      {
+        //right2
+        cb.setInputCloud(input);
+        min << -0.06, -0.06, -0.06, 1;
+        max << 0.06, 0.0938, 0.1915, 1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = right_arm->at(0).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*tmp);
+        //right3
+        cb.setInputCloud(tmp);
+        min << -0.06,-0.06,0,1;
+        max << 0.06,0.0938,0.2685,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = right_arm->at(1).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*input);
+        //right4
+        cb.setInputCloud(input);
+        min << -0.06,-0.0938,-0.06,1;
+        max << 0.06,0.06,0.1915,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = right_arm->at(2).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*tmp);
+        //right5
+        cb.setInputCloud(tmp);
+        min << -0.06,-0.0555,0,1;
+        max << 0.06,0.06,0.2585,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = right_arm->at(3).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*input);
+        //right6
+        cb.setInputCloud(input);
+        min << -0.0711,-0.0555,-0.0711,1;
+        max << 0.0711,0.0795,0.057,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = right_arm->at(4).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*tmp);
+        //right7
+        cb.setInputCloud(tmp);
+        min << -0.04,-0.0399,-0.031,1;
+        max << 0.04,0.0399,0,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = right_arm->at(5).inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*input);
+        if (!crop_r_hand && !crop_l_hand)
+          pcl::copyPointCloud(*input, *(this->scene_processed));
+      }
     }
-    if (crop_r_hand && right_hand)
+    if (crop_r_hand)
     {
       //right hand //TODO hand measures
-      cb.setInputCloud(input);
-      min << 0,0,0,1;
-      max << 0,0,0,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = right_hand->inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*tmp);
-      if (!crop_l_hand)
-        pcl::copyPointCloud(*tmp, *(this->scene_processed));
-    }
-    if (crop_l_hand && left_hand)
-    {
-      //left_hand
-      if (crop_r_hand && right_hand)
-        cb.setInputCloud(tmp);
-      else
+      this->storage->read_right_hand(right_hand);
+      if (right_hand)
+      {
         cb.setInputCloud(input);
-      min << 0,0,0,1;
-      max << 0,0,0,1;
-      cb.setMin(min);
-      cb.setMax(max);
-      cb.setNegative(true); //crop what's inside
-      inv_trans = left_hand->inverse();
-      cb.setTransform(Eigen::Affine3f(inv_trans));
-      cb.filter(*(this->scene_processed));
+        min << 0,0,0,1;
+        max << 0,0,0,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = right_hand->inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*tmp);
+        if (!crop_l_hand)
+          pcl::copyPointCloud(*tmp, *(this->scene_processed));
+      }
+    }
+    if (crop_l_hand)
+    {
+      //left_hand //TODO hand measures
+      this->storage->read_left_hand(left_hand);
+      if (left_hand)
+      {
+        if (crop_r_hand && right_hand)
+          cb.setInputCloud(tmp);
+        else
+          cb.setInputCloud(input);
+        min << 0,0,0,1;
+        max << 0,0,0,1;
+        cb.setMin(min);
+        cb.setMax(max);
+        cb.setNegative(true); //crop what's inside
+        inv_trans = left_hand->inverse();
+        cb.setTransform(Eigen::Affine3f(inv_trans));
+        cb.filter(*(this->scene_processed));
+      }
     }
   }
   //republish processed cloud
@@ -444,20 +464,23 @@ void VisionNode::spin_estimator()
 
 void VisionNode::spin_broadcaster()
 {
+  ROS_INFO("[Broadcaster] Broadcaster module will publish tfs and markers calculated by the other modules or the base node itself.");
+  ROS_INFO("[Broadcaster] Look at the namespace of markers in the MarkerArray.");
   //spin until we disable it or it dies somehow
   while (this->en_broadcaster && this->broadcaster_module)
   {
     //Clear previous markers
     broadcaster_module->markers.markers.clear();
     //Check if we have to publish estimated objects or tracked one
-    if (  (this->en_estimator && this->estimator_module) || (this->tracker_module && this->en_tracker) )
+    if ( (this->en_estimator && this->estimator_module) || (this->tracker_module && this->en_tracker) )
     {
-      //this takes care of markers and TFs of all pose estimated objects, plus tracked object
-      broadcaster_module->elaborate_estimated_objects();
+      if (broadcaster_module->obj_markers || broadcaster_module->obj_tf || broadcaster_module->tracker_bb)
+        //this takes care of markers and TFs of all pose estimated objects, plus tracked object and its bounding box
+        broadcaster_module->elaborate_estimated_objects();
     }
 
     //publish Passthrough filter limits as a box
-    if(limits && filter)
+    if(limits && filter && broadcaster_module->pass_limits)
     {
       visualization_msgs::Marker box_marker;
       if(this->broadcaster_module->create_box_marker(box_marker, limits))
@@ -581,7 +604,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.groups.base_node_filters.plane_segmentation = plane;
     config.groups.base_node_filters.plane_tolerance = plane_tol;
     config.groups.base_node_filters.keep_organized = keep_organized;
-    config.groups.base_node_filters.leaf_size = leaf;
+    config.groups.base_node_filters.downsample_leaf_size = leaf;
     config.groups.base_node_filters.pass_xmax = limits->x2;
     config.groups.base_node_filters.pass_xmin = limits->x1;
     config.groups.base_node_filters.pass_ymax = limits->y2;
@@ -606,6 +629,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("crop_left_arm", config.groups.listener_module.crop_left_arm);
     nh.getParam("crop_right_hand", config.groups.listener_module.crop_right_hand);
     nh.getParam("crop_left_hand", config.groups.listener_module.crop_left_hand);
+    nh.getParam("use_table_transform", config.groups.listener_module.use_table_transform);
     //estimator
     nh.getParam("object_calibration", config.groups.estimator_module.object_calibration);
     nh.getParam("iterations", config.groups.estimator_module.iterations);
@@ -618,6 +642,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("tracker_bounding_box", config.groups.broadcaster_module.tracker_bounding_box);
     //tracker
     config.groups.tracker_module.tracker_disturbance = false;
+    nh.setParam("tracker_disturbance", false);
     nh.getParam("estimation_type", config.groups.tracker_module.estimation_type);
     //Finish gui initialization
     this->rqt_init = false;
@@ -634,7 +659,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   this->plane           = config.groups.base_node_filters.plane_segmentation;
   this->plane_tol       = config.groups.base_node_filters.plane_tolerance;
   this->keep_organized  = config.groups.base_node_filters.keep_organized;
-  this->leaf            = config.groups.base_node_filters.leaf_size;
+  this->leaf            = config.groups.base_node_filters.downsample_leaf_size;
   this->limits->x2      = config.groups.base_node_filters.pass_xmax;
   this->limits->x1      = config.groups.base_node_filters.pass_xmin;
   this->limits->y2      = config.groups.base_node_filters.pass_ymax;
@@ -663,6 +688,11 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->crop_l_arm    = config.groups.listener_module.crop_left_arm;
     this->crop_r_hand   = config.groups.listener_module.crop_right_hand;
     this->crop_l_hand   = config.groups.listener_module.crop_left_hand;
+    this->use_table_trans   = config.groups.listener_module.use_table_transform;
+    this->listener_module->listen_left_arm = this->crop_l_arm;
+    this->listener_module->listen_right_arm = this->crop_r_arm;
+    this->listener_module->listen_left_hand = this->crop_l_hand;
+    this->listener_module->listen_right_hand = this->crop_r_hand;
   }
   //Estimator Module
   if (this->estimator_module && this->en_estimator)
