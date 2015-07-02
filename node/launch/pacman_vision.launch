@@ -49,8 +49,8 @@
   <rosparam command="load" file="$(find pacman_vision)/params/$(arg load).yaml"/>
 
   <!-- pacman vision node  -->
-  <node name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" launch-prefix="terminator -x --title='PaCMan Vision' --new-tab" if="$(arg separate_term)"/>
-  <node name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" unless="$(arg separate_term)"/>
+  <node if="$(arg separate_term)" name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" launch-prefix="gnome-terminal --command"/>
+  <node unless="$(arg separate_term)" name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" />
 
   <!-- rviz -->
   <group if="$(arg run_rviz)">
