@@ -95,7 +95,8 @@ add_executable(pacman_vision src/vision_node.cpp
                              src/tracker.cpp
                              src/utility.cpp
                              src/vito_listener.cpp
-                             src/storage.cpp)
+                             src/storage.cpp
+                             src/supervoxels.cpp)
 
 add_dependencies(pacman_vision
   pacman_vision_comm_generate_messages_cpp

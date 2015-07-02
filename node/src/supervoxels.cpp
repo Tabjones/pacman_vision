@@ -11,7 +11,7 @@ Supervoxels::Supervoxels(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   this->storage = stor;
   this->scene.reset(new PC);
   this->clustered_scene.reset(new PC);
-  this->pub_clustered_scene = this->nh.advertise<PC> ("clustered_scene", 2);
+  this->pub_clusterized_scene = this->nh.advertise<PC> ("supervoxelled_scene", 2);
   serviced = true;
   voxel_res = 0.02f;
   seed_res = 0.2f;

@@ -47,7 +47,7 @@ class VisionNode
     ros::NodeHandle nh;
   private:
     //bools to control modules
-    bool en_estimator, en_tracker, en_broadcaster, en_listener;
+    bool en_estimator, en_tracker, en_broadcaster, en_listener, en_supervoxels;
     //bool to initialize rqt_reconfigure with user parameters
     bool rqt_init;
 
@@ -74,7 +74,6 @@ class VisionNode
     //pointer to processed and acquired point cloud
     PC::Ptr scene_processed;
     PC::Ptr scene;
-//TODO add supervoxels module
     //Shared pointer of Storage (to be shared to modules)
     boost::shared_ptr<Storage> storage;
     //Shared pointers of modules
@@ -82,6 +81,7 @@ class VisionNode
     boost::shared_ptr<Broadcaster> broadcaster_module;
     boost::shared_ptr<Listener> listener_module;
     boost::shared_ptr<Tracker> tracker_module;
+    boost::shared_ptr<Supervoxels> supervoxels_module;
     //slave spinner threads for modules
     //estimator
     boost::thread estimator_driver;
@@ -95,6 +95,9 @@ class VisionNode
     //listenerr
     boost::thread listener_driver;
     void spin_listener();
+    //supervoxels
+    boost::thread supervoxels_driver;
+    void spin_supervoxels();
 
     //Service callback for srv_get_scene
     bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);

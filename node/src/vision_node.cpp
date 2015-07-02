@@ -16,6 +16,7 @@ VisionNode::VisionNode()
   nh.param<bool>("enable_tracker", en_tracker, false);
   nh.param<bool>("enable_broadcaster", en_broadcaster, false);
   nh.param<bool>("enable_listener", en_listener, false);
+  nh.param<bool>("enable_supervoxels", en_supervoxels, false);
   nh.param<bool>("passthrough", filter, true);
   nh.param<bool>("downsampling", downsample, false);
   nh.param<bool>("plane_segmentation", plane, false);
@@ -27,7 +28,7 @@ VisionNode::VisionNode()
   nh.param<double>("pass_ymin", limits->y1, -0.5);
   nh.param<double>("pass_zmax", limits->z2, 1.0);
   nh.param<double>("pass_zmin", limits->z1, 0.3);
-  nh.param<double>("downsamp_leaf_size", leaf, 0.01);
+  nh.param<double>("downsample_leaf_size", leaf, 0.01);
   nh.param<bool>("crop_right_arm", crop_r_arm, false);
   nh.param<bool>("crop_left_arm", crop_l_arm, false);
   nh.param<bool>("crop_right_hand", crop_r_hand, false);
@@ -426,7 +427,25 @@ void VisionNode::check_modules()
     //kill the module
     this->listener_module.reset();
   }
+
+  //check if we want supervoxels module and it is not started, or if it is started but we want it disabled
+  if (this->en_supervoxels && !this->supervoxels_module)
+  {
+    ROS_WARN("[PaCMaN Vision] Started Supervoxels module");
+    this->supervoxels_module.reset( new Supervoxels(this->nh, this->storage) );
+    //spawn a thread to handle the module spinning
+    supervoxels_driver = boost::thread(&VisionNode::spin_supervoxels, this);
+  }
+  else if (!this->en_supervoxels && this->supervoxels_module)
+  {
+    ROS_WARN("[PaCMaN Vision] Stopped Supervoxels module");
+    //wait for the thread to stop, if not already, if already stopped this results in a no_op
+    supervoxels_driver.join();
+    //kill the module
+    this->supervoxels_module.reset();
+  }
 }
+
 ///////Spinner threads//////////
 ////////////////////////////////
 void VisionNode::spin_estimator()
@@ -589,6 +608,21 @@ void VisionNode::spin_listener()
   return;
 }
 
+void VisionNode::spin_supervoxels()
+{
+  //ROS_INFO("[Listener] Listener module will try to read Vito Robot arms and hands transformations to perform hands/arms cropping on the processed scene.");
+  //spin until we disable it or it dies somehow
+  while (this->en_supervoxels && this->supervoxels_module)
+  {
+    //TODO
+    //spin
+    this->supervoxels_module->spin_once();
+    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //Supervoxels can try to go at 20Hz
+  }
+  //supervoxels got stopped
+  return;
+}
+
 //dynamic reconfigure callback
 void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t level)
 {
@@ -599,6 +633,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.enable_broadcaster = en_broadcaster;
     config.enable_listener = en_listener;
     config.enable_tracker= en_tracker;
+    config.enable_supervoxels = en_supervoxels;
     config.groups.base_node_filters.downsampling = downsample;
     config.groups.base_node_filters.passthrough = filter;
     config.groups.base_node_filters.plane_segmentation = plane;
@@ -644,6 +679,9 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.groups.tracker_module.tracker_disturbance = false;
     nh.setParam("tracker_disturbance", false);
     nh.getParam("estimation_type", config.groups.tracker_module.estimation_type);
+    //Supervoxels
+    //TODO
+
     //Finish gui initialization
     this->rqt_init = false;
     ROS_WARN("[PaCMaN Vision] Rqt-Reconfigure Default Values Initialized");
@@ -653,6 +691,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   this->en_tracker      = config.enable_tracker;
   this->en_broadcaster  = config.enable_broadcaster;
   this->en_listener     = config.enable_listener;
+  this->en_supervoxels  = config.enable_supervoxels;
   //filters
   this->downsample      = config.groups.base_node_filters.downsampling;
   this->filter          = config.groups.base_node_filters.passthrough;
@@ -704,6 +743,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->estimator_module->pe.setParam("kNeighbors",estimator_module->neighbors);
     this->estimator_module->pe.setParam("progItera",estimator_module->iterations);
   }
+  //Broadcaster Module
   if (this->broadcaster_module && this->en_broadcaster)
   {
     this->broadcaster_module->obj_tf      = config.groups.broadcaster_module.publish_tf;
@@ -711,6 +751,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->broadcaster_module->pass_limits = config.groups.broadcaster_module.passthrough_limits;
     this->broadcaster_module->tracker_bb  = config.groups.broadcaster_module.tracker_bounding_box;
   }
+  //Tracker Module
   if (this->tracker_module && this->en_tracker)
   {
     this->tracker_module->type = config.groups.tracker_module.estimation_type;
@@ -719,6 +760,11 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
       tracker_module->manual_disturbance = true;
       config.groups.tracker_module.tracker_disturbance = false;
     }
+  }
+  //Supervoxels Module
+  if (this->supervoxels_module && this->en_supervoxels)
+  {
+    //TODO
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
 }

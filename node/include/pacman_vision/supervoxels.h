@@ -1,30 +1,18 @@
 #ifndef _INCL_SUPERVOXELS
 #define _INCL_SUPERVOXELS
 // ROS headers
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <ros/package.h>
-#include <ros/callback_queue.h>
-#include <ros/callback_queue_interface.h>
+#include <pcl_ros/point_cloud.h>
+#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud_conversion.h>
 //pcl
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
 #include <pcl/segmentation/supervoxel_clustering.h>
 #include <pcl/features/normal_3d_omp.h>
+#include <pcl_conversions/pcl_conversions.h>
 //Ros generated
 #include "pacman_vision_comm/clusterize.h"
-//general utilities
-#include <cmath>
-#include <fstream>
-#include <string>
-#include <stdlib.h>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/date_time.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
-#include <Eigen/Dense>
+//Utility
+#include "pacman_vision/utility.h"
 //Storage
 #include "pacman_vision/storage.h"
 
@@ -45,8 +33,8 @@ class Supervoxels
 
     PC::Ptr scene;
     PC::Ptr clustered_scene;
-    pcl::SupervoxelClustering<PT> svc;
-    pcl::NormalEstimationOMP<PT, PN> ne;
+    //pcl::SupervoxelClustering<PT> svc;
+    //pcl::NormalEstimationOMP<PT, PN> ne;
 
     //class behaviour
     bool serviced;
