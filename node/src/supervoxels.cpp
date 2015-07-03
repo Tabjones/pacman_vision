@@ -29,11 +29,15 @@ void Supervoxels::spin_once()
 
 bool Supervoxels::clustering()
 {
+  this->storage->read_scene_processed(scene);
   //TODO
 }
 
 bool Supervoxels::cb_clusterize(pacman_vision_comm::clusterize::Request& req, pacman_vision_comm::clusterize::Response& res)
 {
-  //TODO
+  if ( clustering() )
+    return true;
+  else
+    return false;
 }
 
