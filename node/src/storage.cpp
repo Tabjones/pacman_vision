@@ -383,3 +383,35 @@ bool Storage::write_tracked_box(boost::shared_ptr<Box> &b)
   ROS_WARN("[Storage][%s] Passed BoundingBox limits are empty! Not writing anything in Storage", __func__);
   return false;
 }
+
+bool Storage::read_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr> > &clus)
+{
+  if (!clus)
+    clus.reset(new std::map<uint32_t, pcl::Supervoxel<PT>::Ptr>);
+  else
+    clus->clear();
+  if (!super_clusters.empty())
+  {
+    LOCK guard(mtx_super_clusters);
+    boost::copy(super_clusters, back_inserter(*clus));
+    return true;
+  }
+  ROS_WARN("[Storage][%s] Supervoxel clusters from Storage are empty! Not reading anything", __func__);
+  return false;
+}
+
+bool Storage::write_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr> > &clus)
+{
+  if (clus)
+  {
+    if (!clus->empty())
+    {
+      LOCK guard(this->mtx_super_clusters);
+      this->super_clusters.clear();
+      boost::copy(*clus, back_inserter(this->super_clusters));
+      return true;
+    }
+  }
+  ROS_WARN("[Storage][%s] Passed clusters are empty! Not writing anything", __func__);
+  return false;
+}

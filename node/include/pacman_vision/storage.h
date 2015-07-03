@@ -2,6 +2,7 @@
 #define _INCL_STORAGE
 //Utility
 #include "pacman_vision/utility.h"
+#include <pcl/segmentation/supervoxel_clustering.h>
 
 class Storage
 {
@@ -45,6 +46,8 @@ class Storage
     //Read/Write tracked object boundingbox
     void read_tracked_box(boost::shared_ptr<Box> &b);
     bool write_tracked_box(boost::shared_ptr<Box> &b);
+    bool read_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr> >  &clus);
+    bool write_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr> >  &clus);
   private:
     //untouched scene from kinect
     PC::Ptr scene;
@@ -82,5 +85,8 @@ class Storage
     //Vito Table transformation
     Eigen::Matrix4f table;
     boost::mutex mtx_table;
+    //Supervoxel clusters
+    std::map<uint32_t, pcl::Supervoxel<PT>::Ptr > super_clusters;
+    boost::mutex mtx_super_clusters;
 };
 #endif
