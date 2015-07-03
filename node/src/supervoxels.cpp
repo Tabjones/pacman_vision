@@ -20,6 +20,7 @@ Supervoxels::Supervoxels(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   nh.param<double>("/pacman_vision/color_importance",color_imp, 0.3333);
   nh.param<double>("/pacman_vision/normal_importance", normal_imp, 0.3333);
   nh.param<double>("/pacman_vision/spatial_importance", spatial_imp ,0.3333);
+  nh.param<int>("/pacman_vision/refinement_iterations", num_iterations ,2);
 }
 Supervoxels::~Supervoxels()
 {
@@ -37,6 +38,7 @@ bool Supervoxels::clustering()
   pcl::NormalEstimationOMP<PT, NT> ne;
   ne.setInputCloud(scene);
   ne.useSensorOriginAsViewPoint();
+  ne.setRadiusSearch(0.015);
   NC::Ptr normals (new NC);
   ne.compute(*normals);
 
@@ -48,11 +50,10 @@ bool Supervoxels::clustering()
   svc.setNormalImportance(normal_imp);
   //get clusters
   svc.extract(clusters);
-  //TODO add refinement to check what it does
-  //svc.refineSupervoxels(num_iterations, clusters);
-  //TODO whats the difference between the two methods?
+  svc.refineSupervoxels(num_iterations, clusters);
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr output_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
   output_cloud = svc.getColoredCloud();
+  //This outputs cloud with the voxelgrid of the method (voxel_res), so its further downsampled.
   //output_cloud = svc.getColoredVoxelCloud();
   pcl::copyPointCloud(*output_cloud, *clustered_scene);
   pub_clusterized_scene.publish(clustered_scene);
