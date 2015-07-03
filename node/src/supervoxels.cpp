@@ -27,7 +27,7 @@ void Supervoxels::spin_once()
   this->queue_ptr->callAvailable(ros::WallDuration(0));
 }
 
-void Supervoxels::clustering()
+bool Supervoxels::clustering()
 {
   //TODO
 }

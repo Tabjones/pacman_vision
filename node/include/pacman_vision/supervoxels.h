@@ -53,7 +53,7 @@ class Supervoxels
     void spin_once();
 
     //method to perform clustering
-    void clustering();
+    bool clustering();
 
     //clusterize service callback
     bool cb_clusterize(pacman_vision_comm::clusterize::Request& req, pacman_vision_comm::clusterize::Response& res);

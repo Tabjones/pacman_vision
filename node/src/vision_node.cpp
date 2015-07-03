@@ -610,11 +610,13 @@ void VisionNode::spin_listener()
 
 void VisionNode::spin_supervoxels()
 {
-  //ROS_INFO("[Listener] Listener module will try to read Vito Robot arms and hands transformations to perform hands/arms cropping on the processed scene.");
+  ROS_INFO("[Supervoxels] Supervoxels module will segment processed scene into SuperVoxel clusters and republish it.");
   //spin until we disable it or it dies somehow
   while (this->en_supervoxels && this->supervoxels_module)
   {
-    //TODO
+    if (!this->supervoxels_module->serviced)
+      this->supervoxels_module->clustering();
+
     //spin
     this->supervoxels_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //Supervoxels can try to go at 20Hz
@@ -768,13 +770,12 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   //Supervoxels Module
   if (this->supervoxels_module && this->en_supervoxels)
   {
-    //TODO
-    this->supervoxels_module->serviced = config.groups.supervoxels_module.use_service;
-    nh.getParam("voxel_resolution", config.groups.supervoxels_module.voxel_resolution);
-    nh.getParam("seed_resolution", config.groups.supervoxels_module.seed_resolution);
-    nh.getParam("color_importance", config.groups.supervoxels_module.color_importance);
-    nh.getParam("spatial_importance", config.groups.supervoxels_module.spatial_importance);
-    nh.getParam("normal_importance", config.groups.supervoxels_module.normal_importance);
+    this->supervoxels_module->serviced   = config.groups.supervoxels_module.use_service;
+    this->supervoxels_module->voxel_res  = config.groups.supervoxels_module.voxel_resolution;
+    this->supervoxels_module->seed_res   = config.groups.supervoxels_module.seed_resolution;
+    this->supervoxels_module->color_imp  = config.groups.supervoxels_module.color_importance;
+    this->supervoxels_module->spatial_imp= config.groups.supervoxels_module.spatial_importance;
+    this->supervoxels_module->normal_imp = config.groups.supervoxels_module.normal_importance;
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
 }
