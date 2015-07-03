@@ -41,7 +41,7 @@ class Supervoxels
     double voxel_res, seed_res, color_imp, normal_imp, spatial_imp;
     int num_iterations;
 
-    std::map<uint32_t, pcl::Supervoxel<PT>::Ptr > clusters;
+    boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr > > clusters;
 
     //Service Server
     ros::ServiceServer srv_clusterize;

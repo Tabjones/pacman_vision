@@ -11,6 +11,7 @@ Supervoxels::Supervoxels(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   this->storage = stor;
   this->scene.reset(new PC);
   this->clustered_scene.reset(new PC);
+  this->clusters.reset(new std::map<uint32_t, pcl::Supervoxel<PT>::Ptr>);
   this->pub_clusterized_scene = this->nh.advertise<PC> ("supervoxelled_scene", 2);
   srv_clusterize = nh.advertiseService("clusterize_scene", &Supervoxels::cb_clusterize, this);
   //Params
@@ -38,7 +39,7 @@ bool Supervoxels::clustering()
   pcl::NormalEstimationOMP<PT, NT> ne;
   ne.setInputCloud(scene);
   ne.useSensorOriginAsViewPoint();
-  ne.setRadiusSearch(0.015);
+  ne.setRadiusSearch(0.015); //TODO make it dynamic reconfigurable
   NC::Ptr normals (new NC);
   ne.compute(*normals);
 
@@ -49,16 +50,16 @@ bool Supervoxels::clustering()
   svc.setSpatialImportance(spatial_imp);
   svc.setNormalImportance(normal_imp);
   //get clusters
-  svc.extract(clusters);
-  svc.refineSupervoxels(num_iterations, clusters);
+  svc.extract(*clusters);
+  svc.refineSupervoxels(num_iterations, *clusters);
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr output_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
   output_cloud = svc.getColoredCloud();
   //This outputs cloud with the voxelgrid of the method (voxel_res), so its further downsampled.
   //output_cloud = svc.getColoredVoxelCloud();
   pcl::copyPointCloud(*output_cloud, *clustered_scene);
   pub_clusterized_scene.publish(clustered_scene);
+  this->storage->write_supervoxels_clusters(clusters);
   return true;
-  //TODO add saving of clusters in Storage
 }
 
 bool Supervoxels::cb_clusterize(pacman_vision_comm::clusterize::Request& req, pacman_vision_comm::clusterize::Response& res)
