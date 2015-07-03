@@ -58,6 +58,7 @@ bool Supervoxels::clustering()
   pcl::copyPointCloud(*output_cloud, *clustered_scene);
   pub_clusterized_scene.publish(clustered_scene);
   return true;
+  //TODO add saving of clusters in Storage
 }
 
 bool Supervoxels::cb_clusterize(pacman_vision_comm::clusterize::Request& req, pacman_vision_comm::clusterize::Response& res)
