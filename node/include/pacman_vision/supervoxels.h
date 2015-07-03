@@ -38,7 +38,7 @@ class Supervoxels
 
     //class behaviour
     bool serviced;
-    float voxel_res, seed_res, color_imp, normal_imp, spatial_imp;
+    double voxel_res, seed_res, color_imp, normal_imp, spatial_imp;
     int num_iterations;
 
     std::map<uint32_t, pcl::Supervoxel<PT>::Ptr > clusters;

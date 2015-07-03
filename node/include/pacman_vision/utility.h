@@ -49,6 +49,9 @@ typedef pcl::PointCloud<PX> PXC; //point cloud with PX type
 typedef pcl::PointNormal PN; //point normal type
 typedef pcl::PointCloud<PN> PNC; //point normal cloud
 
+typedef pcl::Normal NT; //point type with only normals
+typedef pcl::PointCloud<NT> NC; //Normal cloud
+
 typedef boost::lock_guard<boost::mutex> LOCK; //default lock type
 
 //Data structure for box, defined by bounduaries

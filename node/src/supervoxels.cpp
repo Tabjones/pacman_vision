@@ -12,10 +12,14 @@ Supervoxels::Supervoxels(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   this->scene.reset(new PC);
   this->clustered_scene.reset(new PC);
   this->pub_clusterized_scene = this->nh.advertise<PC> ("supervoxelled_scene", 2);
-  serviced = true;
-  voxel_res = 0.02f;
-  seed_res = 0.2f;
-  color_imp = normal_imp = spatial_imp = 0.3333f;
+  srv_clusterize = nh.advertiseService("clusterize_scene", &Supervoxels::cb_clusterize, this);
+  //Params
+  nh.param<bool>("/pacman_vision/use_service", serviced, false);
+  nh.param<double>("/pacman_vision/voxel_resolution", voxel_res, 0.02);
+  nh.param<double>("/pacman_vision/seed_resolution", seed_res, 0.2);
+  nh.param<double>("/pacman_vision/color_importance",color_imp, 0.3333);
+  nh.param<double>("/pacman_vision/normal_importance", normal_imp, 0.3333);
+  nh.param<double>("/pacman_vision/spatial_importance", spatial_imp ,0.3333);
 }
 Supervoxels::~Supervoxels()
 {
@@ -30,7 +34,29 @@ void Supervoxels::spin_once()
 bool Supervoxels::clustering()
 {
   this->storage->read_scene_processed(scene);
-  //TODO
+  pcl::NormalEstimationOMP<PT, NT> ne;
+  ne.setInputCloud(scene);
+  ne.useSensorOriginAsViewPoint();
+  NC::Ptr normals (new NC);
+  ne.compute(*normals);
+
+  pcl::SupervoxelClustering<PT> svc(voxel_res, seed_res, true);
+  svc.setInputCloud(scene);
+  svc.setNormalCloud(normals);
+  svc.setColorImportance(color_imp);
+  svc.setSpatialImportance(spatial_imp);
+  svc.setNormalImportance(normal_imp);
+  //get clusters
+  svc.extract(clusters);
+  //TODO add refinement to check what it does
+  //svc.refineSupervoxels(num_iterations, clusters);
+  //TODO whats the difference between the two methods?
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr output_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+  output_cloud = svc.getColoredCloud();
+  //output_cloud = svc.getColoredVoxelCloud();
+  pcl::copyPointCloud(*output_cloud, *clustered_scene);
+  pub_clusterized_scene.publish(clustered_scene);
+  return true;
 }
 
 bool Supervoxels::cb_clusterize(pacman_vision_comm::clusterize::Request& req, pacman_vision_comm::clusterize::Response& res)
