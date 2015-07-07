@@ -38,7 +38,7 @@ class Supervoxels
 
     //class behaviour
     bool serviced;
-    double voxel_res, seed_res, color_imp, normal_imp, spatial_imp;
+    double voxel_res, seed_res, color_imp, normal_imp, spatial_imp, normal_radius;
     int num_iterations;
 
     boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr > > clusters;

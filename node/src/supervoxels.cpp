@@ -21,6 +21,7 @@ Supervoxels::Supervoxels(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   nh.param<double>("/pacman_vision/color_importance",color_imp, 0.3333);
   nh.param<double>("/pacman_vision/normal_importance", normal_imp, 0.3333);
   nh.param<double>("/pacman_vision/spatial_importance", spatial_imp ,0.3333);
+  nh.param<double>("/pacman_vision/normals_search_radius", normal_radius ,0.015);
   nh.param<int>("/pacman_vision/refinement_iterations", num_iterations ,2);
 }
 Supervoxels::~Supervoxels()
@@ -35,11 +36,12 @@ void Supervoxels::spin_once()
 
 bool Supervoxels::clustering()
 {
-  this->storage->read_scene_processed(scene);
+  if (!this->storage->read_scene_processed(scene))
+    return false;
   pcl::NormalEstimationOMP<PT, NT> ne;
   ne.setInputCloud(scene);
   ne.useSensorOriginAsViewPoint();
-  ne.setRadiusSearch(0.015); //TODO make it dynamic reconfigurable
+  ne.setRadiusSearch(normal_radius);
   NC::Ptr normals (new NC);
   ne.compute(*normals);
 

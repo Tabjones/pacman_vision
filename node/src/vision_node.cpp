@@ -689,6 +689,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("spatial_importance", config.groups.supervoxels_module.spatial_importance);
     nh.getParam("normal_importance", config.groups.supervoxels_module.normal_importance);
     nh.getParam("refinement_iterations", config.groups.supervoxels_module.refinement_iterations);
+    nh.getParam("normals_search_radius", config.groups.supervoxels_module.normals_search_radius);
     //Finish gui initialization
     this->rqt_init = false;
     ROS_WARN("[PaCMaN Vision] Rqt-Reconfigure Default Values Initialized");
@@ -778,6 +779,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->supervoxels_module->spatial_imp= config.groups.supervoxels_module.spatial_importance;
     this->supervoxels_module->normal_imp = config.groups.supervoxels_module.normal_importance;
     this->supervoxels_module->num_iterations = config.groups.supervoxels_module.refinement_iterations;
+    this->supervoxels_module->normal_radius = config.groups.supervoxels_module.normals_search_radius;
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
 }

@@ -14,9 +14,12 @@ bool Storage::read_scene(PC::Ptr &cloud)
 {
   if (scene)
   {
-    LOCK guard(mtx_scene);
-    pcl::copyPointCloud(*scene, *cloud);
-    return true;
+    if(!scene->empty())
+    {
+      LOCK guard(mtx_scene);
+      pcl::copyPointCloud(*scene, *cloud);
+      return true;
+    }
   }
   ROS_WARN("[Storage][%s] Scene from Storage is empty! Not reading anything", __func__);
   return false;
@@ -26,9 +29,12 @@ bool Storage::read_scene(PXC::Ptr &cloud)
 {
   if (scene)
   {
-    LOCK guard(mtx_scene);
-    pcl::copyPointCloud(*scene, *cloud);
-    return true;
+    if (!scene->empty())
+    {
+      LOCK guard(mtx_scene);
+      pcl::copyPointCloud(*scene, *cloud);
+      return true;
+    }
   }
   ROS_WARN("[Storage][%s] Scene from Storage is empty! Not reading anything", __func__);
   return false;
@@ -38,9 +44,12 @@ bool Storage::read_scene_processed(PC::Ptr &cloud)
 {
   if (scene_processed)
   {
-    LOCK guard(mtx_scene_processed);
-    pcl::copyPointCloud(*scene_processed, *cloud);
-    return true;
+    if(!scene_processed->empty())
+    {
+      LOCK guard(mtx_scene_processed);
+      pcl::copyPointCloud(*scene_processed, *cloud);
+      return true;
+    }
   }
   ROS_WARN("[Storage][%s] Scene Processed from Storage is empty! Not reading anything", __func__);
   return false;
@@ -50,9 +59,12 @@ bool Storage::read_scene_processed(PXC::Ptr &cloud)
 {
   if(scene_processed)
   {
-    LOCK guard(mtx_scene_processed);
-    pcl::copyPointCloud(*scene_processed, *cloud);
-    return true;
+    if(!scene_processed->empty())
+    {
+      LOCK guard(mtx_scene_processed);
+      pcl::copyPointCloud(*scene_processed, *cloud);
+      return true;
+    }
   }
   ROS_WARN("[Storage][%s] Scene Processed from Storage is empty! Not reading anything", __func__);
   return false;
@@ -62,11 +74,14 @@ bool Storage::write_scene(PC::Ptr &cloud)
 {
   if (cloud)
   {
-    LOCK guard(mtx_scene);
-    if (!scene)
-      scene.reset(new PC);
-    pcl::copyPointCloud(*cloud, *scene);
-    return true;
+    if (!cloud->empty())
+    {
+      LOCK guard(mtx_scene);
+      if (!scene)
+        scene.reset(new PC);
+      pcl::copyPointCloud(*cloud, *scene);
+      return true;
+    }
   }
   ROS_WARN("[Storage][%s] Passed cloud is empty! Not writing anything in Storage", __func__);
   return false;
@@ -76,11 +91,14 @@ bool Storage::write_scene_processed(PC::Ptr &cloud)
 {
   if (cloud)
   {
-    LOCK guard(mtx_scene_processed);
-    if (!scene_processed)
-      scene_processed.reset(new PC);
-    pcl::copyPointCloud(*cloud, *scene_processed);
-    return true;
+    if (!cloud->empty())
+    {
+      LOCK guard(mtx_scene_processed);
+      if (!scene_processed)
+        scene_processed.reset(new PC);
+      pcl::copyPointCloud(*cloud, *scene_processed);
+      return true;
+    }
   }
   ROS_WARN("[Storage][%s] Passed cloud is empty! Not writing anything in Storage", __func__);
   return false;
