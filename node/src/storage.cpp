@@ -411,7 +411,7 @@ bool Storage::read_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pcl
   if (!super_clusters.empty())
   {
     LOCK guard(mtx_super_clusters);
-    boost::copy(super_clusters, back_inserter(*clus));
+    *clus = super_clusters;
     return true;
   }
   ROS_WARN("[Storage][%s] Supervoxel clusters from Storage are empty! Not reading anything", __func__);
@@ -426,7 +426,7 @@ bool Storage::write_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pc
     {
       LOCK guard(this->mtx_super_clusters);
       this->super_clusters.clear();
-      boost::copy(*clus, back_inserter(this->super_clusters));
+      this->super_clusters = *clus;
       return true;
     }
   }
