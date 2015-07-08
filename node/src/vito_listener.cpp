@@ -21,8 +21,8 @@ Listener::Listener(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   arm_naming[3]= "_arm_5_link";
   arm_naming[4]= "_arm_6_link";
   arm_naming[5]= "_arm_7_link";
-  left_arm.reset(new std::vector<Eigen::Matrix4f>);
-  right_arm.reset(new std::vector<Eigen::Matrix4f>);
+  left_arm.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> >);
+  right_arm.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> >);
   left_hand.reset(new Eigen::Matrix4f);
   right_hand.reset(new Eigen::Matrix4f);
   table.reset(new Eigen::Matrix4f);

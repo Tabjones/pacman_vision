@@ -62,7 +62,7 @@ int Estimator::extract_clusters()
   clusters->resize(size);
   names.reset(new std::vector<std::pair<std::string, std::string> > );
   names->resize(size);
-  estimations.reset(new std::vector<Eigen::Matrix4f> );
+  estimations.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > );
   estimations->resize(size);
   int j=0;
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it, ++j)

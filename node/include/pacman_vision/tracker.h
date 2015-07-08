@@ -44,6 +44,8 @@ class Tracker
   public:
     Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~Tracker();
+    //Eigen alignment
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;

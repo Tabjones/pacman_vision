@@ -45,6 +45,8 @@ class VisionNode
     void shutdown();
     //node handle
     ros::NodeHandle nh;
+    //Takes care of Eigen Alignment on Fixed-Size Containers
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   private:
     //bools to control modules
     bool en_estimator, en_tracker, en_broadcaster, en_listener, en_supervoxels;
@@ -56,7 +58,7 @@ class VisionNode
 
     //transforms to crop out vito arms and hands
     //only use them if vito listener is active
-    boost::shared_ptr<std::vector<Eigen::Matrix4f> > left_arm, right_arm;
+    boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > > left_arm, right_arm;
     boost::shared_ptr<Eigen::Matrix4f> left_hand, right_hand;
     //table transform from vito listener
     boost::shared_ptr<Eigen::Matrix4f> table_trans;

@@ -39,6 +39,8 @@ class Estimator
   public:
     Estimator(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~Estimator();
+    //Eigen alignment
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
@@ -46,7 +48,7 @@ class Estimator
     //Service Server
     ros::ServiceServer srv_estimate;
     //estimated transforms
-    boost::shared_ptr<std::vector<Eigen::Matrix4f> > estimations;
+    boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > > estimations;
     //object clusters found on scene
     boost::shared_ptr<std::vector<PXC> > clusters;
     //naming and id-ing of estimated objects

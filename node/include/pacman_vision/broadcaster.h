@@ -17,6 +17,8 @@ class Broadcaster
   public:
     Broadcaster(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~Broadcaster();
+    //Eigen Alignment
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
@@ -28,7 +30,7 @@ class Broadcaster
     //what to broadcast from estimator results and/or tracker
     /////////////////////////////////////////////////////////
     //eigen transforms
-    boost::shared_ptr<std::vector<Eigen::Matrix4f> > estimated;
+    boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > > estimated;
     //tf transforms
     std::vector<tf::Transform> transforms;
     //naming and id-ing of estimator objects

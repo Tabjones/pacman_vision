@@ -28,6 +28,7 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/range/algorithm.hpp>
 #include <Eigen/Dense>
+#include <Eigen/StdVector>
 
 #define D2R 0.017453293  //deg to rad conversion
 
