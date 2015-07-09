@@ -3,4 +3,4 @@
 	url = git@bitbucket.org:Tabjones/vision_communications.git
 [submodule "pel"]
 	path = pel
-	url = https://Tabjones@bitbucket.org/Tabjones/pel.git
+	url = https://Tabjones@bitbucket.org/Tabjones/pose-estimation-library.git
