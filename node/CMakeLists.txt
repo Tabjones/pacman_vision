@@ -26,25 +26,38 @@ include_directories(BEFORE ${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(-std=c++11 ${PCL_DEFINITIONS})
 
-find_package(PEL)
+set(PEL_LW_NAME "pel")
+set(PEL_BUILD "${CMAKE_BINARY_DIR}/${PEL_LW_NAME}")
+set(PEL_DIR ${PEL_BUILD})
+
+#find PEL in system
+find_package(PEL 0.6)
 
 if (NOT PEL_FOUND)
-  MESSAGE(STATUS "PEL LIBRARY NOT FOUND IN SYSTEM, BUILDING IT INTERNALLY")
-  set(PEL_INCLUDE_DIRS ../pel/pel)
-  include_directories(
-    ${HDF5_INCLUDE_DIRS}
-    ${PEL_INCLUDE_DIRS}
+  include(ExternalProject)
+  set(PEL_SRC "${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/${PEL_LW_NAME}")
+
+  MESSAGE(STATUS "Pose Estimation Library (PEL) is NOT FOUND in system, building it...")
+  MESSAGE(STATUS ${LIBRARY_OUTPUT_PATH})
+
+  ExternalProject_Add(
+    Pel
+    SOURCE_DIR ${PEL_SRC}
+    BINARY_DIR ${PEL_BUILD}
+    BUILD_IN_SOURCE 0
+    CONFIGURE_COMMAND ${CMAKE_COMMAND} "${PEL_SRC}/ --prefix=${CATKIN_DEVEL_PREFIX}" TODO
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CATKIN_DEVEL_PREFIX}
+    BUILD_COMMAND make
+    INSTALL_DIR ${CATKIN_DEVEL_PREFIX}
+    INSTALL_COMMAND make install
     )
-  add_library(pel SHARED
-    ../pel/pel/PoseEstimation_interface.cpp
-  )
-  set_target_properties (pel PROPERTIES
-    PUBLIC_HEADER "pel.h;version.h"
-    )
-  target_link_libraries (pel ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${HDF5_LIBRARIES})
-  set(PEL_LIBRARY_DIRS ${CATKIN_DEVEL_PREFIX}/lib)
-  set(PEL_LIBRARIES pel)
+
+  add_custom_command(TARGET Pel
+      POST_BUILD
+      COMMAND find_package(PEL 0.6))
 endif(NOT PEL_FOUND)
+
+#find_package(PEL 0.6 REQUIRED)
 
 ######################
 ## catkin generated ##
@@ -64,12 +77,14 @@ generate_dynamic_reconfigure_options( cfg/pacman_vision.cfg )
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
+
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES vision_node
   CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversions pcl_ros roscpp roslib sensor_msgs tf pacman_vision_comm message_runtime
   DEPENDS PCL Boost
 )
+
 
 ###########
 ## Build ##
@@ -100,7 +115,8 @@ add_executable(pacman_vision src/vision_node.cpp
 
 add_dependencies(pacman_vision
   pacman_vision_comm_generate_messages_cpp
-  pacman_vision_gencfg)
+  pacman_vision_gencfg
+  Pel)
 
 target_link_libraries(pacman_vision
    ${catkin_LIBRARIES}
@@ -125,3 +141,4 @@ add_custom_command(TARGET pacman_vision
   COMMAND rm ${rm_comm}
   WORKING_DIRECTORY ${pacman_vision_SOURCE_DIR}
   )
+
