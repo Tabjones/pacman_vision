@@ -23,11 +23,12 @@
 #include "pacman_vision_comm/estimate.h"
 #include "pacman_vision_comm/pe.h"
 #include "pacman_vision_comm/peArray.h"
-//PEL
-#include <pel.h> //also gets typedefs of PEL
 //Storage
 #include "pacman_vision/storage.h"
+//PEL
+#include <pel/pe_progressive_bisection.h>
 
+using namespace pcl;
 
 class VisionNode;
 
@@ -64,7 +65,7 @@ class Estimator
     double clus_tol;
 
     //PEL object
-    PoseEstimation pe;
+    pel::interface::PEProgressiveBisection pe;
 
     //method to extract clusters of objects in a table top scenario with table already removed
     int extract_clusters();

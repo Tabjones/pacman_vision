@@ -19,15 +19,15 @@ Estimator::Estimator(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   //init params
   nh.param<bool>("/pacman_vision/object_calibration", calibration, false);
   disabled = false;
-  nh.param<int>("/pacman_vison/iterations", iterations, 10);
-  nh.param<int>("/pacman_vision/neighbors", neighbors, 10);
+  nh.param<int>("/pacman_vison/iterations", iterations, 5);
+  nh.param<int>("/pacman_vision/neighbors", neighbors, 20);
   nh.param<double>("/pacman_vision/cluster_tol", clus_tol, 0.05);
   pe.setParam("verbosity",2);
-  pe.setParam("progItera",iterations);
-  pe.setParam("icpReciprocal",1);
-  pe.setParam("kNeighbors",neighbors);
-  pe.setParam("downsampling",0);
-  pe.setDatabase(db_path);
+  pe.setRMSEThreshold(0.003);
+  pe.setStepIterations(iterations);
+  pe.setParam("lists_size",neighbors);
+  pe.setParam("downsamp",0);
+  pe.loadAndSetDatabase(this->db_path);
   ROS_INFO("[Estimator] Estimator module extract euclidean clusters from current scene and tries to identify each of them by matching with provided database. For the Estimator to work properly please enable at least plane segmentation during scene processing.");
 }
 Estimator::~Estimator()
@@ -117,23 +117,19 @@ bool Estimator::estimate()
     ROS_ERROR("[Estimator][%s] No object clusters found in scene, aborting pose estimation...",__func__);
     return false;
   }
-  pe.setDatabase(db_path);
   for (int i=0; i<size; ++i)
   {
-    pe.setQuery("object", clusters->at(i));
-    pe.generateLists();
-    pe.refineCandidates();
-    boost::shared_ptr<Candidate> pest (new Candidate);
-    pe.getEstimation(pest);
-    std::string name;
-    pest->getName(name);
+    pe.setTarget(clusters->at(i).makeShared(), "object");
+    pel::Candidate pest;
+    pe.estimate(pest);
+    std::string name = pest.getName();
     std::vector<std::string> vst;
     boost::split (vst, name, boost::is_any_of("_"), boost::token_compress_on);
     if (this->calibration)
       names->at(i).first = "object";
     else
       names->at(i).first = vst.at(0);
-    pe.getEstimationTransformation(estimations->at(i));
+    estimations->at(i) = pest.getTransformation();
     names->at(i).second = vst.at(0);
     ROS_INFO("[Estimator][%s] Found %s.",__func__,name.c_str());
   }
@@ -141,7 +137,7 @@ bool Estimator::estimate()
   for (int i=0; i<names->size(); ++i)
   {
     int count(1);
-    string name_original = names->at(i).first;
+    std::string name_original = names->at(i).first;
     if (i>0)
     {
       for (int j=0; j<i; ++j)
