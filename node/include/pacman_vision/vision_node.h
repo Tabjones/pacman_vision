@@ -66,6 +66,10 @@ class VisionNode
     bool crop_r_arm, crop_l_arm, crop_r_hand, crop_l_hand;
     //use table transformation to apply passthrough or not
     bool use_table_trans;
+    //if false fallback to openni2
+    bool use_kinect2;
+    //Globally disable all functionalities
+    bool disabled;
 
     //Service Server to retrieve processed scene
     ros::ServiceServer srv_get_scene;

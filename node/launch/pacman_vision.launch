@@ -6,7 +6,13 @@
   <!-- ========================== -->
 
   <!-- launch_kinect2 -->
-  <arg name="launch_kinect2" default="true" doc="true if you want to include kinect2_bridge launch file" />
+  <arg name="launch_kinect2" default="true" doc="true if you want to include kinect2_bridge launch file. Note that launching openni2 and kinect2 simultaneously might not be the best idea!" />
+
+  <!-- launch_openni2 -->
+  <arg name="launch_openni2" default="false" doc="true if you want to include openni2_launch file. Requires calibration package installed. Note that launching openni2 and kinect2 simultaneously might not be the best idea!" />
+
+  <!-- asus -->
+  <arg name="which_asus" default="asus1" doc="If launching openni2 specifies which asus you are using. asus1 or asus2 (there's a label on top of them)." />
 
   <!-- kinect2_max_depth -->
   <arg name="kinect2_max_depth" default="12.0" doc="Maximum distance in meters to consider when creating the point clouds from kinect2. Smaller values increase performance, reducing total number of points processed. Ignored if launch_kinect2 is false." />
@@ -14,21 +20,20 @@
   <!-- kinect2_calib_path -->
   <arg name="kinect2_calib_path" default="$(find kinect2_bridge)/data/" doc="Path to calibration data for Kinect2" />
 
+  <!-- separate_term: Launch the node in a separate Terminal -->
+  <arg name="separate_term" default="false" doc="Launch PaCMan Vision into a separate Terminal instance. Useful to clearly read output."/>
+
   <!-- run_reconfigure:  If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters.-->
   <arg name="run_reconfigure" default="true" doc="If true runs rqt_reconfigure gui for dynamic reconfiguration of parameters." />
 
   <!-- run_service_caller:  If true runs rqt_service_caller gui for calling services.-->
-  <arg name="run_service_caller" default="true" doc="If true runs rqt_service_caller gui for calling various services" />
+  <arg name="run_service_caller" default="false" doc="If true runs rqt_service_caller gui for calling various services" />
 
   <!-- run_rviz:  If true runs rviz gui.-->
   <arg name="run_rviz" default="true" doc="If true runs rviz gui with config stored under cfg directory."/>
 
   <!-- load:  Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder).-->
   <arg name="load" default="default" doc="Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder of this node)."/>
-
-  <!-- separate_term: Launch the node in a separate Terminal (Terminator) -->
-  <arg name="separate_term" default="true" doc="Launch PaCMan Vision into a separate Terminator instance. Usefull to clearly read output."/>
-
 
   <!-- ========================== -->
   <!--        Implementation      -->
@@ -46,6 +51,16 @@
     </include>
   </group>
 
+  <group if="$(arg launch_openni2)">
+    <!-- Launch openni2 launch with custom parameters -->
+    <include file="$(find openni2_launch)/launch/openni2.launch">
+      <arg name="depth_registration" value="true" />
+      <arg name="color_depth_synchronization" value="true" />
+      <arg name="rgb_camera_info_url" value="file://$(find calibration)/config/intrinsics/rgb_$(arg which_asus).yaml"/>
+      <arg name="depth_camera_info_url" value="file://$(find calibration)/config/intrinsics/depth_$(arg which_asus).yaml"/>
+    </include>
+  </group>
+
   <rosparam command="load" file="$(find pacman_vision)/params/$(arg load).yaml"/>
 
   <!-- pacman vision node  -->
@@ -53,18 +68,12 @@
   <node unless="$(arg separate_term)" name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" />
 
   <!-- rviz -->
-  <group if="$(arg run_rviz)">
-    <node name="rviz_pacman_vision" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
-  </group>
+  <node if="$(arg run_rviz)" name="rviz_pacman_vision" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
 
   <!-- rqt_reconfigure -->
-  <group if="$(arg run_reconfigure)">
-    <node name="dynamic_reconfigure_pacman_vision" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/>
-  </group>
+  <node if="$(arg run_reconfigure)" name="dynamic_reconfigure_pacman_vision" pkg="rqt_reconfigure" type="rqt_reconfigure" respawn="false"/>
 
   <!-- rqt_service_caller -->
-  <group if="$(arg run_service_caller)">
-    <node name="service_caller_pacman_vision" pkg="rqt_service_caller" type="rqt_service_caller" respawn="false"/>
-  </group>
+  <node if="$(arg run_service_caller)" name="service_caller_pacman_vision" pkg="rqt_service_caller" type="rqt_service_caller" respawn="false"/>
 
 </launch>
