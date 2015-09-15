@@ -8,6 +8,7 @@ class Storage
 {
   public:
     Storage();
+    ~Storage(){}
     //Eigen Alignment
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -18,6 +19,9 @@ class Storage
     bool write_scene_processed (PC::Ptr &cloud);
     bool read_scene (PXC::Ptr &cloud);
     bool read_scene_processed (PXC::Ptr &cloud);
+    //Read write sensor reference frame
+    bool read_sensor_ref_frame (std::string& frame);
+    bool write_sensor_ref_frame (std::string& frame);
     //Read and write estimated objects
     bool read_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs);
     bool write_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs);
@@ -57,6 +61,9 @@ class Storage
     //scene after processing
     PC::Ptr scene_processed;
     boost::mutex mtx_scene_processed;
+    //sensor reference frame
+    std::string sensor_ref_frame;
+    boost::mutex mtx_sensor_ref_frame;
     //cluster of objects found on scene (TODO currently unused by anyone)
     std::vector<PXC> clusters;
     boost::mutex mtx_clusters;

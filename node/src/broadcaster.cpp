@@ -24,7 +24,6 @@ void Broadcaster::elaborate_estimated_objects()
 {
   if (!this->storage->read_obj_transforms(estimated) || !this->storage->read_obj_names(names) )
   {
-    ROS_WARN("[Broadcaster][%s] Can not read estimated objects to broadcast. Did you run an estimation with Estimator module ?", __func__);
     return;
   }
   int size = estimated->size();
@@ -207,8 +206,10 @@ void Broadcaster::broadcast_once()
 {
   if (obj_tf)
   {
+    std::string frame;
+    this->storage->read_sensor_ref_frame(frame);
     for (int i = 0; i < transforms.size(); ++i)
-      tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), "/kinect2_rgb_optical_frame", names->at(i).first.c_str()));
+      tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), frame.c_str(), names->at(i).first.c_str()));
   }
   if (obj_markers || pass_limits || tracker_bb)
   {

@@ -56,6 +56,9 @@ class VisionNode
     // use kinect2 hd(1920x1080) <2>, qhd(960x540) <1>, or sd(530x270) <0>
     int kinect2_resolution;
 
+    //Sensor reference frame. Either kinect2 or asus
+    std::string sensor_ref_frame;
+
     //transforms to crop out vito arms and hands
     //only use them if vito listener is active
     boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > > left_arm, right_arm;

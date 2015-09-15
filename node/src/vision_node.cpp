@@ -676,10 +676,14 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
         topic = nh.resolveName("/kinect2/sd/points");
       else //unhandled default to sd
         topic = nh.resolveName("/kinect2/sd/points");
+      sensor_ref_frame = "/kinect2_rgb_optical_frame";
+      this->storage->write_sensor_ref_frame(sensor_ref_frame);
     }
     else
     {
       topic = nh.resolveName("/camera/depth_registered/points");
+      sensor_ref_frame = "/camera_rgb_optical_frame";
+      this->storage->write_sensor_ref_frame(sensor_ref_frame);
     }
     sub_kinect = nh.subscribe(topic, 5, &VisionNode::cb_kinect, this);
 
@@ -722,6 +726,18 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   this->en_broadcaster  = config.enable_broadcaster;
   this->en_listener     = config.enable_listener;
   this->en_supervoxels  = config.enable_supervoxels;
+  //Global Node Disable
+  if (this->disabled != config.Master_Disable)
+  {
+    disabled = config.Master_Disable;
+    if (disabled)
+    {//disable everything
+      config.enable_estimator = config.enable_tracker = config.enable_listener =
+        config.enable_broadcaster = config.enable_supervoxels = false;
+      en_estimator = en_tracker = en_broadcaster = en_listener = en_supervoxels = false;
+      this->sub_kinect.shutdown();
+    }
+  }
   if (config.Master_Disable)
   {
     config.enable_estimator = config.enable_tracker = config.enable_listener
@@ -752,6 +768,8 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
       {
         topic = nh.resolveName("/camera/depth_registered/points");
         sub_kinect = nh.subscribe(topic, 2, &VisionNode::cb_kinect, this);
+        sensor_ref_frame = "/camera_rgb_optical_frame";
+        this->storage->write_sensor_ref_frame(sensor_ref_frame);
       }
       else
       {
@@ -766,6 +784,8 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
           topic = nh.resolveName("/kinect2/sd/points");
         //resubscribe (also kills previous subscription)
         sub_kinect = nh.subscribe(topic, 2, &VisionNode::cb_kinect, this);
+        sensor_ref_frame = "/kinect2_rgb_optical_frame";
+        this->storage->write_sensor_ref_frame(sensor_ref_frame);
       }
     }
     if (this->kinect2_resolution != config.kinect2_resolution)
@@ -839,18 +859,6 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->supervoxels_module->normal_imp = config.groups.supervoxels_module.normal_importance;
     this->supervoxels_module->num_iterations = config.groups.supervoxels_module.refinement_iterations;
     this->supervoxels_module->normal_radius = config.groups.supervoxels_module.normals_search_radius;
-  }
-  //Global Node Disable
-  if (this->disabled != config.Master_Disable)
-  {
-    disabled = config.Master_Disable;
-    if (disabled)
-    {//disable everything
-      config.enable_estimator = config.enable_tracker = config.enable_listener =
-        config.enable_broadcaster = config.enable_supervoxels = false;
-      en_estimator = en_tracker = en_broadcaster = en_listener = en_supervoxels = false;
-      this->sub_kinect.shutdown();
-    }
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
 }

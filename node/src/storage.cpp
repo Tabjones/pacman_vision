@@ -143,7 +143,6 @@ bool Storage::read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f
     trans->clear();
   if (this->estimations.empty())
   {
-    ROS_WARN("[Storage][%s] Estimations from Storage are empty! Not reading anything", __func__);
     return false;
   }
   boost::copy(estimations, back_inserter(*trans));
@@ -233,7 +232,7 @@ bool Storage::write_obj_transform_by_index(int idx, boost::shared_ptr<Eigen::Mat
     return false;
   }
   LOCK guard(mtx_estimations);
-  if (idx >=0 && idx < (estimations.size()-1))
+  if (idx >=0 && idx < (estimations.size()))
   {
     estimations.at(idx) = *trans;
     return true;
@@ -432,4 +431,22 @@ bool Storage::write_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pc
   }
   ROS_WARN("[Storage][%s] Passed clusters are empty! Not writing anything", __func__);
   return false;
+}
+
+bool Storage::read_sensor_ref_frame (std::string& frame)
+{
+  LOCK guard(mtx_sensor_ref_frame);
+  frame = this->sensor_ref_frame;
+  return true;
+}
+bool Storage::write_sensor_ref_frame (std::string& frame)
+{
+  if (!frame.empty())
+  {
+    LOCK guard(mtx_sensor_ref_frame);
+    this->sensor_ref_frame = frame;
+    return true;
+  }
+  else
+    return false;
 }

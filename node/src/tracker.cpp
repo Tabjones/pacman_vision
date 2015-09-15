@@ -296,7 +296,6 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
     return false;
   }
   std::string models_path (ros::package::getPath("asus_scanner_models"));
-  this->storage->search_obj_name(req.name, index);
   if ( !this->storage->search_obj_name(req.name, index) )
   {
     ROS_ERROR("[Tracker][%s] Cannot find %s from the pool of already estimated objects, check spelling or run an estimation first!", __func__, req.name.c_str());
