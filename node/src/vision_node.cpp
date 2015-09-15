@@ -827,8 +827,8 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->estimator_module->iterations  = config.groups.estimator_module.iterations;
     this->estimator_module->neighbors   = config.groups.estimator_module.neighbors;
     this->estimator_module->clus_tol    = config.groups.estimator_module.cluster_tol;
-    this->estimator_module->pe.setParam("kNeighbors",estimator_module->neighbors);
-    this->estimator_module->pe.setParam("progItera",estimator_module->iterations);
+    this->estimator_module->pe.setParam("lists_size",estimator_module->neighbors);
+    this->estimator_module->pe.setStepIterations(estimator_module->iterations);
   }
   //Broadcaster Module
   if (this->broadcaster_module && this->en_broadcaster)
