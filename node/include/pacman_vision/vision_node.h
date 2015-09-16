@@ -2,6 +2,7 @@
 #define _INCL_NODE
 
 // ROS headers
+#include <roscpp>
 #include <dynamic_reconfigure/server.h>
 #include <pcl_ros/point_cloud.h>
 #include <sensor_msgs/PointCloud.h>

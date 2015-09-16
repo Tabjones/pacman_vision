@@ -463,32 +463,21 @@ void VisionNode::check_modules()
 ////////////////////////////////
 void VisionNode::spin_estimator()
 {
-  ROS_INFO("[Estimator] Estimator module will try to perform a Pose Estimation on each object found in the Processed Scene.");
-  ROS_INFO("[Estimator] It isolates possible objects by means of Euclidean Clustering, thus a plane segmentation should be performed on the scene.");
-  ROS_INFO("[Estimator] Estimator needs an object database, previously created, which must be put into database folder. More info is available on the Module Readme.");
-  int count_to_spam (0);
+  ROS_INFO("[Estimator] Estimator module will try to perform a Pose Estimation on each object found in the Processed Scene. It isolates possible objects by means of Euclidean Clustering, thus a plane segmentation should be performed on the scene. Estimator needs an object database, previously created, which must be put into database folder. More info is available on the Module Readme.");
   //spin until we disable it or it dies somehow
   while (this->en_estimator && this->estimator_module)
   {
-    if(count_to_spam > 50)
+    if(!plane)
     {
-      count_to_spam = 0;
-      if(!plane)
-      {
-        ROS_WARN("[Estimator] Estimator module will not function properly without plane segmentation.");
-        ROS_WARN("[Estimator] Please enable at least plane segmentation for scene processing.");
-      }
-      if(downsample && (leaf < 0.001 || leaf > 0.01))
-      {
-        ROS_WARN("[Estimator] Estimator module uses a prebuilt database of poses with its own downsampling leaf size.");
-        ROS_WARN("[Estimator] Database downsampling leaf size should be 0.005, thus it is not recommended to use a scene leaf size too far from that value.");
-        ROS_WARN("[Estimator] Now, scene leaf size is %g", leaf);
-      }
+      ROS_WARN_THROTTLE(30,"[Estimator] Estimator module will not function properly without plane segmentation. Please enable at least plane segmentation for scene processing.");
+    }
+    if(downsample && (leaf < 0.001 || leaf > 0.01))
+    {
+      ROS_WARN_THROTTLE(30,"[Estimator] Estimator module uses a prebuilt database of poses with its own downsampling leaf size. Database downsampling leaf size is hardcoded at 0.005, thus it is not recommended to use a scene leaf size too far from that value. Current scene leaf size is %g", leaf);
     }
     //This module actually does nothing directly, it just waits for user to call the service
     this->estimator_module->spin_once();
-    ++count_to_spam;
-    boost::this_thread::sleep(boost::posix_time::milliseconds(100)); //estimator could try to go at 10Hz (no need to process those services faster)
+    boost::this_thread::sleep(boost::posix_time::milliseconds(500)); //estimator could try to go at 2Hz (no need to process those services faster)
   }
   //estimator got stopped
   return;
@@ -496,8 +485,7 @@ void VisionNode::spin_estimator()
 
 void VisionNode::spin_broadcaster()
 {
-  ROS_INFO("[Broadcaster] Broadcaster module will publish tfs and markers calculated by the other modules or the base node itself.");
-  ROS_INFO("[Broadcaster] Look at the namespace of markers in the MarkerArray.");
+  ROS_INFO("[Broadcaster] Broadcaster module will publish tfs and markers calculated by the other modules or the base node itself. Look at the namespace of markers in the MarkerArray.");
   //spin until we disable it or it dies somehow
   while (this->en_broadcaster && this->broadcaster_module)
   {
@@ -537,7 +525,7 @@ void VisionNode::spin_broadcaster()
     this->broadcaster_module->broadcast_once();
     //spin
     this->broadcaster_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(33)); //broadcaster could try to go at 30Hz
+    boost::this_thread::sleep(boost::posix_time::milliseconds(20)); //broadcaster could try to go at 50Hz
   }
   //broadcaster got stopped
   return;
@@ -545,9 +533,7 @@ void VisionNode::spin_broadcaster()
 
 void VisionNode::spin_tracker()
 {
-  int count_to_spam (0);
-  ROS_INFO("[Tracker] Tracker module will try to track an already Pose Estimated object (from Estimator) as it moves around.");
-  ROS_INFO("[Tracker] An object model (its complete mesh and point cloud) must be present inside asus_scanner_models ROS package.");
+  ROS_INFO("[Tracker] Tracker module will try to track an already Pose Estimated object (from Estimator) as it moves around. An object model (its complete mesh and point cloud) must be present inside asus_scanner_models ROS package.");
   //spin until we disable it or it dies somehow
   while (this->en_tracker && this->tracker_module)
   {
@@ -555,11 +541,7 @@ void VisionNode::spin_tracker()
       this->tracker_module->leaf = this->leaf;
     else
     {
-      if (count_to_spam > 50)
-      {
-        ROS_WARN("[Tracker] Tracker module will not function properly without scene downsampling, please enable it.");
-        count_to_spam = 0;
-      }
+      ROS_WARN_THROTTLE(30, "[Tracker] Tracker module will not function properly without scene downsampling, please enable it.");
     }
     //spin it
     if (this->tracker_module->started)
@@ -586,7 +568,6 @@ void VisionNode::spin_tracker()
         this->estimator_module->disabled = false;
       }
     }
-    ++count_to_spam;
     this->tracker_module->spin_once();
     boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go as fast as possible
   }
