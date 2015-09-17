@@ -1,8 +1,10 @@
 #include "pacman_vision/kinect2_processor.h"
 
 Kinect2Processor::Kinect2Processor () : device(0), packetPipeline(0), registration(0),
-  listenerColor(0), listenerIrDepth(0)
+  listener(0), started(false), initialized(false)
 {
+  undistorted = new libfreenect2::Frame(512, 424, 4);
+  registered = new libfreenect2::Frame(512, 424, 4);
 }
 
 bool
@@ -46,6 +48,7 @@ Kinect2Processor::initDevice ()
 
   //init registration
   registration = new libfreenect2::Registration(irParams, colorParams);
+  initialized = true;
   return (true);
 }
 
@@ -57,8 +60,34 @@ Kinect2Processor::processData()
   colorFrame = frames[libfreenect2::Frame::Color];
 //  irFrame = frames[libfreenect2::Frame::Ir];
   depthFrame = frames[libfreenect2::Frame::Depth];
-  libfreenect2::Frame undistorted(512, 424, 4), registered(512, 424, 4);
-  registration->apply(colorFrame, depthFrame, &undistorted, &registered);
+  registration->apply(colorFrame, depthFrame, undistorted, registered);
   listener->release(frames);
-  //TODO add pointcloud converter
+}
+
+void
+Kinect2Processor::computePointCloud(PC::Ptr& out_cloud)
+{
+  //assume registration was performed
+  out_cloud.reset(new PC);
+  out_cloud->width = 512;
+  out_cloud->height = 424;
+  out_cloud->is_dense = true;
+  out_cloud->sensor_origin_.setZero();
+  out_cloud->sensor_orientation_.setIdentity();
+  float cx(irParams.cx), cy(irParams.cy);
+  float fx(irParams.fx), fy(irParams.fy);
+  for (int xi=0; xi<512; ++xi)
+  {
+    for (int yi=0; yi<424; ++yi)
+    {
+      float xu = (xi + 0.5 - cx)/fx;
+      float yu = (yi + 0.5 - cy)/fy;
+      PT point;
+      point.x = xu*undistorted->data[512*yi + xi];
+      point.y = yu*undistorted->data[512*yi + xi];
+      point.z = undistorted->data[512*yi + xi];
+      point.rgb = registered->data[512*yi + xi];
+      out_cloud->push_back(point);
+    }
+  }
 }

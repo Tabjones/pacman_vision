@@ -2,7 +2,6 @@
 #define _INCL_NODE
 
 // ROS headers
-#include <roscpp>
 #include <dynamic_reconfigure/server.h>
 #include <pcl_ros/point_cloud.h>
 #include <sensor_msgs/PointCloud.h>
@@ -28,6 +27,7 @@
 
 #include "pacman_vision/utility.h"
 #include "pacman_vision/storage.h"
+#include "pacman_vision/kinect2_processor.h"
 //Modules
 #include "pacman_vision/estimator.h"
 #include "pacman_vision/broadcaster.h"
@@ -37,6 +37,18 @@
 
 class VisionNode
 {
+  struct SensorParams
+  {
+    //Sensor reference frame. Either external kinect2, asus xtion  or internal kinect2 processor
+    std::string ref_frame;
+    //which sensor to use: 0 internal, 1 external kinect2_bridge, 2 external openni2
+    int type;
+    //use EXTERNAL kinect2 hd(1920x1080) <2>, qhd(960x540) <1>, or sd(512x424) <0>  (i.e. kinect2_bridge)
+    //this only has a meaning if type == 1
+    int resolution;
+    //sensor subscribers need update
+    bool needs_update;
+  };
 
   public:
     VisionNode();
@@ -49,16 +61,14 @@ class VisionNode
     //Takes care of Eigen Alignment on Fixed-Size Containers
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   private:
+    //Globally disable all functionalities
+    bool master_disable;
     //bools to control modules
     bool en_estimator, en_tracker, en_broadcaster, en_listener, en_supervoxels;
-    //bool to initialize rqt_reconfigure with user parameters
+    //bool to initialize rqt_reconfigure with user parameters (instead of those written in cfg file)
     bool rqt_init;
-
-    // use kinect2 hd(1920x1080) <2>, qhd(960x540) <1>, or sd(530x270) <0>
-    int kinect2_resolution;
-
-    //Sensor reference frame. Either kinect2 or asus
-    std::string sensor_ref_frame;
+    //sensor information
+    SensorParams sensor;
 
     //transforms to crop out vito arms and hands
     //only use them if vito listener is active
@@ -70,10 +80,6 @@ class VisionNode
     bool crop_r_arm, crop_l_arm, crop_r_hand, crop_l_hand;
     //use table transformation to apply passthrough or not
     bool use_table_trans;
-    //if false fallback to openni2
-    bool use_kinect2;
-    //Globally disable all functionalities
-    bool disabled;
 
     //Service Server to retrieve processed scene
     ros::ServiceServer srv_get_scene;
@@ -86,6 +92,8 @@ class VisionNode
     PC::Ptr scene;
     //Shared pointer of Storage (to be shared to modules)
     boost::shared_ptr<Storage> storage;
+    //Shared pointer of Kinect2Processor
+    boost::shared_ptr<Kinect2Processor> kinect2;
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module;
     boost::shared_ptr<Broadcaster> broadcaster_module;
@@ -127,7 +135,10 @@ class VisionNode
 
     //method to enable/disable modules
     void check_modules();
-
+    //Process scene method (read scene -> write scene_processed)
+    void process_scene();
+    //Check subscribers: handle pointcloud subscribers
+    void check_sensor_subscribers();
 };
 
 #endif

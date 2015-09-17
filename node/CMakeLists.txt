@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED)
 find_package(PCL 1.7.2 REQUIRED)
 find_package(HDF5 REQUIRED)
+find_package(freenect2 REQUIRED)
 
 include_directories(BEFORE ${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
@@ -78,7 +79,7 @@ catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES vision_node
   CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversions pcl_ros roscpp roslib sensor_msgs tf pacman_vision_comm message_runtime
-  DEPENDS PCL Boost PEL
+  DEPENDS PCL Boost PEL freenect2
 )
 
 
@@ -91,6 +92,7 @@ include_directories(
   ${boost_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIRS}
   ${PEL_INCLUDE_DIRS}
+  ${freenect2_INCLUDE_DIRS}
 )
 
 link_directories(
@@ -98,9 +100,11 @@ link_directories(
   ${boost_LIBRARY_DIRS}
   ${CATKIN_DEVEL_PREFIX}/lib
   ${PEL_LIBRARY_DIRS}
+  ${freenect2_LIBRARY_DIRS}
   )
 
 add_executable(pacman_vision src/vision_node.cpp
+                             src/kinect2_processor.cpp
                              src/estimator.cpp
                              src/broadcaster.cpp
                              src/tracker.cpp
@@ -119,6 +123,7 @@ target_link_libraries(pacman_vision
    ${PCL_LIBRARIES}
    ${boost_LIBRARIES}
    ${PEL_LIBRARIES}
+   ${freenect2_LIBRARIES}
 )
 
 ##POST BUILD COMMAND to fetch database
