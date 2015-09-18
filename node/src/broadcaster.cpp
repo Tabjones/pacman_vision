@@ -30,13 +30,15 @@ void Broadcaster::elaborate_estimated_objects()
   transforms.resize(size);
   //read tracked object index if Tracker is tracking
   int index;
+  std::string sensor_ref_frame;
+  this->storage->read_sensor_ref_frame(sensor_ref_frame);
   this->storage->read_tracked_index(index);
   for (int i=0; i<size; ++i) //if size is zero dont do anything
   {
     geometry_msgs::Pose pose;
     fromEigen(estimated->at(i), pose, transforms[i]);
     visualization_msgs::Marker marker;
-    marker.header.frame_id = "/kinect2_rgb_optical_frame";
+    marker.header.frame_id = sensor_ref_frame.c_str();
     marker.header.stamp = ros::Time();
     marker.ns=names->at(i).second.c_str();
     if (names->at(i).second.compare(names->at(i).first) != 0)
@@ -100,8 +102,10 @@ bool Broadcaster::create_box_marker(visualization_msgs::Marker &box, boost::shar
     ROS_ERROR("[Broadcaster][%s] Cannot create a box marker with empty passed limits, aborting...", __func__);
     return false;
   }
+  std::string sensor_ref_frame;
+  this->storage->read_sensor_ref_frame(sensor_ref_frame);
   box.type = visualization_msgs::Marker::LINE_LIST;
-  box.header.frame_id = "/kinect2_rgb_optical_frame";
+  box.header.frame_id = sensor_ref_frame.c_str();
   box.header.stamp = ros::Time();
   //adjust these two values later if needed
   box.ns = "box";

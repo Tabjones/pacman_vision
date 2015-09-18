@@ -10,7 +10,7 @@ Kinect2Processor::Kinect2Processor () : device(0), packetPipeline(0), registrati
 bool
 Kinect2Processor::initDevice ()
 {
-  if (freenect2.enumerateDevices() == 0)
+  if (freenect2.enumerateDevices() <= 0)
   {
     ROS_ERROR("[Kinect2] No Kinect2 devices found");
     return (false);
@@ -67,27 +67,37 @@ Kinect2Processor::processData()
 void
 Kinect2Processor::computePointCloud(PC::Ptr& out_cloud)
 {
+  const float bad_point = std::numeric_limits<float>::quiet_NaN();
   //assume registration was performed
   out_cloud.reset(new PC);
   out_cloud->width = 512;
   out_cloud->height = 424;
-  out_cloud->is_dense = true;
+  out_cloud->is_dense = false;
   out_cloud->sensor_origin_.setZero();
   out_cloud->sensor_orientation_.setIdentity();
-  float cx(irParams.cx), cy(irParams.cy);
-  float fx(irParams.fx), fy(irParams.fy);
-  for (int xi=0; xi<512; ++xi)
+  out_cloud->points.resize(out_cloud->width * out_cloud->height);
+  const float cx(irParams.cx), cy(irParams.cy);
+  const float fx(irParams.fx), fy(irParams.fy);
+  for (int r=0; r<424; ++r)
   {
-    for (int yi=0; yi<424; ++yi)
+    PT *pointP = &out_cloud->points[r*424]; //points in row
+    const unsigned char *dP = &undistorted->data[r*424]; //depth value in row
+    for (int c=0; c<512; ++c, ++pointP, ++dP)
     {
-      float xu = (xi + 0.5 - cx)/fx;
-      float yu = (yi + 0.5 - cy)/fy;
-      PT point;
-      point.x = xu*undistorted->data[512*yi + xi];
-      point.y = yu*undistorted->data[512*yi + xi];
-      point.z = undistorted->data[512*yi + xi];
-      point.rgb = registered->data[512*yi + xi];
-      out_cloud->push_back(point);
+      float xu = (c + 0.5 - cx)/fx;
+      float yu = (r + 0.5 - cy)/fy;
+      const float depth_val = *reinterpret_cast<float*>(&undistorted->data[r*424+c])/1000.0f;
+      if (isnan(depth_val) || depth_val <= 0.001)
+      {
+        //point is not valid
+        pointP->x = pointP->y = pointP->z = bad_point;
+        pointP->rgb = 0;
+        continue;
+      }
+      pointP->x = xu * depth_val;
+      pointP->y = yu * depth_val;
+      pointP->z = depth_val;
+      pointP->rgb = *reinterpret_cast<float*>(&registered->data[424*r + c]);
     }
   }
 }

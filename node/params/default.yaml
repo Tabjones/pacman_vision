@@ -39,7 +39,7 @@ pacman_vision:
     spatial_importance: 0.3333,
     tracker_bounding_box: false,
     tracker_disturbance: false,
-    sensor_type: 1,
+    sensor_type: 0,
     use_service: false,
     use_table_transform: false,
     voxel_resolution: 0.02

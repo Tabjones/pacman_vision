@@ -8,6 +8,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud_conversion.h>
 #include <visualization_msgs/Marker.h>
+#include <tf/transform_broadcaster.h>
 //PCL
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/crop_box.h>
@@ -90,6 +91,8 @@ class VisionNode
     //pointer to processed and acquired point cloud
     PC::Ptr scene_processed;
     PC::Ptr scene;
+    //tf broadcaster for sesor reference frame (used if internal processor in enabled)
+    tf::TransformBroadcaster tf_sensor_ref_frame_brcaster;
     //Shared pointer of Storage (to be shared to modules)
     boost::shared_ptr<Storage> storage;
     //Shared pointer of Kinect2Processor

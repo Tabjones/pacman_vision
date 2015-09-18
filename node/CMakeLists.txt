@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(pacman_vision)
 
+find_package(freenect2 REQUIRED)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -18,10 +20,8 @@ find_package(catkin REQUIRED COMPONENTS
   pacman_vision_comm
 )
 
-find_package(Boost REQUIRED)
 find_package(PCL 1.7.2 REQUIRED)
 find_package(HDF5 REQUIRED)
-find_package(freenect2 REQUIRED)
 
 include_directories(BEFORE ${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
@@ -89,7 +89,6 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${boost_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIRS}
   ${PEL_INCLUDE_DIRS}
   ${freenect2_INCLUDE_DIRS}
@@ -97,10 +96,8 @@ include_directories(
 
 link_directories(
   ${PCL_LIBRARY_DIRS}
-  ${boost_LIBRARY_DIRS}
   ${CATKIN_DEVEL_PREFIX}/lib
   ${PEL_LIBRARY_DIRS}
-  ${freenect2_LIBRARY_DIRS}
   )
 
 add_executable(pacman_vision src/vision_node.cpp
@@ -119,11 +116,10 @@ add_dependencies(pacman_vision
   )
 
 target_link_libraries(pacman_vision
+   ${freenect2_LIBRARY}
    ${catkin_LIBRARIES}
    ${PCL_LIBRARIES}
-   ${boost_LIBRARIES}
    ${PEL_LIBRARIES}
-   ${freenect2_LIBRARIES}
 )
 
 ##POST BUILD COMMAND to fetch database

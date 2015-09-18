@@ -667,6 +667,11 @@ void VisionNode::check_sensor_subscribers()
   }
   else
   {
+    if (sensor.needs_update)
+    {
+      sensor.ref_frame = "/kinect2_reference_frame";
+      this->storage->write_sensor_ref_frame(sensor.ref_frame);
+    }
     //Use internal sensor processor, no subscriber needed
     if (sub_kinect.getNumPublishers() > 0)
       sub_kinect.shutdown();
@@ -848,7 +853,19 @@ void VisionNode::spin_once()
         kinect2->start();
       kinect2->processData();
       kinect2->computePointCloud(this->scene);
+      if (!this->scene_processed)
+        this->scene_processed.reset( new PC);
+      tf::Vector3 v_zero;
+      v_zero.setZero();
+      tf::Quaternion q_zero;
+      q_zero.setRPY(0,0,0);
+      tf::Transform t_zero(q_zero, v_zero);
+      this->tf_sensor_ref_frame_brcaster.sendTransform(tf::StampedTransform(t_zero, ros::Time::now(), "/vito_anchor", sensor.ref_frame.c_str()));
+      pcl_conversions::toPCL(ros::Time::now(), this->scene->header.stamp);
+      this->scene->header.frame_id = sensor.ref_frame;
+      this->scene->header.seq = 0;
       this->storage->write_scene(this->scene);
+
       this->process_scene();
     }
   }
@@ -860,6 +877,7 @@ void VisionNode::shutdown()
 {
   en_tracker = en_broadcaster = en_estimator = en_listener = en_supervoxels = false;
   this->check_modules();
+  this->kinect2->close();
   ROS_INFO("[PaCMan Vision] Shutting down...");
   //Wait for other threads
   boost::this_thread::sleep(boost::posix_time::seconds(1));

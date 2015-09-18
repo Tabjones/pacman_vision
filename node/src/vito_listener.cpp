@@ -39,10 +39,12 @@ Listener::~Listener()
 
 void Listener::listen_table()
 {
+  std::string sens_ref_frame;
+  this->storage->read_sensor_ref_frame(sens_ref_frame);
   try
   {
-    tf_listener.waitForTransform("/kinect2_rgb_optical_frame", "/workbench_plate_link", ros::Time(0), ros::Duration(2.0));
-    tf_listener.lookupTransform("/kinect2_rgb_optical_frame", "/workbench_plate_link", ros::Time(0), table_tf);
+    tf_listener.waitForTransform(sens_ref_frame.c_str(), "/workbench_plate_link", ros::Time(0), ros::Duration(2.0));
+    tf_listener.lookupTransform(sens_ref_frame.c_str(), "/workbench_plate_link", ros::Time(0), table_tf);
     geometry_msgs::Pose pose;
     fromTF(table_tf, *table, pose);
   }
@@ -59,6 +61,8 @@ void Listener::listen_table()
 void Listener::listen_once()
 {
   geometry_msgs::Pose pose;
+  std::string sens_ref_frame;
+  this->storage->read_sensor_ref_frame(sens_ref_frame);
   if (listen_left_arm)
   {
     std::string left = "left";
@@ -66,8 +70,8 @@ void Listener::listen_once()
     {
       for (int i=0; i<arm_naming.size(); ++i)
       {
-        tf_listener.waitForTransform("/kinect2_rgb_optical_frame", (left+arm_naming[i]).c_str(), ros::Time(0), ros::Duration(2.0));
-        tf_listener.lookupTransform("/kinect2_rgb_optical_frame", (left+arm_naming[i]).c_str(), ros::Time(0), left_arm_tf[i]);
+        tf_listener.waitForTransform(sens_ref_frame.c_str(), (left+arm_naming[i]).c_str(), ros::Time(0), ros::Duration(2.0));
+        tf_listener.lookupTransform(sens_ref_frame.c_str(), (left+arm_naming[i]).c_str(), ros::Time(0), left_arm_tf[i]);
         fromTF(left_arm_tf[i], left_arm->at(i), pose);
       }
     }

@@ -44,6 +44,12 @@ class Kinect2Processor
       device->stop();
       started = false;
     }
+    //close kinect2
+    void
+    close ()
+    {
+      device->close();
+    }
     //Recive and process data
     void
     processData();
