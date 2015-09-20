@@ -1,4 +1,5 @@
 #include "pacman_vision/kinect2_processor.h"
+#include <array>
 
 Kinect2Processor::Kinect2Processor () : device(0), packetPipeline(0), registration(0),
   listener(0), started(false), initialized(false)
@@ -67,7 +68,7 @@ Kinect2Processor::processData()
 void
 Kinect2Processor::computePointCloud(PC::Ptr& out_cloud)
 {
-  const float bad_point = std::numeric_limits<float>::quiet_NaN();
+  std::array<float, 512*424> X,Y,Z,RGB;
   //assume registration was performed
   out_cloud.reset(new PC);
   out_cloud->width = 512;
@@ -76,28 +77,6 @@ Kinect2Processor::computePointCloud(PC::Ptr& out_cloud)
   out_cloud->sensor_origin_.setZero();
   out_cloud->sensor_orientation_.setIdentity();
   out_cloud->points.resize(out_cloud->width * out_cloud->height);
-  const float cx(irParams.cx), cy(irParams.cy);
-  const float fx(irParams.fx), fy(irParams.fy);
-  for (int r=0; r<424; ++r)
-  {
-    PT *pointP = &out_cloud->points[r*424]; //points in row
-    const unsigned char *dP = &undistorted->data[r*424]; //depth value in row
-    for (int c=0; c<512; ++c, ++pointP, ++dP)
-    {
-      float xu = (c + 0.5 - cx)/fx;
-      float yu = (r + 0.5 - cy)/fy;
-      const float depth_val = *reinterpret_cast<float*>(&undistorted->data[r*424+c])/1000.0f;
-      if (isnan(depth_val) || depth_val <= 0.001)
-      {
-        //point is not valid
-        pointP->x = pointP->y = pointP->z = bad_point;
-        pointP->rgb = 0;
-        continue;
-      }
-      pointP->x = xu * depth_val;
-      pointP->y = yu * depth_val;
-      pointP->z = depth_val;
-      pointP->rgb = *reinterpret_cast<float*>(&registered->data[424*r + c]);
-    }
-  }
+  registration->computeCoordinatesAndColor(undistorted, registered, X,Y,Z,RGB);
+  //todo fill pointcloud
 }
