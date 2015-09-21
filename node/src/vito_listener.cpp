@@ -45,15 +45,15 @@ void Listener::listen_table()
   {
     tf_listener.waitForTransform(sens_ref_frame.c_str(), "/workbench_plate_link", ros::Time(0), ros::Duration(2.0));
     tf_listener.lookupTransform(sens_ref_frame.c_str(), "/workbench_plate_link", ros::Time(0), table_tf);
-    geometry_msgs::Pose pose;
-    fromTF(table_tf, *table, pose);
   }
   catch (tf::TransformException& ex)
   {
     ROS_WARN("%s", ex.what());
-    ROS_WARN("[Listener][%s] Can not find Table Transformation...", __func__);
-    return;
+    ROS_WARN("[Listener][%s] Can not find Table Transformation. Using identity...", __func__);
+    table_tf.setIdentity();
   }
+  geometry_msgs::Pose pose;
+  fromTF(table_tf, *table, pose);
   this->storage->write_table(this->table);
   return;
 }

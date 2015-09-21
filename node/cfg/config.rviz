@@ -129,7 +129,7 @@ Visualization Manager:
       Marker Topic: /pacman_vision/broadcaster/broadcasted_markers
       Name: Markers
       Namespaces:
-        {}
+        PassThrough Filter Limits: true
       Queue Size: 10
       Value: true
     - Class: rviz/TF
@@ -137,9 +137,15 @@ Visualization Manager:
       Frame Timeout: 1
       Frames:
         All Enabled: false
-        kinect2_reference_frame:
+        camera_depth_frame:
           Value: true
-        vito_anchor:
+        camera_depth_optical_frame:
+          Value: true
+        camera_link:
+          Value: true
+        camera_rgb_frame:
+          Value: true
+        camera_rgb_optical_frame:
           Value: true
       Marker Scale: 0.5
       Name: Transformations
@@ -147,15 +153,19 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        vito_anchor:
-          kinect2_reference_frame:
-            {}
+        camera_link:
+          camera_depth_frame:
+            camera_depth_optical_frame:
+              {}
+          camera_rgb_frame:
+            camera_rgb_optical_frame:
+              {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: kinect2_reference_frame
+    Fixed Frame: camera_rgb_optical_frame
     Frame Rate: 100
   Name: root
   Tools:
@@ -176,7 +186,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.75023
+      Distance: 1.42636
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -188,10 +198,10 @@ Visualization Manager:
         Z: 0.743147
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -1.2848
+      Pitch: -1.2798
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.69869
+      Yaw: 4.69369
     Saved: ~
 Window Geometry:
   Displays:
