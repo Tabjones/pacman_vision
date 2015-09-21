@@ -9,6 +9,7 @@ Listener::Listener(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   this->queue_ptr.reset(new ros::CallbackQueue);
   this->nh.setCallbackQueue(&(*this->queue_ptr));
   this->storage = stor;
+  this->srv_get_cloud = nh.advertiseService("get_cloud_in_hand", &Listener::cb_get_cloud_in_hand, this);
   nh.param<bool>("/pacman_vision/crop_left_arm", listen_left_arm, false);
   nh.param<bool>("/pacman_vision/crop_right_arm", listen_right_arm, false);
   nh.param<bool>("/pacman_vision/crop_left_hand", listen_left_hand, false);
@@ -21,6 +22,28 @@ Listener::Listener(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   arm_naming[3]= "_arm_5_link";
   arm_naming[4]= "_arm_6_link";
   arm_naming[5]= "_arm_7_link";
+  detailed_hand_naming.resize(21);
+  detailed_hand_naming[0]= "_softhand_base";
+  detailed_hand_naming[1]= "_palm_link";
+  detailed_hand_naming[2]= "_index_knuckle_link";
+  detailed_hand_naming[3]= "_index_proximal_link";
+  detailed_hand_naming[4]= "_index_middle_link";
+  detailed_hand_naming[5]= "_index_distal_link";
+  detailed_hand_naming[6]= "_little_knuckle_link";
+  detailed_hand_naming[7]= "_little_proximal_link";
+  detailed_hand_naming[8]= "_little_middle_link";
+  detailed_hand_naming[9]= "_little_distal_link";
+  detailed_hand_naming[10]= "_middle_knuckle_link";
+  detailed_hand_naming[11]= "_middle_proximal_link";
+  detailed_hand_naming[12]= "_middle_middle_link";
+  detailed_hand_naming[13]= "_middle_distal_link";
+  detailed_hand_naming[14]= "_ring_knuckle_link";
+  detailed_hand_naming[15]= "_ring_proximal_link";
+  detailed_hand_naming[16]= "_ring_middle_link";
+  detailed_hand_naming[17]= "_ring_distal_link";
+  detailed_hand_naming[18]= "_thumb_knuckle_link";
+  detailed_hand_naming[19]= "_thumb_proximal_link";
+  detailed_hand_naming[20]= "_thumb_distal_link";
   left_arm.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> >);
   right_arm.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> >);
   left_hand.reset(new Eigen::Matrix4f);
@@ -90,8 +113,8 @@ void Listener::listen_once()
     {
       for (int i=0; i<arm_naming.size(); ++i)
       {
-        tf_listener.waitForTransform("/kinect2_rgb_optical_frame", (right+arm_naming[i]).c_str(), ros::Time(0), ros::Duration(2.0));
-        tf_listener.lookupTransform("/kinect2_rgb_optical_frame", (right+arm_naming[i]).c_str(), ros::Time(0), right_arm_tf[i]);
+        tf_listener.waitForTransform(sens_ref_frame.c_str(), (right+arm_naming[i]).c_str(), ros::Time(0), ros::Duration(2.0));
+        tf_listener.lookupTransform(sens_ref_frame.c_str(), (right+arm_naming[i]).c_str(), ros::Time(0), right_arm_tf[i]);
         fromTF(right_arm_tf[i], right_arm->at(i), pose);
       }
     }
@@ -107,8 +130,8 @@ void Listener::listen_once()
   {
    try
    {
-     tf_listener.waitForTransform("/kinect2_rgb_optical_frame", "/left_hand_palm_link", ros::Time(0), ros::Duration(2.0));
-     tf_listener.lookupTransform("/kinect2_rgb_optical_frame", "/left_hand_palm_link", ros::Time(0), left_hand_tf);
+     tf_listener.waitForTransform(sens_ref_frame.c_str(), "/left_hand_palm_link", ros::Time(0), ros::Duration(2.0));
+     tf_listener.lookupTransform(sens_ref_frame.c_str(), "/left_hand_palm_link", ros::Time(0), left_hand_tf);
      fromTF(left_hand_tf, *left_hand, pose);
    }
    catch (tf::TransformException& ex)
@@ -123,8 +146,8 @@ void Listener::listen_once()
   {
    try
    {
-     tf_listener.waitForTransform("/kinect2_rgb_optical_frame", "/right_hand_palm_link", ros::Time(0), ros::Duration(2.0));
-     tf_listener.lookupTransform("/kinect2_rgb_optical_frame", "/right_hand_palm_link", ros::Time(0), right_hand_tf);
+     tf_listener.waitForTransform(sens_ref_frame.c_str(), "/right_hand_palm_link", ros::Time(0), ros::Duration(2.0));
+     tf_listener.lookupTransform(sens_ref_frame.c_str(), "/right_hand_palm_link", ros::Time(0), right_hand_tf);
      fromTF(right_hand_tf, *right_hand, pose);
    }
    catch (tf::TransformException& ex)
@@ -137,7 +160,116 @@ void Listener::listen_once()
   }
   return;
 }
+
+bool Listener::cb_get_cloud_in_hand(pacman_vision_comm::get_cloud_in_hand::Request& req, pacman_vision_comm::get_cloud_in_hand::Response& res)
+{
+  PC::Ptr cloud (new PC);
+  this->storage->read_scene_processed(cloud);
+  //listen right or left hand based on req.right
+  for (size_t i=0; i<detailed_hand_naming.size(); ++i)
+    listen_and_crop_detailed_hand_piece(req.right, i, cloud);
+  sensor_msgs::PointCloud2 msg;
+  if (req.save.compare("false") != 0)
+  {
+    pcl::io::savePCDFile( (req.save).c_str(), *cloud );
+  }
+  pcl::toROSMsg(*cloud, msg);
+  res.obj = msg;
+  return true;
+}
+
 void Listener::spin_once()
 {
   this->queue_ptr->callAvailable(ros::WallDuration(0));
+}
+
+void Listener::listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::Ptr& cloud)
+{
+  std::string sens_ref_frame, hand, piece;
+  this->storage->read_sensor_ref_frame(sens_ref_frame);
+  tf::StampedTransform tf_piece;
+  piece = detailed_hand_naming[idx];
+  Eigen::Matrix4f trans, inv;
+  geometry_msgs::Pose pose;
+  if (right)
+    hand = "right_hand";
+  else
+    hand = "left_hand";
+  try
+  {
+    tf_listener.waitForTransform(sens_ref_frame.c_str(), (hand+piece).c_str(), ros::Time(0), ros::Duration(2.0));
+    tf_listener.lookupTransform(sens_ref_frame.c_str(), (hand+piece).c_str(), ros::Time(0), tf_piece);
+    fromTF(tf_piece, trans, pose);
+  }
+  catch (tf::TransformException& ex)
+  {
+    ROS_WARN("%s", ex.what());
+    ROS_WARN("[Listener][%s] Can not find %s Transformation, setting identity",__func__,(hand+piece).c_str() );
+    trans.setIdentity();
+  }
+  //crop it
+  pcl::CropBox<PT> cb;
+  Eigen::Vector4f min, max; //bounduaries
+  inv = trans.inverse();
+  cb.setInputCloud(cloud);
+  cb.setNegative (true); //crop what's inside the box
+  cb.setTransform(Eigen::Affine3f(inv));
+  PC out;
+  if (idx == 0)
+  {
+    //base
+    min << -0.033, -0.033, 0, 1;
+    max << 0.033, 0.033, 0.062, 1;
+  }
+  else if (idx == 1)
+  {
+    //palm_link
+    if (right)
+    {
+      min << -0.027, -0.049, -0.012, 1;
+      max << 0.012, 0.04, 0.114, 1;
+    }
+    else
+    {
+      min << -0.027, -0.04, -0.012, 1;
+      max << 0.012, 0.049, 0.114, 1;
+    }
+  }
+  else if (idx == 2 || idx == 6 || idx == 10 || idx == 14)
+  {
+    //knuckle
+    min << -0.017, -0.007, -0.012, 1;
+    max << 0.018, 0.007, 0.013, 1;
+  }
+  else if (idx == 3 || idx == 7 || idx == 11 || idx == 15 || idx == 19
+      || idx == 4 || idx == 8 || idx == 12 || idx == 16 )
+  {
+    //proximal = middle
+    min << -0.008, -0.007, -0.009, 1;
+    max << 0.018, 0.007, 0.01, 1;
+  }
+  else if (idx == 5 || idx == 9 || idx == 13 || idx == 17 || idx == 20)
+  {
+    //distal
+    min << -0.008, -0.007, -0.009, 1;
+    max << 0.025, 0.007, 0.011, 1;
+  }
+  else
+  {
+    //thumb_knuckle
+    if (right)
+    {
+      min << -0.006, -0.014, -0.011, 1;
+      max << 0.031, 0.006, 0.012, 1;
+    }
+    else
+    {
+      min << -0.006, -0.006, -0.011, 1;
+      max << 0.031, 0.014, 0.012, 1;
+    }
+  }
+  cb.setMin (min);
+  cb.setMax (max);
+  cb.filter(out);
+  pcl::copyPointCloud(out, *cloud);
 }
