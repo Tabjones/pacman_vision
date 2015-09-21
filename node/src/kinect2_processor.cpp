@@ -78,5 +78,11 @@ Kinect2Processor::computePointCloud(PC::Ptr& out_cloud)
   out_cloud->sensor_orientation_.setIdentity();
   out_cloud->points.resize(out_cloud->width * out_cloud->height);
   registration->computeCoordinatesAndColor(undistorted, registered, X,Y,Z,RGB);
-  //todo fill pointcloud
+  for (size_t i=0; i<out_cloud->points.size(); ++i)
+  {
+    out_cloud->points[i].x = X[i];
+    out_cloud->points[i].y = Y[i];
+    out_cloud->points[i].z = Z[i];
+    out_cloud->points[i].rgb = RGB[i];
+  }
 }
