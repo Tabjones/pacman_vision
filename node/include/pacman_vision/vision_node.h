@@ -28,7 +28,7 @@
 
 #include "pacman_vision/utility.h"
 #include "pacman_vision/storage.h"
-#include "pacman_vision/kinect2_processor.h"
+//#include "pacman_vision/kinect2_processor.h"
 //Modules
 #include "pacman_vision/estimator.h"
 #include "pacman_vision/broadcaster.h"
@@ -96,7 +96,7 @@ class VisionNode
     //Shared pointer of Storage (to be shared to modules)
     boost::shared_ptr<Storage> storage;
     //Shared pointer of Kinect2Processor
-    boost::shared_ptr<Kinect2Processor> kinect2;
+    //boost::shared_ptr<Kinect2Processor> kinect2;
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module;
     boost::shared_ptr<Broadcaster> broadcaster_module;

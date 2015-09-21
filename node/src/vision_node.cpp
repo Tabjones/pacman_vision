@@ -4,7 +4,7 @@ VisionNode::VisionNode()
 {
   this->nh = ros::NodeHandle("pacman_vision");
   this->storage.reset(new Storage);
-  this->kinect2.reset(new Kinect2Processor);
+//  this->kinect2.reset(new Kinect2Processor);
   this->scene.reset(new PC);
   this->limits.reset(new Box);
   //first call of dynamic reconfigure callback will only set gui to loaded parameters
@@ -40,6 +40,10 @@ VisionNode::VisionNode()
   nh.param<double>("plane_tolerance", plane_tol, 0.004);
   //set callback for dynamic reconfigure
   this->dyn_srv.setCallback(boost::bind(&VisionNode::cb_reconfigure, this, _1, _2));
+
+  //hardcode use asus, ingore params
+  sensor.type = 2;
+  sensor.needs_update = true;
 }
 
 //when service is called
@@ -663,6 +667,7 @@ void VisionNode::check_sensor_subscribers()
       sensor.ref_frame = "/camera_rgb_optical_frame";
       this->storage->write_sensor_ref_frame(sensor.ref_frame);
       sub_kinect = nh.subscribe(topic, 5, &VisionNode::cb_kinect, this);
+      sensor.needs_update = false;
     }
   }
   else
@@ -754,16 +759,16 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
       = config.enable_broadcaster = config.enable_supervoxels = false;
     en_estimator = en_tracker = en_broadcaster = en_listener = en_supervoxels = false;
   }
-  if (sensor.resolution != config.external_kinect2_resolution)
-  {
-    sensor.resolution = config.external_kinect2_resolution;
-    this->sensor.needs_update = true;
-  }
-  if (sensor.type != config.sensor_type)
-  {
-    sensor.type = config.sensor_type;
-    this->sensor.needs_update = true;
-  }
+  // if (sensor.resolution != config.external_kinect2_resolution)
+  // {
+  //   sensor.resolution = config.external_kinect2_resolution;
+  //   this->sensor.needs_update = true;
+  // }
+  // if (sensor.type != config.sensor_type)
+  // {
+  //   sensor.type = config.sensor_type;
+  //   this->sensor.needs_update = true;
+  // }
   //filters
   this->downsample      = config.groups.base_node_filters.downsampling;
   this->filter          = config.groups.base_node_filters.passthrough;
@@ -839,35 +844,35 @@ void VisionNode::spin_once()
   {
     if (sub_kinect.getNumPublishers() > 0)
       sub_kinect.shutdown();
-    if (sensor.type == 0 && kinect2->started)
-      kinect2->stop();
+    // if (sensor.type == 0 && kinect2->started)
+    //   kinect2->stop();
   }
   else
   {
     this->check_sensor_subscribers();
-    if (sensor.type == 0)
-    {
-      if (!kinect2->initialized)
-        kinect2->initDevice();
-      if (!kinect2->started)
-        kinect2->start();
-      kinect2->processData();
-      kinect2->computePointCloud(this->scene);
-      if (!this->scene_processed)
-        this->scene_processed.reset( new PC);
-      tf::Vector3 v_zero;
-      v_zero.setZero();
-      tf::Quaternion q_zero;
-      q_zero.setRPY(0,0,0);
-      tf::Transform t_zero(q_zero, v_zero);
-      this->tf_sensor_ref_frame_brcaster.sendTransform(tf::StampedTransform(t_zero, ros::Time::now(), "/vito_anchor", sensor.ref_frame.c_str()));
-      pcl_conversions::toPCL(ros::Time::now(), this->scene->header.stamp);
-      this->scene->header.frame_id = sensor.ref_frame;
-      this->scene->header.seq = 0;
-      this->storage->write_scene(this->scene);
-
-      this->process_scene();
-    }
+    // if (sensor.type == 0)
+    // {
+    //   if (!kinect2->initialized)
+    //     kinect2->initDevice();
+    //   if (!kinect2->started)
+    //     kinect2->start();
+    //   kinect2->processData();
+    //   kinect2->computePointCloud(this->scene);
+    //   if (!this->scene_processed)
+    //     this->scene_processed.reset( new PC);
+    //   tf::Vector3 v_zero;
+    //   v_zero.setZero();
+    //   tf::Quaternion q_zero;
+    //   q_zero.setRPY(0,0,0);
+    //   tf::Transform t_zero(q_zero, v_zero);
+    //   this->tf_sensor_ref_frame_brcaster.sendTransform(tf::StampedTransform(t_zero, ros::Time::now(), "/vito_anchor", sensor.ref_frame.c_str()));
+    //   pcl_conversions::toPCL(ros::Time::now(), this->scene->header.stamp);
+    //   this->scene->header.frame_id = sensor.ref_frame;
+    //   this->scene->header.seq = 0;
+    //   this->storage->write_scene(this->scene);
+    //
+    //   this->process_scene();
+    // }
   }
   ros::spinOnce();
   this->check_modules();
@@ -877,7 +882,7 @@ void VisionNode::shutdown()
 {
   en_tracker = en_broadcaster = en_estimator = en_listener = en_supervoxels = false;
   this->check_modules();
-  this->kinect2->close();
+  // this->kinect2->close();
   ROS_INFO("[PaCMan Vision] Shutting down...");
   //Wait for other threads
   boost::this_thread::sleep(boost::posix_time::seconds(1));
