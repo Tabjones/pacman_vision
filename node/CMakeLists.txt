@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(pacman_vision)
 
-## find_package(freenect2 REQUIRED)
+find_package(freenect2 REQUIRED)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -61,10 +61,6 @@ endif(NOT PEL_FOUND)
 ######################
 generate_dynamic_reconfigure_options( cfg/pacman_vision.cfg )
 
-##generate_messages(
-##  dynamic_reconfigure
-##  )
-
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -79,7 +75,7 @@ catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES vision_node
   CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversions pcl_ros roscpp roslib sensor_msgs tf pacman_vision_comm message_runtime
-  DEPENDS PCL Boost PEL ## freenect2
+  DEPENDS PCL Boost PEL freenect2
 )
 
 
@@ -91,7 +87,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIRS}
   ${PEL_INCLUDE_DIRS}
-  ##  ${freenect2_INCLUDE_DIRS}
+  ${freenect2_INCLUDE_DIRS}
 )
 
 link_directories(
@@ -101,7 +97,7 @@ link_directories(
   )
 
 add_executable(pacman_vision src/vision_node.cpp
-  # src/kinect2_processor.cpp
+                             src/kinect2_processor.cpp
                              src/estimator.cpp
                              src/broadcaster.cpp
                              src/tracker.cpp
@@ -116,7 +112,7 @@ add_dependencies(pacman_vision
   )
 
 target_link_libraries(pacman_vision
-  # ${freenect2_LIBRARY}
+   ${freenect2_LIBRARY}
    ${catkin_LIBRARIES}
    ${PCL_LIBRARIES}
    ${PEL_LIBRARIES}

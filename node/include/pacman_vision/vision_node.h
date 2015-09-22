@@ -23,18 +23,18 @@
 #include <pcl_ros/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 // ROS generated headers
-#include "pacman_vision_comm/get_scene.h"
-#include "pacman_vision/pacman_visionConfig.h"
+#include <pacman_vision_comm/get_scene.h>
+#include <pacman_vision/pacman_visionConfig.h>
 
-#include "pacman_vision/utility.h"
-#include "pacman_vision/storage.h"
-//#include "pacman_vision/kinect2_processor.h"
+#include <pacman_vision/utility.h>
+#include <pacman_vision/storage.h>
+#include <pacman_vision/kinect2_processor.h>
 //Modules
-#include "pacman_vision/estimator.h"
-#include "pacman_vision/broadcaster.h"
-#include "pacman_vision/vito_listener.h"
-#include "pacman_vision/tracker.h"
-#include "pacman_vision/supervoxels.h"
+#include <pacman_vision/estimator.h>
+#include <pacman_vision/broadcaster.h>
+#include <pacman_vision/vito_listener.h>
+#include <pacman_vision/tracker.h>
+#include <pacman_vision/supervoxels.h>
 
 class VisionNode
 {
@@ -96,7 +96,7 @@ class VisionNode
     //Shared pointer of Storage (to be shared to modules)
     boost::shared_ptr<Storage> storage;
     //Shared pointer of Kinect2Processor
-    //boost::shared_ptr<Kinect2Processor> kinect2;
+    boost::shared_ptr<Kinect2Processor> kinect2;
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module;
     boost::shared_ptr<Broadcaster> broadcaster_module;
