@@ -68,7 +68,6 @@ Kinect2Processor::processData()
 void
 Kinect2Processor::computePointCloud(PC::Ptr& out_cloud)
 {
-  std::array<float, 512*424> X,Y,Z,RGB;
   //assume registration was performed
   out_cloud.reset(new PC);
   out_cloud->width = 512;
@@ -77,12 +76,14 @@ Kinect2Processor::computePointCloud(PC::Ptr& out_cloud)
   out_cloud->sensor_origin_.setZero();
   out_cloud->sensor_orientation_.setIdentity();
   out_cloud->points.resize(out_cloud->width * out_cloud->height);
-  registration->computeCoordinatesAndColor(undistorted, registered, X,Y,Z,RGB);
-  for (size_t i=0; i<out_cloud->points.size(); ++i)
+  for (int r=0; r<out_cloud->height; ++r)
   {
-    out_cloud->points[i].x = X[i];
-    out_cloud->points[i].y = Y[i];
-    out_cloud->points[i].z = Z[i];
-    out_cloud->points[i].rgb = RGB[i];
+    for (int c=0; c<out_cloud->width; ++c)
+    {
+      unsigned int rgb;
+      registration->getPointXYZRGB(undistorted, registered, r,c, out_cloud->points[512*r+c].x,
+          out_cloud->points[512*r+c].y, out_cloud->points[512*r+c].z, rgb);
+      out_cloud->points[512*r+c].rgb = *reinterpret_cast<float*>(&rgb);
+    }
   }
 }
