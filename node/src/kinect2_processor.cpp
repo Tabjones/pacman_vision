@@ -1,5 +1,4 @@
-#include "pacman_vision/kinect2_processor.h"
-#include <array>
+#include <pacman_vision/kinect2_processor.h>
 
 Kinect2Processor::Kinect2Processor () : device(0), packetPipeline(0), registration(0),
   listener(0), started(false), initialized(false)
@@ -77,13 +76,7 @@ Kinect2Processor::computePointCloud(PC::Ptr& out_cloud)
   out_cloud->sensor_orientation_.setIdentity();
   out_cloud->points.resize(out_cloud->width * out_cloud->height);
   for (int r=0; r<out_cloud->height; ++r)
-  {
     for (int c=0; c<out_cloud->width; ++c)
-    {
-      unsigned int rgb;
       registration->getPointXYZRGB(undistorted, registered, r,c, out_cloud->points[512*r+c].x,
-          out_cloud->points[512*r+c].y, out_cloud->points[512*r+c].z, rgb);
-      out_cloud->points[512*r+c].rgb = *reinterpret_cast<float*>(&rgb);
-    }
-  }
+          out_cloud->points[512*r+c].y, out_cloud->points[512*r+c].z, out_cloud->points[512*r+c].rgb);
 }
