@@ -28,33 +28,8 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(-std=c++11 ${PCL_DEFINITIONS})
 
 #find PEL in system
-find_package(PEL 0.6)
-
-if (NOT PEL_FOUND)
-  set(PEL_LW_NAME "pel")
-  set(PEL_BUILD "${CATKIN_DEVEL_PREFIX}/${PEL_LW_NAME}/")
-  make_directory("${PEL_BUILD}")
-  set(PEL_SRC "${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/${PEL_LW_NAME}/")
-
-  MESSAGE(STATUS "============================================================")
-  MESSAGE(STATUS "Pose Estimation Library (PEL) is NOT FOUND in system,")
-  MESSAGE(STATUS "building it from Pacman-Vision submodule...")
-  MESSAGE(STATUS "PEL building will take place in ${PEL_BUILD}")
-  MESSAGE(STATUS "PEL sources are located in ${PEL_SRC}")
-  MESSAGE(STATUS "Starting PEL build...")
-  execute_process(
-    COMMAND ${CMAKE_COMMAND} ${PEL_SRC}
-    WORKING_DIRECTORY ${PEL_BUILD}
-    )
-  execute_process(
-    COMMAND make
-    WORKING_DIRECTORY ${PEL_BUILD}
-    )
-  MESSAGE(STATUS "Done building PEL. Finding it again...")
-  MESSAGE(STATUS "============================================================")
-  find_package(PEL 0.6 REQUIRED)
-endif(NOT PEL_FOUND)
-
+find_package(Pel 0.6 REQUIRED)
+add_definitions(${Pel_DEFINITIONS})
 
 ######################
 ## catkin generated ##
@@ -75,7 +50,7 @@ catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES vision_node
   CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversions pcl_ros roscpp roslib sensor_msgs tf pacman_vision_comm message_runtime
-  DEPENDS PCL Boost PEL freenect2
+  DEPENDS PCL Boost Pel freenect2
 )
 
 
@@ -86,14 +61,14 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIRS}
-  ${PEL_INCLUDE_DIRS}
+  ${Pel_INCLUDE_DIRS}
   ${freenect2_INCLUDE_DIRS}
 )
 
 link_directories(
   ${PCL_LIBRARY_DIRS}
+  ${Pel_LIBRARY_DIRS}
   ${CATKIN_DEVEL_PREFIX}/lib
-  ${PEL_LIBRARY_DIRS}
   )
 
 add_executable(pacman_vision src/vision_node.cpp
@@ -115,7 +90,7 @@ target_link_libraries(pacman_vision
    ${freenect2_LIBRARY}
    ${catkin_LIBRARIES}
    ${PCL_LIBRARIES}
-   ${PEL_LIBRARIES}
+   ${Pel_LIBRARIES}
 )
 
 ##POST BUILD COMMAND to fetch database
