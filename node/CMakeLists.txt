@@ -1,6 +1,18 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(pacman_vision)
 
+# Check for c++11 support
+INCLUDE(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+IF(COMPILER_SUPPORTS_CXX11)
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+ELSEIF(COMPILER_SUPPORTS_CXX0X)
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+ELSE()
+  MESSAGE(ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+ENDIF()
+
 find_package(freenect2 REQUIRED)
 
 ## Find catkin macros and libraries
@@ -24,12 +36,10 @@ find_package(PCL 1.7.2 REQUIRED)
 find_package(HDF5 REQUIRED)
 
 include_directories(BEFORE ${PCL_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(-std=c++11 ${PCL_DEFINITIONS})
+add_definitions(${PCL_DEFINITIONS})
 
 #find pel in system
 find_package(pel 0.6 REQUIRED)
-add_definitions(${pel_DEFINITIONS})
 
 ######################
 ## catkin generated ##
@@ -68,7 +78,6 @@ include_directories(
 link_directories(
   ${PCL_LIBRARY_DIRS}
   ${pel_LIBRARY_DIRS}
-  ${CATKIN_DEVEL_PREFIX}/lib
   )
 
 add_executable(pacman_vision src/vision_node.cpp
