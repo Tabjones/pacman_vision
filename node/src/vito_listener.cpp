@@ -1,4 +1,5 @@
 #include "pacman_vision/vito_listener.h"
+#include <boost/filesystem.hpp>
 
 //////////////
 // Listener //
@@ -163,15 +164,35 @@ void Listener::listen_once()
 
 bool Listener::cb_get_cloud_in_hand(pacman_vision_comm::get_cloud_in_hand::Request& req, pacman_vision_comm::get_cloud_in_hand::Response& res)
 {
-  PC::Ptr cloud (new PC);
+  PC::Ptr cloud (new PC); //gets progressively overwritten
+  PC::Ptr cloud_original (new PC);
+  PC::Ptr obj (new PC);
+  PC::Ptr piece (new PC);
   this->storage->read_scene_processed(cloud);
+  pcl::copyPointCloud(*cloud, *cloud_original);
   //listen right or left hand based on req.right
   for (size_t i=0; i<detailed_hand_naming.size(); ++i)
+  {
+    if (i == 0)
+      listen_and_extract_detailed_hand_piece(req.right, i, cloud_original, obj);
+    listen_and_extract_detailed_hand_piece(req.right, i, cloud_original, piece);
     listen_and_crop_detailed_hand_piece(req.right, i, cloud);
+    *obj += *piece;
+  }
   sensor_msgs::PointCloud2 msg;
   if (req.save.compare("false") != 0)
   {
-    pcl::io::savePCDFile( (req.save).c_str(), *cloud );
+    boost::filesystem::path save_dir (req.save);
+    if (boost::filesystem::exists(save_dir) && boost::filesystem::is_directory(save_dir))
+    {
+      pcl::io::savePCDFile( (save_dir.string() + "/obj.pcd").c_str(), *cloud );
+      pcl::io::savePCDFile( (save_dir.string() + "/hand.pcd").c_str(), *obj );
+    }
+    else
+    {
+      ROS_ERROR ("[Listener][%s] Invalid save directory passed to service: %s",__func__,save_dir.c_str());
+      return false;
+    }
   }
   pcl::toROSMsg(*cloud, msg);
   res.obj = msg;
@@ -217,6 +238,20 @@ void Listener::listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::P
   PC out;
   if (idx == 0)
   {
+    Eigen::Vector4f bb_min, bb_max; //external bounding box bounduaries
+    pcl::CropBox<PT> cb_bb;
+    cb_bb.setTransform(Eigen::Affine3f(inv));
+    cb_bb.setInputCloud(cloud);
+    cb_bb.setNegative (false);
+    bb_min << -0.25, -0.25, 0 ,1;
+    bb_max << 0.25, 0.25, 0.6, 1;
+    cb_bb.setMin(bb_min);
+    cb_bb.setMax(bb_max);
+    cb_bb.filter(out);
+    pcl::copyPointCloud(out, *cloud);
+    cb.setInputCloud(cloud);
+    cb.setNegative (true); //crop what's inside the box
+    cb.setTransform(Eigen::Affine3f(inv));
     //base
     min << -0.033, -0.033, 0, 1;
     max << 0.033, 0.033, 0.062, 1;
@@ -272,4 +307,93 @@ void Listener::listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::P
   cb.setMax (max);
   cb.filter(out);
   pcl::copyPointCloud(out, *cloud);
+}
+
+void Listener::listen_and_extract_detailed_hand_piece(bool right, size_t idx, PC::Ptr& cloud, PC::Ptr& piece)
+{
+  std::string sens_ref_frame, hand, hand_piece;
+  this->storage->read_sensor_ref_frame(sens_ref_frame);
+  tf::StampedTransform tf_piece;
+  hand_piece = detailed_hand_naming[idx];
+  Eigen::Matrix4f trans, inv;
+  geometry_msgs::Pose pose;
+  if (right)
+    hand = "right_hand";
+  else
+    hand = "left_hand";
+  try
+  {
+    tf_listener.waitForTransform(sens_ref_frame.c_str(), (hand+hand_piece).c_str(), ros::Time(0), ros::Duration(2.0));
+    tf_listener.lookupTransform(sens_ref_frame.c_str(), (hand+hand_piece).c_str(), ros::Time(0), tf_piece);
+    fromTF(tf_piece, trans, pose);
+  }
+  catch (tf::TransformException& ex)
+  {
+    ROS_WARN("%s", ex.what());
+    ROS_WARN("[Listener][%s] Can not find %s Transformation, setting identity",__func__,(hand+hand_piece).c_str() );
+    trans.setIdentity();
+  }
+  //crop it
+  pcl::CropBox<PT> cb;
+  Eigen::Vector4f min, max; //bounduaries
+  inv = trans.inverse();
+  cb.setInputCloud(cloud);
+  cb.setNegative (false); //crop what's outside the box
+  cb.setTransform(Eigen::Affine3f(inv));
+  if (idx == 0)
+  {
+    //base
+    min << -0.033, -0.033, 0, 1;
+    max << 0.033, 0.033, 0.062, 1;
+  }
+  else if (idx == 1)
+  {
+    //palm_link
+    if (right)
+    {
+      min << -0.027, -0.049, -0.012, 1;
+      max << 0.012, 0.04, 0.114, 1;
+    }
+    else
+    {
+      min << -0.027, -0.04, -0.012, 1;
+      max << 0.012, 0.049, 0.114, 1;
+    }
+  }
+  else if (idx == 2 || idx == 6 || idx == 10 || idx == 14)
+  {
+    //knuckle
+    min << -0.017, -0.007, -0.012, 1;
+    max << 0.018, 0.007, 0.013, 1;
+  }
+  else if (idx == 3 || idx == 7 || idx == 11 || idx == 15 || idx == 19
+      || idx == 4 || idx == 8 || idx == 12 || idx == 16 )
+  {
+    //proximal = middle
+    min << -0.008, -0.007, -0.009, 1;
+    max << 0.018, 0.007, 0.01, 1;
+  }
+  else if (idx == 5 || idx == 9 || idx == 13 || idx == 17 || idx == 20)
+  {
+    //distal
+    min << -0.008, -0.007, -0.009, 1;
+    max << 0.025, 0.007, 0.011, 1;
+  }
+  else
+  {
+    //thumb_knuckle
+    if (right)
+    {
+      min << -0.006, -0.014, -0.011, 1;
+      max << 0.031, 0.006, 0.012, 1;
+    }
+    else
+    {
+      min << -0.006, -0.006, -0.011, 1;
+      max << 0.031, 0.014, 0.012, 1;
+    }
+  }
+  cb.setMin (min);
+  cb.setMax (max);
+  cb.filter(*piece);
 }

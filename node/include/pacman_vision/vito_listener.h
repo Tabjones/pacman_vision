@@ -60,6 +60,8 @@ class Listener
     void listen_table();
     //method to listen to a piece of soft hand, and crop out its bb.
     void listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::Ptr& cloud);
+    //method to listen to a piece of soft hand, and extract its content.
+    void listen_and_extract_detailed_hand_piece(bool right, size_t idx, PC::Ptr& cloud, PC::Ptr& piece);
 
 
 };
