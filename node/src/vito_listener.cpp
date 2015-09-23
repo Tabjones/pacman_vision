@@ -179,7 +179,7 @@ bool Listener::cb_get_cloud_in_hand(pacman_vision_comm::get_cloud_in_hand::Reque
     listen_and_crop_detailed_hand_piece(req.right, i, cloud);
     *obj += *piece;
   }
-  sensor_msgs::PointCloud2 msg;
+  sensor_msgs::PointCloud2 msg, msg2;
   if (req.save.compare("false") != 0)
   {
     boost::filesystem::path save_dir (req.save);
@@ -195,7 +195,9 @@ bool Listener::cb_get_cloud_in_hand(pacman_vision_comm::get_cloud_in_hand::Reque
     }
   }
   pcl::toROSMsg(*cloud, msg);
+  pcl::toROSMsg(*obj, msg2);
   res.obj = msg;
+  res.hand = msg2;
   return true;
 }
 
