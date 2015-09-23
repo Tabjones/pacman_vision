@@ -27,9 +27,9 @@ include_directories(BEFORE ${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(-std=c++11 ${PCL_DEFINITIONS})
 
-#find PEL in system
-find_package(Pel 0.6 REQUIRED)
-add_definitions(${Pel_DEFINITIONS})
+#find pel in system
+find_package(pel 0.6 REQUIRED)
+add_definitions(${pel_DEFINITIONS})
 
 ######################
 ## catkin generated ##
@@ -50,7 +50,7 @@ catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES vision_node
   CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversions pcl_ros roscpp roslib sensor_msgs tf pacman_vision_comm message_runtime
-  DEPENDS PCL Boost Pel freenect2
+  DEPENDS PCL Boost pel freenect2
 )
 
 
@@ -61,13 +61,13 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIRS}
-  ${Pel_INCLUDE_DIRS}
+  ${pel_INCLUDE_DIRS}
   ${freenect2_INCLUDE_DIRS}
 )
 
 link_directories(
   ${PCL_LIBRARY_DIRS}
-  ${Pel_LIBRARY_DIRS}
+  ${pel_LIBRARY_DIRS}
   ${CATKIN_DEVEL_PREFIX}/lib
   )
 
@@ -90,7 +90,7 @@ target_link_libraries(pacman_vision
    ${freenect2_LIBRARY}
    ${catkin_LIBRARIES}
    ${PCL_LIBRARIES}
-   ${Pel_LIBRARIES}
+   ${pel_LIBRARIES}
 )
 
 ##POST BUILD COMMAND to fetch database
