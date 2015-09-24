@@ -92,7 +92,7 @@ include_directories(BEFORE ${PCL_INCLUDE_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 ####### Config File
-configure_file("${PROJECT_SOURCE_DIR}/cmake/config_h.cmake.in" @ONLY
+configure_file("${PROJECT_SOURCE_DIR}/cmake/config_h.cmake.in"
   "${PROJECT_BIN_DIR}/include/pacman_vision/config.h")
 LIST(APPEND HEADERS include/pacman_vision/config.h)
 include_directories(${PROJECT_BIN_DIR}/include)
@@ -100,23 +100,19 @@ include_directories(${PROJECT_BIN_DIR}/include)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED
-  COMPONENTS
-    asus_scanner_models
-    calibration
-    dynamic_reconfigure
-    geometry_msgs
-    pcl_conversions
-    pcl_ros
-    roscpp
-    roslib
-    sensor_msgs
-    tf
-    pacman_vision_comm
-  OPTIONAL_COMPONENTS
-    kinect2_bridge
-    vito_robot
-)
+find_package(catkin REQUIRED COMPONENTS
+  asus_scanner_models
+  calibration
+  dynamic_reconfigure
+  geometry_msgs
+  pcl_conversions
+  pcl_ros
+  roscpp
+  roslib
+  sensor_msgs
+  tf
+  pacman_vision_comm
+  )
 
 ###Add cmake created cfg for ros dynamic reconfigure?
 ###Add same thing for package.xml
