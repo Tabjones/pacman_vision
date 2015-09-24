@@ -1,7 +1,9 @@
 #ifndef _INCL_STORAGE
 #define _INCL_STORAGE
+
+#include <pacman_vision/config.h>
 //Utility
-#include "pacman_vision/utility.h"
+#include <pacman_vision/utility.h>
 #include <pcl/segmentation/supervoxel_clustering.h>
 
 class Storage

@@ -1,7 +1,9 @@
 #ifndef _INCL_TRACKER
 #define _INCL_TRACKER
+
+#include <pacman_vision/config.h>
 //Utility
-#include "pacman_vision/utility.h"
+#include <pacman_vision/utility.h>
 //PCL
 #include <pcl/common/centroid.h>
 #include <pcl/common/eigen.h>
@@ -24,16 +26,16 @@
 #include <pcl/sample_consensus/sac_model_plane.h>
 #include <pcl/segmentation/sac_segmentation.h>
 // ROS generated headers
-#include "pacman_vision_comm/track_object.h"
-#include "pacman_vision_comm/stop_track.h"
-#include "pacman_vision_comm/grasp_verification.h"
+#include <pacman_vision_comm/track_object.h>
+#include <pacman_vision_comm/stop_track.h>
+#include <pacman_vision_comm/grasp_verification.h>
 //general utilities
 #include <ctime>
 #include <algorithm>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 //Storage
-#include "pacman_vision/storage.h"
+#include <pacman_vision/storage.h>
 
 class VisionNode;
 

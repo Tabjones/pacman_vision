@@ -1,8 +1,9 @@
 #ifndef _INCL_ESTIMATOR
 #define _INCL_ESTIMATOR
 
+#include <pacman_vision/config.h>
 //Utility
-#include "pacman_vision/utility.h"
+#include <pacman_vision/utility.h>
 //PCL
 #include <pcl/common/centroid.h>
 #include <pcl/common/eigen.h>
@@ -20,11 +21,11 @@
 #include <pcl_ros/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 // ROS generated headers
-#include "pacman_vision_comm/estimate.h"
-#include "pacman_vision_comm/pe.h"
-#include "pacman_vision_comm/peArray.h"
+#include <pacman_vision_comm/estimate.h>
+#include <pacman_vision_comm/pe.h>
+#include <pacman_vision_comm/peArray.h>
 //Storage
-#include "pacman_vision/storage.h"
+#include <pacman_vision/storage.h>
 //PEL
 #include <pel/pe_progressive_bisection.h>
 

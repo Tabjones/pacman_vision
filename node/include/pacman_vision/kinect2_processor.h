@@ -1,8 +1,9 @@
 #ifndef _INCL_KINECT2
 #define _INCL_KINECT2
 
+#include <pacman_vision/config.h>
 //utility
-#include "pacman_vision/utility.h"
+#include <pacman_vision/utility.h>
 // libfreenect2
 #include <libfreenect2/libfreenect2.hpp>
 #include <libfreenect2/frame_listener_impl.h>

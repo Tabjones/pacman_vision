@@ -1,6 +1,7 @@
 #ifndef _INCL_NODE
 #define _INCL_NODE
 
+#include <pacman_vision/config.h>
 // ROS headers
 #include <dynamic_reconfigure/server.h>
 #include <pcl_ros/point_cloud.h>

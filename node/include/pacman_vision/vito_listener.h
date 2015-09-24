@@ -1,7 +1,9 @@
 #ifndef _INCL_LISTENER
 #define _INCL_LISTENER
+
+#include <pacman_vision/config.h>
 //Utility
-#include "pacman_vision/utility.h"
+#include <pacman_vision/utility.h>
 // ROS headers
 #include <tf/transform_listener.h>
 #include <pcl_ros/point_cloud.h>
@@ -14,9 +16,9 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/filters/crop_box.h>
 //Storage
-#include "pacman_vision/storage.h"
+#include <pacman_vision/storage.h>
 //Ros generated
-#include "pacman_vision_comm/get_cloud_in_hand.h"
+#include <pacman_vision_comm/get_cloud_in_hand.h>
 
 class VisionNode;
 

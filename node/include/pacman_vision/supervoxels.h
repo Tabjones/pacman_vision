@@ -1,5 +1,7 @@
 #ifndef _INCL_SUPERVOXELS
 #define _INCL_SUPERVOXELS
+
+#include <pacman_vision/config.h>
 // ROS headers
 #include <pcl_ros/point_cloud.h>
 #include <sensor_msgs/PointCloud.h>
@@ -10,11 +12,11 @@
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl_conversions/pcl_conversions.h>
 //Ros generated
-#include "pacman_vision_comm/clusterize.h"
+#include <pacman_vision_comm/clusterize.h>
 //Utility
-#include "pacman_vision/utility.h"
+#include <pacman_vision/utility.h>
 //Storage
-#include "pacman_vision/storage.h"
+#include <pacman_vision/storage.h>
 
 class VisionNode;
 

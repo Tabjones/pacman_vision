@@ -1,4 +1,4 @@
-#include "pacman_vision/vision_node.h"
+#include <pacman_vision/vision_node.h>
 
 VisionNode::VisionNode()
 {
