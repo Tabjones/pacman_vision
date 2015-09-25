@@ -1,7 +1,9 @@
 //TODO:
+//0)kinect2 processor does not stop if changing sensor type
 //1)Rework broadcaster module to recompute only changed markers, actually broadcasting faster.
 //2)Make a separated thread for Kinect2Processor ?!
 //3)Hardcode meshes bounding boxes into files (not code) in Listener, possibly adding scale
+//4)Listen table recheck transforms and filter limits are not updated when using table transf
 
 #include <pacman_vision/vision_node.h>
 
@@ -9,7 +11,9 @@ VisionNode::VisionNode()
 {
   this->nh = ros::NodeHandle("pacman_vision");
   this->storage.reset(new Storage);
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
   this->kinect2.reset(new Kinect2Processor);
+#endif
   this->scene.reset(new PC);
   this->limits.reset(new Box);
   //first call of dynamic reconfigure callback will only set gui to loaded parameters
@@ -45,6 +49,11 @@ VisionNode::VisionNode()
   nh.param<double>("plane_tolerance", plane_tol, 0.004);
   //set callback for dynamic reconfigure
   this->dyn_srv.setCallback(boost::bind(&VisionNode::cb_reconfigure, this, _1, _2));
+#ifndef PACMAN_VISION_WITH_KINECT2_SUPPORT
+  //force use of openni2
+  sensor.type = 2;
+  sensor.needs_update = true;
+#endif
 }
 
 //when service is called
@@ -387,6 +396,7 @@ void VisionNode::process_scene()
 ////////////////////////////////
 ///////Spinner threads//////////
 ////////////////////////////////
+#ifdef PACMAN_VISION_WITH_PEL_SUPPORT
 void VisionNode::spin_estimator()
 {
   ROS_INFO("[Estimator] Estimator module will try to perform a Pose Estimation on each object found in the Processed Scene. It isolates possible objects by means of Euclidean Clustering, thus a plane segmentation should be performed on the scene. Estimator needs an object database, previously created, which must be put into database folder. More info is available on the Module Readme.");
@@ -406,54 +416,6 @@ void VisionNode::spin_estimator()
     boost::this_thread::sleep(boost::posix_time::milliseconds(500)); //estimator could try to go at 2Hz (no need to process those services faster)
   }
   //estimator got stopped
-  return;
-}
-
-void VisionNode::spin_broadcaster()
-{
-  ROS_INFO("[Broadcaster] Broadcaster module will publish tfs and markers calculated by the other modules or the base node itself. Look at the namespace of markers in the MarkerArray.");
-  //spin until we disable it or it dies somehow
-  while (this->en_broadcaster && this->broadcaster_module)
-  {
-    //Clear previous markers
-    broadcaster_module->markers.markers.clear();
-    //Check if we have to publish estimated objects or tracked one
-    if ( (this->en_estimator && this->estimator_module) || (this->tracker_module && this->en_tracker) )
-    {
-      if (broadcaster_module->obj_markers || broadcaster_module->obj_tf || broadcaster_module->tracker_bb)
-        //this takes care of markers and TFs of all pose estimated objects, plus tracked object and its bounding box
-        broadcaster_module->elaborate_estimated_objects();
-    }
-
-    //publish Passthrough filter limits as a box
-    if(limits && filter && broadcaster_module->pass_limits)
-    {
-      visualization_msgs::Marker box_marker;
-      if(this->broadcaster_module->create_box_marker(box_marker, limits))
-      {
-        box_marker.color.r = 1.0f;
-        box_marker.color.g = 0.0f;
-        box_marker.color.b = 0.0f;
-        box_marker.color.a = 1.0f;
-        box_marker.pose.position.x=0;
-        box_marker.pose.position.y=0;
-        box_marker.pose.position.z=0;
-        box_marker.pose.orientation.x=0;
-        box_marker.pose.orientation.y=0;
-        box_marker.pose.orientation.z=0;
-        box_marker.pose.orientation.w=1;
-        box_marker.ns = "PassThrough Filter Limits";
-        box_marker.id = 1;
-        this->broadcaster_module->markers.markers.push_back(box_marker);
-      }
-    }
-    //Actually do the broadcasting. This also sets timestamps of all markers pushed inside the array
-    this->broadcaster_module->broadcast_once();
-    //spin
-    this->broadcaster_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(20)); //broadcaster could try to go at 50Hz
-  }
-  //broadcaster got stopped
   return;
 }
 
@@ -498,6 +460,57 @@ void VisionNode::spin_tracker()
     boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go as fast as possible
   }
   //tracker got stopped
+  return;
+}
+#endif
+
+void VisionNode::spin_broadcaster()
+{
+  ROS_INFO("[Broadcaster] Broadcaster module will publish tfs and markers calculated by the other modules or the base node itself. Look at the namespace of markers in the MarkerArray.");
+  //spin until we disable it or it dies somehow
+  while (this->en_broadcaster && this->broadcaster_module)
+  {
+    //Clear previous markers
+    broadcaster_module->markers.markers.clear();
+#ifdef PACMAN_VISION_WITH_PEL_SUPPORT
+    //Check if we have to publish estimated objects or tracked one
+    if ( (this->en_estimator && this->estimator_module) || (this->tracker_module && this->en_tracker) )
+    {
+      if (broadcaster_module->obj_markers || broadcaster_module->obj_tf || broadcaster_module->tracker_bb)
+        //this takes care of markers and TFs of all pose estimated objects, plus tracked object and its bounding box
+        broadcaster_module->elaborate_estimated_objects();
+    }
+#endif
+
+    //publish Passthrough filter limits as a box
+    if(limits && filter && broadcaster_module->pass_limits)
+    {
+      visualization_msgs::Marker box_marker;
+      if(this->broadcaster_module->create_box_marker(box_marker, limits))
+      {
+        box_marker.color.r = 1.0f;
+        box_marker.color.g = 0.0f;
+        box_marker.color.b = 0.0f;
+        box_marker.color.a = 1.0f;
+        box_marker.pose.position.x=0;
+        box_marker.pose.position.y=0;
+        box_marker.pose.position.z=0;
+        box_marker.pose.orientation.x=0;
+        box_marker.pose.orientation.y=0;
+        box_marker.pose.orientation.z=0;
+        box_marker.pose.orientation.w=1;
+        box_marker.ns = "PassThrough Filter Limits";
+        box_marker.id = 1;
+        this->broadcaster_module->markers.markers.push_back(box_marker);
+      }
+    }
+    //Actually do the broadcasting. This also sets timestamps of all markers pushed inside the array
+    this->broadcaster_module->broadcast_once();
+    //spin
+    this->broadcaster_module->spin_once();
+    boost::this_thread::sleep(boost::posix_time::milliseconds(20)); //broadcaster could try to go at 50Hz
+  }
+  //broadcaster got stopped
   return;
 }
 
@@ -550,6 +563,7 @@ void VisionNode::spin_supervoxels()
 ////////////////////////////////////
 void VisionNode::check_modules()
 {
+#ifdef PACMAN_VISION_WITH_PEL_SUPPORT
   //check if we want estimator module and it is not started, or if it is started but we want it disabled
   if (this->en_estimator && !this->estimator_module && !master_disable)
   {
@@ -567,23 +581,6 @@ void VisionNode::check_modules()
     this->estimator_module.reset();
   }
 
-  //check if we want broadcaster module and it is not started, or if it is started but we want it disabled
-  if (this->en_broadcaster && !this->broadcaster_module && !master_disable)
-  {
-    ROS_WARN("[PaCMaN Vision] Started Broadcaster module");
-    this->broadcaster_module.reset( new Broadcaster(this->nh, this->storage) );
-    //spawn a thread to handle the module spinning
-    broadcaster_driver = boost::thread(&VisionNode::spin_broadcaster, this);
-  }
-  else if (!this->en_broadcaster && this->broadcaster_module)
-  {
-    ROS_WARN("[PaCMaN Vision] Stopped Broadcaster module");
-    //wait for the thread to stop, if not already, if already stopped this results in a no_op
-    broadcaster_driver.join();
-    //kill the module
-    this->broadcaster_module.reset();
-  }
-
   //check if we want tracker module and it is not started, or if it is started but we want it disabled
   if (this->en_tracker && !this->tracker_module && !master_disable)
   {
@@ -599,6 +596,24 @@ void VisionNode::check_modules()
     tracker_driver.join();
     //kill the module
     this->tracker_module.reset();
+  }
+#endif
+
+  //check if we want broadcaster module and it is not started, or if it is started but we want it disabled
+  if (this->en_broadcaster && !this->broadcaster_module && !master_disable)
+  {
+    ROS_WARN("[PaCMaN Vision] Started Broadcaster module");
+    this->broadcaster_module.reset( new Broadcaster(this->nh, this->storage) );
+    //spawn a thread to handle the module spinning
+    broadcaster_driver = boost::thread(&VisionNode::spin_broadcaster, this);
+  }
+  else if (!this->en_broadcaster && this->broadcaster_module)
+  {
+    ROS_WARN("[PaCMaN Vision] Stopped Broadcaster module");
+    //wait for the thread to stop, if not already, if already stopped this results in a no_op
+    broadcaster_driver.join();
+    //kill the module
+    this->broadcaster_module.reset();
   }
 
   //check if we want listener module and it is not started, or if it is started but we want it disabled
@@ -673,6 +688,7 @@ void VisionNode::check_sensor_subscribers()
   }
   else
   {
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
     if (sensor.needs_update)
     {
       sensor.ref_frame = "/kinect2_reference_frame";
@@ -681,6 +697,7 @@ void VisionNode::check_sensor_subscribers()
     //Use internal sensor processor, no subscriber needed
     if (sub_kinect.getNumPublishers() > 0)
       sub_kinect.shutdown();
+#endif
   }
 }
 
@@ -690,13 +707,30 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   //initial gui init based on params (just do it once)
   if (rqt_init)
   {
+#ifdef PACMAN_VISION_WITH_PEL_SUPPORT
     config.enable_estimator = en_estimator;
-    config.enable_broadcaster = en_broadcaster;
-    config.enable_listener = en_listener;
     config.enable_tracker= en_tracker;
-    config.enable_supervoxels = en_supervoxels;
+    //estimator
+    nh.getParam("object_calibration", config.groups.estimator_module.object_calibration);
+    nh.getParam("iterations", config.groups.estimator_module.iterations);
+    nh.getParam("neighbors", config.groups.estimator_module.neighbors);
+    nh.getParam("cluster_tol", config.groups.estimator_module.cluster_tol);
+    //tracker
+    config.groups.tracker_module.tracker_disturbance = false;
+    nh.setParam("tracker_disturbance", false);
+    nh.getParam("estimation_type", config.groups.tracker_module.estimation_type);
+    //broadcaster specific
+    nh.getParam("publish_tf", config.groups.broadcaster_module.publish_tf);
+    nh.getParam("estimated_objects", config.groups.broadcaster_module.estimated_objects);
+    nh.getParam("tracker_bounding_box", config.groups.broadcaster_module.tracker_bounding_box);
+#endif
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
     config.external_kinect2_resolution = sensor.resolution;
     config.sensor_type = sensor.type;
+#endif
+    config.enable_broadcaster = en_broadcaster;
+    config.enable_listener = en_listener;
+    config.enable_supervoxels = en_supervoxels;
     config.Master_Disable = master_disable;
     config.groups.base_node_filters.downsampling = downsample;
     config.groups.base_node_filters.passthrough = filter;
@@ -716,20 +750,8 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("crop_right_hand", config.groups.listener_module.crop_right_hand);
     nh.getParam("crop_left_hand", config.groups.listener_module.crop_left_hand);
     nh.getParam("use_table_transform", config.groups.listener_module.use_table_transform);
-    //estimator
-    nh.getParam("object_calibration", config.groups.estimator_module.object_calibration);
-    nh.getParam("iterations", config.groups.estimator_module.iterations);
-    nh.getParam("neighbors", config.groups.estimator_module.neighbors);
-    nh.getParam("cluster_tol", config.groups.estimator_module.cluster_tol);
     //broadcaster
-    nh.getParam("publish_tf", config.groups.broadcaster_module.publish_tf);
-    nh.getParam("estimated_objects", config.groups.broadcaster_module.estimated_objects);
     nh.getParam("passthrough_limits", config.groups.broadcaster_module.passthrough_limits);
-    nh.getParam("tracker_bounding_box", config.groups.broadcaster_module.tracker_bounding_box);
-    //tracker
-    config.groups.tracker_module.tracker_disturbance = false;
-    nh.setParam("tracker_disturbance", false);
-    nh.getParam("estimation_type", config.groups.tracker_module.estimation_type);
     //Supervoxels
     nh.getParam("use_service", config.groups.supervoxels_module.use_service);
     nh.getParam("voxel_resolution", config.groups.supervoxels_module.voxel_resolution);
@@ -746,8 +768,30 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     return;
   }
   //Normal behaviour
+#ifdef PACMAN_VISION_WITH_PEL_SUPPORT
   this->en_estimator    = config.enable_estimator;
   this->en_tracker      = config.enable_tracker;
+  //Estimator Module
+  if (this->estimator_module && this->en_estimator)
+  {
+    this->estimator_module->calibration = config.groups.estimator_module.object_calibration;
+    this->estimator_module->iterations  = config.groups.estimator_module.iterations;
+    this->estimator_module->neighbors   = config.groups.estimator_module.neighbors;
+    this->estimator_module->clus_tol    = config.groups.estimator_module.cluster_tol;
+    this->estimator_module->pe.setParam("lists_size",estimator_module->neighbors);
+    this->estimator_module->pe.setStepIterations(estimator_module->iterations);
+  }
+  //Tracker Module
+  if (this->tracker_module && this->en_tracker)
+  {
+    this->tracker_module->type = config.groups.tracker_module.estimation_type;
+    if (config.groups.tracker_module.tracker_disturbance)
+    {
+      tracker_module->manual_disturbance = true;
+      config.groups.tracker_module.tracker_disturbance = false;
+    }
+  }
+#endif
   this->en_broadcaster  = config.enable_broadcaster;
   this->en_listener     = config.enable_listener;
   this->en_supervoxels  = config.enable_supervoxels;
@@ -756,10 +800,14 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   if (master_disable)
   {
     //Force disable of all modules
-    config.enable_estimator = config.enable_tracker = config.enable_listener
-      = config.enable_broadcaster = config.enable_supervoxels = false;
-    en_estimator = en_tracker = en_broadcaster = en_listener = en_supervoxels = false;
+#ifdef PACMAN_VISION_WITH_PEL_SUPPORT
+    config.enable_estimator = config.enable_tracker = false;
+    en_estimator = en_tracker = false;
+#endif
+    config.enable_listener = config.enable_broadcaster = config.enable_supervoxels = false;
+    en_broadcaster = en_listener = en_supervoxels = false;
   }
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
   if (sensor.resolution != config.external_kinect2_resolution)
   {
     sensor.resolution = config.external_kinect2_resolution;
@@ -770,6 +818,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     sensor.type = config.sensor_type;
     this->sensor.needs_update = true;
   }
+#endif
   //filters
   this->downsample      = config.groups.base_node_filters.downsampling;
   this->filter          = config.groups.base_node_filters.passthrough;
@@ -796,33 +845,15 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->listener_module->listen_left_hand = this->crop_l_hand;
     this->listener_module->listen_right_hand = this->crop_r_hand;
   }
-  //Estimator Module
-  if (this->estimator_module && this->en_estimator)
-  {
-    this->estimator_module->calibration = config.groups.estimator_module.object_calibration;
-    this->estimator_module->iterations  = config.groups.estimator_module.iterations;
-    this->estimator_module->neighbors   = config.groups.estimator_module.neighbors;
-    this->estimator_module->clus_tol    = config.groups.estimator_module.cluster_tol;
-    this->estimator_module->pe.setParam("lists_size",estimator_module->neighbors);
-    this->estimator_module->pe.setStepIterations(estimator_module->iterations);
-  }
   //Broadcaster Module
   if (this->broadcaster_module && this->en_broadcaster)
   {
+#ifdef PACMAN_VISION_WITH_PEL_SUPPORT
     this->broadcaster_module->obj_tf      = config.groups.broadcaster_module.publish_tf;
     this->broadcaster_module->obj_markers = config.groups.broadcaster_module.estimated_objects;
-    this->broadcaster_module->pass_limits = config.groups.broadcaster_module.passthrough_limits;
     this->broadcaster_module->tracker_bb  = config.groups.broadcaster_module.tracker_bounding_box;
-  }
-  //Tracker Module
-  if (this->tracker_module && this->en_tracker)
-  {
-    this->tracker_module->type = config.groups.tracker_module.estimation_type;
-    if (config.groups.tracker_module.tracker_disturbance)
-    {
-      tracker_module->manual_disturbance = true;
-      config.groups.tracker_module.tracker_disturbance = false;
-    }
+#endif
+    this->broadcaster_module->pass_limits = config.groups.broadcaster_module.passthrough_limits;
   }
   //Supervoxels Module
   if (this->supervoxels_module && this->en_supervoxels)
@@ -845,12 +876,16 @@ void VisionNode::spin_once()
   {
     if (sub_kinect.getNumPublishers() > 0)
       sub_kinect.shutdown();
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
     if (sensor.type == 0 && kinect2->started)
       kinect2->stop();
+#endif
+    sensor.needs_update = true;
   }
   else
   {
     this->check_sensor_subscribers();
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
     if (sensor.type == 0)
     {
       if (!kinect2->initialized)
@@ -873,6 +908,7 @@ void VisionNode::spin_once()
       this->storage->write_scene(this->scene);
       this->process_scene();
     }
+#endif
   }
   ros::spinOnce();
   this->check_modules();
@@ -882,7 +918,9 @@ void VisionNode::shutdown()
 {
   en_tracker = en_broadcaster = en_estimator = en_listener = en_supervoxels = false;
   this->check_modules();
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
   this->kinect2->close();
+#endif
   ROS_INFO("[PaCMan Vision] Shutting down...");
   //Wait for other threads
   boost::this_thread::sleep(boost::posix_time::seconds(1));

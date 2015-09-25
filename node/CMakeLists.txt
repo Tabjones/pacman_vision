@@ -41,9 +41,10 @@ IF(freenect2_FOUND)
   LIST(APPEND EXT_DEPS
     freenect2)
 ELSE(freenect2_FOUND)
-  message(STATUS "=======================================================")
-  message(STATUS "== Libreenect2 NOT found, disabling kinect2 support. ==")
-  message(STATUS "=======================================================")
+  unset(PACMAN_VISION_WITH_KINECT2_SUPPORT)
+  message(WARNING "=======================================================")
+  message(WARNING "== Libreenect2 NOT found, disabling kinect2 support. ==")
+  message(WARNING "=======================================================")
 ENDIF(freenect2_FOUND)
 
   ###################
@@ -65,9 +66,10 @@ IF(pel_FOUND)
   LIST(APPEND EXT_DEPS
     pel)
 ELSE(pel_FOUND)
-  message(STATUS "=============================================================")
-  message(STATUS "== Pel NOT found, disabling estimator and tracker modules. ==")
-  message(STATUS "=============================================================")
+  unset(PACMAN_VISION_WITH_PEL_SUPPORT)
+  message(WARNING "=============================================================")
+  message(WARNING "== Pel NOT found, disabling estimator and tracker modules. ==")
+  message(WARNING "=============================================================")
 ENDIF(pel_FOUND)
 
 find_package(PCL 1.7.2 REQUIRED)
@@ -96,13 +98,24 @@ find_package(catkin REQUIRED COMPONENTS
   pacman_vision_comm
   )
 
-##TODO##Add cmake created cfg for ros dynamic reconfigure?
-###Add same thing for package.xml
 
-######################
-## catkin generated ##
-######################
-generate_dynamic_reconfigure_options( cfg/pacman_vision.cfg )
+
+#############################################
+## catkin generated for Dynamic Reconfigure##
+#############################################
+IF(PACMAN_VISION_WITH_KINECT2_SUPPORT)
+  IF(PACMAN_VISION_WITH_PEL_SUPPORT)
+    generate_dynamic_reconfigure_options( cfg/pacman_vision.complete.cfg )
+  ELSE(PACMAN_VISION_WITH_PEL_SUPPORT)
+    generate_dynamic_reconfigure_options( cfg/pacman_vision.nopel.cfg )
+  ENDIF(PACMAN_VISION_WITH_PEL_SUPPORT)
+ELSE(PACMAN_VISION_WITH_KINECT2_SUPPORT)
+  IF(PACMAN_VISION_WITH_PEL_SUPPORT)
+    generate_dynamic_reconfigure_options( cfg/pacman_vision.nokinect2.cfg )
+  ELSE(PACMAN_VISION_WITH_PEL_SUPPORT)
+    generate_dynamic_reconfigure_options( cfg/pacman_vision.barebone.cfg )
+  ENDIF(PACMAN_VISION_WITH_PEL_SUPPORT)
+ENDIF(PACMAN_VISION_WITH_KINECT2_SUPPORT)
 
 ###################################
 ## catkin specific configuration ##

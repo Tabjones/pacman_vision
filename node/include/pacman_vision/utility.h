@@ -32,6 +32,8 @@
 
 #define D2R 0.017453293  //deg to rad conversion
 
+using namespace pcl;
+
 //convert from eigen matrix to tf and pose
 void fromEigen(Eigen::Matrix4f &source, geometry_msgs::Pose &dest, tf::Transform &tf_dest);
 //converto from pose to eigen matrix and tf

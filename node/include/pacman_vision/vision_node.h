@@ -14,6 +14,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/passthrough.h>
+#include <pcl/filters/extract_indices.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/sample_consensus/method_types.h>
@@ -29,12 +30,16 @@
 
 #include <pacman_vision/utility.h>
 #include <pacman_vision/storage.h>
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
 #include <pacman_vision/kinect2_processor.h>
+#endif
 //Modules
+#ifdef PACMAN_VISION_WITH_PEL_SUPPORT
 #include <pacman_vision/estimator.h>
+#include <pacman_vision/tracker.h>
+#endif
 #include <pacman_vision/broadcaster.h>
 #include <pacman_vision/vito_listener.h>
-#include <pacman_vision/tracker.h>
 #include <pacman_vision/supervoxels.h>
 
 class VisionNode
@@ -96,24 +101,29 @@ class VisionNode
     tf::TransformBroadcaster tf_sensor_ref_frame_brcaster;
     //Shared pointer of Storage (to be shared to modules)
     boost::shared_ptr<Storage> storage;
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
     //Shared pointer of Kinect2Processor
     boost::shared_ptr<Kinect2Processor> kinect2;
+#endif
+#ifdef PACMAN_VISION_WITH_PEL_SUPPORT
     //Shared pointers of modules
     boost::shared_ptr<Estimator> estimator_module;
-    boost::shared_ptr<Broadcaster> broadcaster_module;
-    boost::shared_ptr<Listener> listener_module;
     boost::shared_ptr<Tracker> tracker_module;
-    boost::shared_ptr<Supervoxels> supervoxels_module;
-    //slave spinner threads for modules
+    //spinners
     //estimator
     boost::thread estimator_driver;
     void spin_estimator();
-    //broadcaster
-    boost::thread broadcaster_driver;
-    void spin_broadcaster();
     //tracker
     boost::thread tracker_driver;
     void spin_tracker();
+#endif
+    boost::shared_ptr<Broadcaster> broadcaster_module;
+    boost::shared_ptr<Listener> listener_module;
+    boost::shared_ptr<Supervoxels> supervoxels_module;
+    //slave spinner threads for modules
+    //broadcaster
+    boost::thread broadcaster_driver;
+    void spin_broadcaster();
     //listenerr
     boost::thread listener_driver;
     void spin_listener();
