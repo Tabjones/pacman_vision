@@ -1,3 +1,8 @@
+//TODO:
+//1)Rework broadcaster module to recompute only changed markers, actually broadcasting faster.
+//2)Make a separated thread for Kinect2Processor ?!
+//3)Hardcode meshes bounding boxes into files (not code) in Listener, possibly adding scale
+
 #include <pacman_vision/vision_node.h>
 
 VisionNode::VisionNode()

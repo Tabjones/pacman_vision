@@ -22,18 +22,8 @@ set(SOURCES
   src/supervoxels.cpp
   )
 
-set(HEADERS
-    include/pacman_vision/broadcaster.h
-    include/pacman_vision/storage.h
-    include/pacman_vision/supervoxels.h
-    include/pacman_vision/utility.h
-    include/pacman_vision/vision_node.h
-    include/pacman_vision/vito_listener.h
-    )
-
 set(EXT_DEPS
   PCL
-  Boost
   )
 
   ###################
@@ -42,16 +32,14 @@ find_package(freenect2)
 IF(freenect2_FOUND)
   set(PACMAN_VISION_WITH_KINECT2_SUPPORT 1)
   include_directories(${freenect2_INCLUDE_DIRS})
-  LIST(APPEND HEADERS
-    include/pacman_vision/kinect2_processor.h
-    )
   LIST(APPEND SOURCES
     src/kinect2_processor.cpp
     )
   LIST(APPEND LIBRARIES
     ${freenect2_LIBRARY}
     )
-  LIST(APPEND EXT_DEPS freenect2)
+  LIST(APPEND EXT_DEPS
+    freenect2)
 ELSE(freenect2_FOUND)
   message(STATUS "=======================================================")
   message(STATUS "== Libreenect2 NOT found, disabling kinect2 support. ==")
@@ -64,10 +52,6 @@ find_package(pel 0.6)
 IF(pel_FOUND)
   set(PACMAN_VISION_WITH_PEL_SUPPORT 1)
   include_directories(${pel_INCLUDE_DIRS})
-  LIST(APPEND HEADERS
-    include/pacman_vision/estimator.h
-    include/pacman_vision/tracker.h
-    )
   LIST(APPEND SOURCES
     src/estimator.cpp
     src/tracker.cpp
@@ -76,9 +60,10 @@ IF(pel_FOUND)
     ${pel_LIBRARIES}
     )
   LIST(APPEND LINK_DIR
-  ${pel_LIBRARY_DIRS}
+    ${pel_LIBRARY_DIRS}
     )
-  LIST(APPEND EXT_DEPS pel)
+  LIST(APPEND EXT_DEPS
+    pel)
 ELSE(pel_FOUND)
   message(STATUS "=============================================================")
   message(STATUS "== Pel NOT found, disabling estimator and tracker modules. ==")
@@ -93,16 +78,13 @@ add_definitions(${PCL_DEFINITIONS})
 
 ####### Config File
 configure_file("${PROJECT_SOURCE_DIR}/cmake/config_h.cmake.in"
-  "${PROJECT_BIN_DIR}/include/pacman_vision/config.h")
-LIST(APPEND HEADERS include/pacman_vision/config.h)
-include_directories(${PROJECT_BIN_DIR}/include)
+  "${CATKIN_DEVEL_PREFIX}/include/pacman_vision/config.h")
+include_directories(${CATKIN_DEVEL_PREFIX}/include)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  asus_scanner_models
-  calibration
   dynamic_reconfigure
   geometry_msgs
   pcl_conversions
@@ -114,7 +96,7 @@ find_package(catkin REQUIRED COMPONENTS
   pacman_vision_comm
   )
 
-###Add cmake created cfg for ros dynamic reconfigure?
+##TODO##Add cmake created cfg for ros dynamic reconfigure?
 ###Add same thing for package.xml
 
 ######################
@@ -135,7 +117,17 @@ generate_dynamic_reconfigure_options( cfg/pacman_vision.cfg )
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES vision_node
-  CATKIN_DEPENDS dynamic_reconfigure geometry_msgs pcl_conversions pcl_ros roscpp roslib sensor_msgs tf pacman_vision_comm message_runtime
+  CATKIN_DEPENDS
+  dynamic_reconfigure
+  geometry_msgs
+  pcl_conversions
+  pcl_ros
+  roscpp
+  roslib
+  sensor_msgs
+  tf
+  pacman_vision_comm
+  message_runtime
   DEPENDS ${EXT_DEPS}
 )
 
@@ -154,7 +146,7 @@ link_directories(
   ${LINK_DIR}
   )
 
-add_executable(pacman_vision ${HEADERS} ${SOURCES})
+add_executable(pacman_vision ${SOURCES})
 
 add_dependencies(pacman_vision
   pacman_vision_comm_generate_messages_cpp
@@ -162,9 +154,9 @@ add_dependencies(pacman_vision
   )
 
 target_link_libraries(pacman_vision
+   ${LIBRARIES}
    ${catkin_LIBRARIES}
    ${PCL_LIBRARIES}
-   ${LIBRARIES}
 )
 
 ##POST BUILD COMMAND to fetch database

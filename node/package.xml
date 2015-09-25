@@ -27,6 +27,7 @@
 
   <exec_depend>asus_scanner_models</exec_depend>
   <exec_depend>message_runtime</exec_depend>
+  <exec_depend>calibration</exec_depend>
 
   <depend>pel</depend>
 
