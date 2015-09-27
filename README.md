@@ -94,14 +94,14 @@ tracking, these features are entirely optional, however if you want them you'll 
 To do that you can either clone the library into your catkin source space directly and let it compile it
 along with other pure catkin packages, or install it system wide via CMake.
 
-For a catkin install:
+* For a catkin install:
 ```
 cd ~/catkin_ws/src/
 git clone https://github.com/Tabjones/Pose-Estimation-Library
 ```
 And let it compile when you execute `catkin build`.
 
-For a system-wide install:
+* For a system-wide install:
 ```
 git clone https://github.com/Tabjones/Pose-Estimation-Library pel
 cd pel && mkdir build && cd build
@@ -112,6 +112,7 @@ Additional informations can be found on the package page.
 
 ### Step 4 - Other ROS Packages Needed at Exec-time###
 Pacman-Vision expects to find the following packages at execution time:
+
 * [Calibration](https://github.com/CentroEPiaggio/calibration)
 * [Asus Scanner Models](https://github.com/pacman-project/pacman-object-database)
 
