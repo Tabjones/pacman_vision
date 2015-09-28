@@ -13,6 +13,9 @@ ELSE()
   MESSAGE(ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 ENDIF()
 
+##Include a FindVCG if needed
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
 set(SOURCES
   src/vision_node.cpp
   src/broadcaster.cpp
@@ -71,6 +74,22 @@ ELSE(pel_FOUND)
   message(WARNING "== Pel NOT found, disabling estimator and tracker modules. ==")
   message(WARNING "=============================================================")
 ENDIF(pel_FOUND)
+
+  ####################
+## Find VCG in system ##
+find_package(VCG)
+IF(VCG_FOUND)
+  set(PACMAN_VISION_WITH_VCG_SUPPORT 1)
+  include_directories(${VCG_INCLUDE_DIRS})
+  LIST(APPEND SOURCES
+    src/pose_scanner.cpp
+    )
+ELSE(VCG_FOUND)
+  unset(PACMAN_VISION_WITH_VCG_SUPPORT)
+  message(WARNING "===================================================")
+  message(WARNING "== VCG NOT found, disabling pose scanner module. ==")
+  message(WARNING "===================================================")
+ENDIF(VCG_FOUND)
 
 find_package(PCL 1.7.2 REQUIRED)
 find_package(HDF5 REQUIRED)

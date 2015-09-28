@@ -51,6 +51,7 @@ class Kinect2Processor
     close ()
     {
       device->close();
+      initialized=false;
     }
     //Recive and process data
     void

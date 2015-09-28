@@ -99,6 +99,7 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
     // Save untouched scene into storage
     this->storage->write_scene(this->scene);
     process_scene();
+    publish_scene_processed();
   }
 }
 
@@ -383,14 +384,24 @@ void VisionNode::process_scene()
       }
     }
   }
-  //republish processed cloud
-  /* |passt   | voxelgrid   |segment | | arms or hands croppings                                 */
-  if ((filter || downsample || plane || crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand ) && (pub_scene.getNumSubscribers()>0))
-    pub_scene.publish(*scene_processed);
-  else if (pub_scene.getNumSubscribers()>0)
-    pub_scene.publish(*scene);
-  //save scene processed into storage
+  //Save into storage
   this->storage->write_scene_processed(this->scene_processed);
+}
+
+void VisionNode::publish_scene_processed()
+{
+  //republish processed cloud
+  if (scene_processed && scene)
+  {
+    if (!scene_processed->empty() && !scene->empty())
+    {
+      /* |passt   | voxelgrid   |segment | | arms or hands croppings                                 */
+      if ((filter || downsample || plane || crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand ) && (pub_scene.getNumSubscribers()>0))
+        pub_scene.publish(*scene_processed);
+      else if (pub_scene.getNumSubscribers()>0)
+        pub_scene.publish(*scene);
+    }
+  }
 }
 
 ////////////////////////////////
@@ -651,13 +662,14 @@ void VisionNode::check_modules()
   }
 }
 
-void VisionNode::check_sensor_subscribers()
+void VisionNode::check_sensor()
 {
   if (sensor.type == 1)
   {
     //Use external kinect2 bridge
     if (sensor.needs_update)
     {
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
       std::string topic;
       if (sensor.resolution == 2)
         topic = nh.resolveName("/kinect2/hd/points");
@@ -670,6 +682,12 @@ void VisionNode::check_sensor_subscribers()
       sensor.ref_frame = "/kinect2_rgb_optical_frame";
       this->storage->write_sensor_ref_frame(sensor.ref_frame);
       sub_kinect = nh.subscribe(topic, 5, &VisionNode::cb_kinect, this);
+      if (this->kinect2->started || this->kinect2->initialized)
+      {
+        kinect2->stop();
+        kinect2->close();
+      }
+#endif
       sensor.needs_update = false;
     }
   }
@@ -684,6 +702,13 @@ void VisionNode::check_sensor_subscribers()
       this->storage->write_sensor_ref_frame(sensor.ref_frame);
       sub_kinect = nh.subscribe(topic, 5, &VisionNode::cb_kinect, this);
       sensor.needs_update = false;
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
+      if (this->kinect2->started || this->kinect2->initialized)
+      {
+        kinect2->stop();
+        kinect2->close();
+      }
+#endif
     }
   }
   else
@@ -695,10 +720,54 @@ void VisionNode::check_sensor_subscribers()
       this->storage->write_sensor_ref_frame(sensor.ref_frame);
     }
     //Use internal sensor processor, no subscriber needed
-    if (sub_kinect.getNumPublishers() > 0)
-      sub_kinect.shutdown();
+    sub_kinect.shutdown();
 #endif
   }
+}
+
+void VisionNode::spin_once()
+{
+  if(master_disable)
+  {
+    sub_kinect.shutdown();
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
+    if (kinect2->started)
+      kinect2->stop();
+    if (sensor.type != 0 && kinect2->initialized)
+      kinect2->close();
+#endif
+    sensor.needs_update = true;
+  }
+  else
+  {
+    this->check_sensor();
+#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
+    if (sensor.type == 0)
+    {
+      if (!kinect2->initialized)
+        kinect2->initDevice();
+      if (!kinect2->started)
+        kinect2->start();
+      kinect2->processData();
+      kinect2->computePointCloud(this->scene);
+      if (!this->scene_processed)
+        this->scene_processed.reset( new PC);
+      tf::Vector3 v_t(0.0385,0,0);
+      tf::Quaternion q_zero;
+      q_zero.setRPY(0,0,0);
+      tf::Transform t_zero(q_zero, v_t);
+      this->tf_sensor_ref_frame_brcaster.sendTransform(tf::StampedTransform(t_zero, ros::Time::now(), "/kinect2_anchor", sensor.ref_frame.c_str()));
+      pcl_conversions::toPCL(ros::Time::now(), this->scene->header.stamp);
+      this->scene->header.frame_id = sensor.ref_frame;
+      this->scene->header.seq = 0;
+      this->storage->write_scene(this->scene);
+      this->process_scene();
+      this->publish_scene_processed();
+    }
+#endif
+  }
+  ros::spinOnce();
+  this->check_modules();
 }
 
 //dynamic reconfigure callback
@@ -797,7 +866,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   this->en_supervoxels  = config.enable_supervoxels;
   //Global Node Disable
   this->master_disable = config.Master_Disable;
-  if (master_disable)
+  if (this->master_disable)
   {
     //Force disable of all modules
 #ifdef PACMAN_VISION_WITH_PEL_SUPPORT
@@ -868,49 +937,6 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->supervoxels_module->normal_radius = config.groups.supervoxels_module.normals_search_radius;
   }
   ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
-}
-
-void VisionNode::spin_once()
-{
-  if(master_disable)
-  {
-    if (sub_kinect.getNumPublishers() > 0)
-      sub_kinect.shutdown();
-#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
-    if (sensor.type == 0 && kinect2->started)
-      kinect2->stop();
-#endif
-    sensor.needs_update = true;
-  }
-  else
-  {
-    this->check_sensor_subscribers();
-#ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
-    if (sensor.type == 0)
-    {
-      if (!kinect2->initialized)
-        kinect2->initDevice();
-      if (!kinect2->started)
-        kinect2->start();
-      kinect2->processData();
-      kinect2->computePointCloud(this->scene);
-      if (!this->scene_processed)
-        this->scene_processed.reset( new PC);
-      tf::Vector3 v_t(0.0385,0,0);
-      tf::Quaternion q_zero;
-      q_zero.setRPY(0,0,0);
-      tf::Transform t_zero(q_zero, v_t);
-      this->tf_sensor_ref_frame_brcaster.sendTransform(tf::StampedTransform(t_zero, ros::Time::now(), "/kinect2_anchor", sensor.ref_frame.c_str()));
-      pcl_conversions::toPCL(ros::Time::now(), this->scene->header.stamp);
-      this->scene->header.frame_id = sensor.ref_frame;
-      this->scene->header.seq = 0;
-      this->storage->write_scene(this->scene);
-      this->process_scene();
-    }
-#endif
-  }
-  ros::spinOnce();
-  this->check_modules();
 }
 
 void VisionNode::shutdown()

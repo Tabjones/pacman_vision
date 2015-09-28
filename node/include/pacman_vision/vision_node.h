@@ -151,8 +151,10 @@ class VisionNode
     void check_modules();
     //Process scene method (read scene -> write scene_processed)
     void process_scene();
-    //Check subscribers: handle pointcloud subscribers
-    void check_sensor_subscribers();
+    //Publish scene processed
+    void publish_scene_processed();
+    //Check which sensor to use
+    void check_sensor();
 };
 
 #endif
