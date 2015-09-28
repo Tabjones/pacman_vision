@@ -48,6 +48,9 @@ class PoseScanner
     //Service Server
     ros::ServiceServer srv_acquire;
 
+    //subscriber to clickedpoints
+    ros::Subscriber sub_clicked;
+
     //method to move turn table
     bool set_turn_table_pos(float pos);
     //method to read turn table position
@@ -56,8 +59,10 @@ class PoseScanner
     //table transform
     boost::shared_ptr<Eigen::Matrix4f> table_transform;
 
-    //Save location
+    //Save location informations
     boost::filesystem::path work_dir;
+    boost::filesystem::path session_dir;
+    boost::posix_tim::ptime timestamp;
 
     //Scene processed
     PC::Ptr scene;

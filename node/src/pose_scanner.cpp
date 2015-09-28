@@ -9,14 +9,17 @@ PoseScanner::PoseScanner(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   this->storage = stor;
   this->srv_acquire = nh.advertiseService("acquire", &PoseScanner::cb_acquire, this);
   nh.param<int>("/pacman_vision/table_pass", table_pass, 10);
-  //TODO
   std::string work_dir_s;
   nh.param<std::string>("/pacman_vision/work_dir", work_dir_s, "~/PoseScanner");
   work_dir = work_dir_s;
-  boost::posix_time::ptime timestamp(boost::posix_time::second_clock::local_time());
-  work_dir /= boost::filesystem::path()
+  timestamp = boost::posix_time::second_clock::local_time();
+  session_dir = (work_dir.string() + "/Session_" + to_simple_string(timestamp) + "/");
+  sub_clicked = nh.subscribe(nh.resolveName("/clicked_points"), 1, &PoseScanner::cb_clicked, this);
 }
 
+void PoseScanner::cb_clicked (const //TODO and add in .h)
+{
+}
 bool PoseScanner::cb_acquire(pacman_vision_comm::acquire::Request& req, pacman_vision_comm::acquire::Response& res)
 {
 }
