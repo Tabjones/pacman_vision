@@ -23,7 +23,8 @@ class Kinect2Processor
       delete undistorted;
       delete registered;
       delete packetPipeline;
-      delete listener;
+      delete listener_depth;
+      delete listener_color;
       delete registration;
       delete device;
     }
@@ -60,14 +61,15 @@ class Kinect2Processor
   private:
     libfreenect2::Freenect2 freenect2;
     libfreenect2::Freenect2Device *device;
-    libfreenect2::SyncMultiFrameListener *listener;
+    libfreenect2::SyncMultiFrameListener *listener_color;
+    libfreenect2::SyncMultiFrameListener *listener_depth;
     libfreenect2::PacketPipeline *packetPipeline;
     libfreenect2::Registration *registration;
     libfreenect2::Freenect2Device::ColorCameraParams colorParams;
     libfreenect2::Freenect2Device::IrCameraParams irParams;
     libfreenect2::Frame *colorFrame, *irFrame, *depthFrame;
     libfreenect2::Frame *undistorted, *registered;
-    libfreenect2::FrameMap frames;
+    libfreenect2::FrameMap frames_c, frames_d;
 };
 
 #endif

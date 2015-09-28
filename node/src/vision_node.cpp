@@ -385,9 +385,9 @@ void VisionNode::process_scene()
   }
   //republish processed cloud
   /* |passt   | voxelgrid   |segment | | arms or hands croppings                                 */
-  if (filter || downsample || plane || crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand )
+  if ((filter || downsample || plane || crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand ) && (pub_scene.getNumSubscribers()>0))
     pub_scene.publish(*scene_processed);
-  else
+  else if (pub_scene.getNumSubscribers()>0)
     pub_scene.publish(*scene);
   //save scene processed into storage
   this->storage->write_scene_processed(this->scene_processed);
@@ -896,12 +896,11 @@ void VisionNode::spin_once()
       kinect2->computePointCloud(this->scene);
       if (!this->scene_processed)
         this->scene_processed.reset( new PC);
-      tf::Vector3 v_zero;
-      v_zero.setZero();
+      tf::Vector3 v_t(0.0385,0,0);
       tf::Quaternion q_zero;
       q_zero.setRPY(0,0,0);
-      tf::Transform t_zero(q_zero, v_zero);
-      this->tf_sensor_ref_frame_brcaster.sendTransform(tf::StampedTransform(t_zero, ros::Time::now(), "/vito_anchor", sensor.ref_frame.c_str()));
+      tf::Transform t_zero(q_zero, v_t);
+      this->tf_sensor_ref_frame_brcaster.sendTransform(tf::StampedTransform(t_zero, ros::Time::now(), "/kinect2_anchor", sensor.ref_frame.c_str()));
       pcl_conversions::toPCL(ros::Time::now(), this->scene->header.stamp);
       this->scene->header.frame_id = sensor.ref_frame;
       this->scene->header.seq = 0;

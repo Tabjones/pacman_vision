@@ -1,7 +1,7 @@
 #include <pacman_vision/kinect2_processor.h>
 
 Kinect2Processor::Kinect2Processor () : device(0), packetPipeline(0), registration(0),
-  listener(0), started(false), initialized(false)
+  listener_color(0), listener_depth(0), started(false), initialized(false)
 {
   undistorted = new libfreenect2::Frame(512, 424, 4);
   registered = new libfreenect2::Frame(512, 424, 4);
@@ -36,10 +36,11 @@ Kinect2Processor::initDevice ()
   }
 
   //create the listener
-  listener = new libfreenect2::SyncMultiFrameListener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
+  listener_depth = new libfreenect2::SyncMultiFrameListener(libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
+  listener_color = new libfreenect2::SyncMultiFrameListener(libfreenect2::Frame::Color);
   //and set them
-  device->setColorFrameListener(listener);
-  device->setIrAndDepthFrameListener(listener);
+  device->setColorFrameListener(listener_color);
+  device->setIrAndDepthFrameListener(listener_depth);
   //listen to camera parameters
   device->start();
   colorParams = device->getColorCameraParams();
@@ -56,12 +57,14 @@ void
 Kinect2Processor::processData()
 {
   //assume kinect2 is started and initialized
-  listener->waitForNewFrame(frames);
-  colorFrame = frames[libfreenect2::Frame::Color];
-//  irFrame = frames[libfreenect2::Frame::Ir];
-  depthFrame = frames[libfreenect2::Frame::Depth];
+  listener_color->waitForNewFrame(frames_c);
+  colorFrame = frames_c[libfreenect2::Frame::Color];
+  listener_depth->waitForNewFrame(frames_d);
+  depthFrame = frames_d[libfreenect2::Frame::Depth];
+//  irFrame = frames_d[libfreenect2::Frame::Ir];
   registration->apply(colorFrame, depthFrame, undistorted, registered);
-  listener->release(frames);
+  listener_color->release(frames_c);
+  listener_depth->release(frames_d);
 }
 
 void

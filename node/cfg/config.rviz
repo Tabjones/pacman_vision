@@ -136,16 +136,10 @@ Visualization Manager:
       Enabled: true
       Frame Timeout: 1
       Frames:
-        All Enabled: false
-        camera_depth_frame:
+        All Enabled: true
+        kinect2_anchor:
           Value: true
-        camera_depth_optical_frame:
-          Value: true
-        camera_link:
-          Value: true
-        camera_rgb_frame:
-          Value: true
-        camera_rgb_optical_frame:
+        kinect2_reference_frame:
           Value: true
       Marker Scale: 0.5
       Name: Transformations
@@ -153,19 +147,15 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        camera_link:
-          camera_depth_frame:
-            camera_depth_optical_frame:
-              {}
-          camera_rgb_frame:
-            camera_rgb_optical_frame:
-              {}
+        kinect2_anchor:
+          kinect2_reference_frame:
+            {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: camera_rgb_optical_frame
+    Fixed Frame: kinect2_reference_frame
     Frame Rate: 100
   Name: root
   Tools:
@@ -186,22 +176,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.42636
+      Distance: 2.47357
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.0541452
-        Y: -0.0426222
-        Z: 0.743147
+        X: 0.065862
+        Y: 0.499407
+        Z: 1.99627
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -1.2798
+      Pitch: -1.27396
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.69369
+      Yaw: 4.66237
     Saved: ~
 Window Geometry:
   Displays:
