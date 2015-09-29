@@ -41,6 +41,7 @@
 #include <pacman_vision/broadcaster.h>
 #include <pacman_vision/vito_listener.h>
 #include <pacman_vision/supervoxels.h>
+#include <pacman_vision/pose_scanner.h>
 
 class VisionNode
 {
@@ -71,7 +72,7 @@ class VisionNode
     //Globally disable all functionalities
     bool master_disable;
     //bools to control modules
-    bool en_estimator, en_tracker, en_broadcaster, en_listener, en_supervoxels;
+    bool en_estimator, en_tracker, en_broadcaster, en_listener, en_supervoxels, en_scanner;
     //bool to initialize rqt_reconfigure with user parameters (instead of those written in cfg file)
     bool rqt_init;
     //sensor information
@@ -120,10 +121,14 @@ class VisionNode
     boost::shared_ptr<Broadcaster> broadcaster_module;
     boost::shared_ptr<Listener> listener_module;
     boost::shared_ptr<Supervoxels> supervoxels_module;
+    boost::shared_ptr<PoseScanner> scanner_module;
     //slave spinner threads for modules
     //broadcaster
     boost::thread broadcaster_driver;
     void spin_broadcaster();
+    //pose scanner
+    boost::thread scanner_driver;
+    void spin_scanner();
     //listenerr
     boost::thread listener_driver;
     void spin_listener();

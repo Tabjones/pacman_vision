@@ -6,6 +6,11 @@
 #include <pacman_vision/utility.h>
 //ROS
 #include <geometry_msgs/PointStamped.h>
+#include <tf/transform_broadcaster.h>
+#include <pcl_ros/point_cloud.h>
+#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud_conversion.h>
 //PCL
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/eigen.h>
@@ -13,7 +18,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_ros/transforms.h>
+#include <pcl/features/normal_3d.h>
 #include <pcl/ModelCoefficients.h>
+#include <pcl/search/kdtree.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/sample_consensus/ransac.h>
@@ -24,6 +31,7 @@
 #include <turn_table_interface/setPos.h>
 #include <turn_table_interface/getPos.h>
 #include <pacman_vision_comm/acquire.h>
+#include <pacman_vision_comm/reload_transform.h>
 //general utilities
 #include <ctime>
 #include <algorithm>
@@ -40,7 +48,7 @@ class PoseScanner
 
   public:
     PoseScanner(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
-    ~PoseScanner();
+    ~PoseScanner(){};
     //Eigen alignment
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   private:
@@ -49,22 +57,29 @@ class PoseScanner
     boost::shared_ptr<Storage> storage;
     //Service Server
     ros::ServiceServer srv_acquire;
+    ros::ServiceServer srv_reload;
 
     //subscriber to clickedpoints
     ros::Subscriber sub_clicked;
 
-    //method to move turn table
-    bool set_turn_table_pos(float pos);
-    //method to read turn table position
-    float get_turn_table_pos();
+    //publisher of poses
+    ros::Publisher pub_poses;
 
-    //table transform
-    boost::shared_ptr<Eigen::Matrix4f> table_transform;
+    //transform broadcaster
+    tf::TransformBroadcaster tf_table_trans;
+
+    //table transforms
+    Eigen::Matrix4f T_kt, T_tk;
+    //has a table trasform ?
+    bool has_transform;
+
+    //Acquired poses
+    boost::shared_ptr<std::vector<PC>> poses;
 
     //Save location informations
     boost::filesystem::path work_dir;
     boost::filesystem::path session_dir;
-    boost::posix_tim::ptime timestamp;
+    boost::posix_time::ptime timestamp;
 
     //Scene processed
     PC::Ptr scene;
@@ -72,8 +87,29 @@ class PoseScanner
     //table pass in degrees
     int table_pass;
 
+    //ignore accidentally clicked points
+    bool ignore_clicked_point;
+
+    //method to move turn table
+    bool set_turn_table_pos(float pos);
+
+    //method to read turn table position
+    float get_turn_table_pos();
+
+    //acquire the table transform, given a point and a normal (store it into class)
+    bool computeTableTransform(PT pt, float nx, float ny, float nz);
+
+    //save computed transforms to disk
+    bool saveTableTransform();
+
+    //save acquired poses to disk
+    bool savePoses();
+
     //acquire service callback
     bool cb_acquire(pacman_vision_comm::acquire::Request& req, pacman_vision_comm::acquire::Response& res);
+
+    //reload service callback
+    bool cb_reload(pacman_vision_comm::reload_transform::Request& req, pacman_vision_comm::reload_transform::Response& res);
 
     //Callback from clicked_point
     void cb_clicked(const geometry_msgs::PointStamped::ConstPtr& msg);

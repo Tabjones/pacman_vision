@@ -1,9 +1,9 @@
 //TODO:
-//0)kinect2 processor does not stop if changing sensor type
-//1)Rework broadcaster module to recompute only changed markers, actually broadcasting faster.
+//1)Remove broadcaster module! Recompute only changed markers! Each module broadcasts.
 //2)Make a separated thread for Kinect2Processor ?!
 //3)Hardcode meshes bounding boxes into files (not code) in Listener, possibly adding scale
 //4)Listen table recheck transforms and filter limits are not updated when using table transf
+//5)Fill tracker service grasp verification
 
 #include <pacman_vision/vision_node.h>
 
@@ -27,6 +27,7 @@ VisionNode::VisionNode()
   nh.param<bool>("enable_broadcaster", en_broadcaster, false);
   nh.param<bool>("enable_listener", en_listener, false);
   nh.param<bool>("enable_supervoxels", en_supervoxels, false);
+  nh.param<bool>("enable_scanner", en_scanner, false);
   nh.param<bool>("passthrough", filter, true);
   nh.param<bool>("downsampling", downsample, false);
   nh.param<bool>("plane_segmentation", plane, false);
@@ -569,6 +570,20 @@ void VisionNode::spin_supervoxels()
   return;
 }
 
+void VisionNode::spin_scanner()
+{
+  ROS_INFO("[Pose Scanner] Pose Scanner module will perform acquisition of objects poses when calling appropriated service.");
+  //spin until we disable it or it dies somehow
+  while (this->en_scanner && this->scanner_module)
+  {
+    //spin
+    this->scanner_module->spin_once();
+    boost::this_thread::sleep(boost::posix_time::milliseconds(100)); //Scanner can try to go at 10Hz
+  }
+  //scanner got stopped
+  return;
+}
+
 ////////////////////////////////////
 ////// Checkers methods ////////////
 ////////////////////////////////////
@@ -659,6 +674,23 @@ void VisionNode::check_modules()
     supervoxels_driver.join();
     //kill the module
     this->supervoxels_module.reset();
+  }
+
+  //check if we want pose scanner module and it is not started, or if it is started but we want it disabled
+  if (this->en_scanner && !this->scanner_module && !master_disable)
+  {
+    ROS_WARN("[PaCMaN Vision] Started Pose Scanner module");
+    this->scanner_module.reset( new PoseScanner(this->nh, this->storage) );
+    //spawn a thread to handle the module spinning
+    scanner_driver = boost::thread(&VisionNode::spin_scanner, this);
+  }
+  else if (!this->en_scanner && this->scanner_module)
+  {
+    ROS_WARN("[PaCMaN Vision] Stopped Pose Scanner module");
+    //wait for the thread to stop, if not already, if already stopped this results in a no_op
+    scanner_driver.join();
+    //kill the module
+    this->scanner_module.reset();
   }
 }
 
@@ -800,6 +832,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.enable_broadcaster = en_broadcaster;
     config.enable_listener = en_listener;
     config.enable_supervoxels = en_supervoxels;
+    config.enable_scanner = en_scanner;
     config.Master_Disable = master_disable;
     config.groups.base_node_filters.downsampling = downsample;
     config.groups.base_node_filters.passthrough = filter;
@@ -830,6 +863,10 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("normal_importance", config.groups.supervoxels_module.normal_importance);
     nh.getParam("refinement_iterations", config.groups.supervoxels_module.refinement_iterations);
     nh.getParam("normals_search_radius", config.groups.supervoxels_module.normals_search_radius);
+    //Pose Scanner
+    nh.getParam("ignore_clicked_point", config.groups.pose_scanner_module.ignore_clicked_point);
+    nh.getParam("work_dir", config.groups.pose_scanner_module.work_dir);
+    nh.getParam("table_pass", config.groups.pose_scanner_module.table_pass);
     //Finish gui initialization
     this->rqt_init = false;
     this->sensor.needs_update = true;
@@ -864,6 +901,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   this->en_broadcaster  = config.enable_broadcaster;
   this->en_listener     = config.enable_listener;
   this->en_supervoxels  = config.enable_supervoxels;
+  this->en_scanner      = config.enable_scanner;
   //Global Node Disable
   this->master_disable = config.Master_Disable;
   if (this->master_disable)
@@ -873,8 +911,8 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.enable_estimator = config.enable_tracker = false;
     en_estimator = en_tracker = false;
 #endif
-    config.enable_listener = config.enable_broadcaster = config.enable_supervoxels = false;
-    en_broadcaster = en_listener = en_supervoxels = false;
+    config.enable_listener = config.enable_broadcaster = config.enable_supervoxels = config.enable_scanner = false;
+    en_broadcaster = en_listener = en_supervoxels = en_scanner = false;
   }
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
   if (sensor.resolution != config.external_kinect2_resolution)
@@ -936,12 +974,19 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->supervoxels_module->num_iterations = config.groups.supervoxels_module.refinement_iterations;
     this->supervoxels_module->normal_radius = config.groups.supervoxels_module.normals_search_radius;
   }
+  //Pose Scanner Module
+  if (this->scanner_module && this->en_scanner)
+  {
+    this->scanner_module->table_pass   = config.groups.pose_scanner_module.table_pass;
+    this->scanner_module->work_dir  = config.groups.pose_scanner_module.work_dir;
+    this->scanner_module->ignore_clicked_point = config.groups.pose_scanner_module.ignore_clicked_point;
+  }
   ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
 }
 
 void VisionNode::shutdown()
 {
-  en_tracker = en_broadcaster = en_estimator = en_listener = en_supervoxels = false;
+  en_tracker = en_broadcaster = en_estimator = en_listener = en_supervoxels = en_scanner = false;
   this->check_modules();
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
   this->kinect2->close();
