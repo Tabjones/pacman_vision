@@ -6,7 +6,7 @@
 #include <pacman_vision/utility.h>
 //ROS
 #include <geometry_msgs/PointStamped.h>
-#include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 #include <pcl_ros/point_cloud.h>
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -65,8 +65,9 @@ class PoseScanner
     //publisher of poses
     ros::Publisher pub_poses;
 
-    //transform broadcaster
+    //transform broadcaster and listener
     tf::TransformBroadcaster tf_table_trans;
+    tf::TransformListener tf_listener;
 
     //table transforms
     Eigen::Matrix4f T_kt, T_tk;

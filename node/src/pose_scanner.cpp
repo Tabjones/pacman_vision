@@ -91,7 +91,13 @@ void PoseScanner::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg)
     pt.x = msg->point.x;
     pt.y = msg->point.y;
     pt.z = msg->point.z;
+    std::string sensor;
     this->storage->read_scene_processed(scene);
+    this->storage->read_sensor_ref_frame(sensor);
+    if (msg->header.frame_id.compare(sensor) |= 0)
+    {
+      //TODO transform point back into sensor frame
+    }
     //compute a normal around its neighborhood (3cm)
     pcl::search::KdTree<PT> kdtree;
     std::vector<int> idx(scene->points.size());
@@ -121,6 +127,7 @@ bool PoseScanner::cb_acquire(pacman_vision_comm::acquire::Request& req, pacman_v
     ROS_ERROR("[PoseScanner][%s]\tNo table transform defined, please click and publish a point in rviz",__func__);
     return (false);
   }
+  //TODO
 }
 
 bool PoseScanner::set_turn_table_pos(float pos)
@@ -179,6 +186,8 @@ bool PoseScanner::cb_reload(pacman_vision_comm::reload_transform::Request& req, 
 
 void PoseScanner::spin_once()
 {
+  //update session dir if it was dynamic reconfigured
+  session_dir = (work_dir.string() + "/Session_" + to_simple_string(timestamp) + "/");
   if (has_transform)
   {
     tf::Transform t_kt;
