@@ -4,6 +4,8 @@
 #include <pacman_vision/config.h>
 //Utility
 #include <pacman_vision/utility.h>
+//ROS
+#include <geometry_msgs/PointStamped.h>
 //PCL
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/eigen.h>
@@ -72,6 +74,9 @@ class PoseScanner
 
     //acquire service callback
     bool cb_acquire(pacman_vision_comm::acquire::Request& req, pacman_vision_comm::acquire::Response& res);
+
+    //Callback from clicked_point
+    void cb_clicked(const geometry_msgs::PointStamped::ConstPtr& msg);
 
     //custom spin method
     void spin_once();

@@ -14,11 +14,16 @@ PoseScanner::PoseScanner(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   work_dir = work_dir_s;
   timestamp = boost::posix_time::second_clock::local_time();
   session_dir = (work_dir.string() + "/Session_" + to_simple_string(timestamp) + "/");
-  sub_clicked = nh.subscribe(nh.resolveName("/clicked_points"), 1, &PoseScanner::cb_clicked, this);
+  sub_clicked = nh.subscribe(nh.resolveName("/clicked_point"), 1, &PoseScanner::cb_clicked, this);
 }
 
-void PoseScanner::cb_clicked (const //TODO and add in .h)
+void PoseScanner::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg)
 {
+  float x,y,z;
+  x = msgs->point.x;
+  y = msgs->point.y;
+  z = msgs->point.z;
+  //TODO add normal estimation
 }
 bool PoseScanner::cb_acquire(pacman_vision_comm::acquire::Request& req, pacman_vision_comm::acquire::Response& res)
 {
