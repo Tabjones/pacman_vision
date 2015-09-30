@@ -3,7 +3,10 @@
 //2)Make a separated thread for Kinect2Processor ?!
 //3)Hardcode meshes bounding boxes into files (not code) in Listener, possibly adding scale
 //4)Listen table recheck transforms and filter limits are not updated when using table transf
+//5)Listener should crop robot itself
 //5)Fill tracker service grasp verification
+//6)Fix transformation in cropbox arms (probably inverse)
+//7)tracker refind object in scene: save relative transform hand-object, so you can start from it
 
 #include <pacman_vision/vision_node.h>
 
@@ -203,7 +206,7 @@ void VisionNode::process_scene()
     PC::Ptr input (new PC);
     PC::Ptr output (new PC);
     pcl::CropBox<PT> cb;
-    Eigen::Matrix4f inv_trans;
+    Eigen::Matrix4f trans;
     Eigen::Vector4f min,max;
     if (filter || downsample || plane)
       pcl::copyPointCloud(*(this->scene_processed), *input);
@@ -220,8 +223,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(0).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = left_arm->at(0);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter (*(tmp));
         //left3
         cb.setInputCloud(tmp);
@@ -230,8 +233,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(1).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = left_arm->at(1);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*input);
         //left4
         cb.setInputCloud(input);
@@ -240,8 +243,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(2).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = left_arm->at(2);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*tmp);
         //left5
         cb.setInputCloud(tmp);
@@ -250,8 +253,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(3).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = left_arm->at(3);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*input);
         //left6shared_ptr<
         cb.setInputCloud(input);
@@ -260,8 +263,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(4).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = left_arm->at(4);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*tmp);
         //left7
         cb.setInputCloud(tmp);
@@ -270,8 +273,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(5).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = left_arm->at(5);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*input);
         if (!crop_r_arm && !crop_r_hand && !crop_l_hand)
           pcl::copyPointCloud(*input, *(this->scene_processed));
@@ -288,8 +291,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(0).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = right_arm->at(0);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*tmp);
         //right3
         cb.setInputCloud(tmp);
@@ -298,8 +301,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(1).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = right_arm->at(1);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*input);
         //right4
         cb.setInputCloud(input);
@@ -308,8 +311,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(2).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = right_arm->at(2);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*tmp);
         //right5
         cb.setInputCloud(tmp);
@@ -318,8 +321,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(3).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = right_arm->at(3);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*input);
         //right6
         cb.setInputCloud(input);
@@ -328,8 +331,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(4).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = right_arm->at(4);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*tmp);
         //right7
         cb.setInputCloud(tmp);
@@ -338,8 +341,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(5).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = right_arm->at(5);
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*input);
         if (!crop_r_hand && !crop_l_hand)
           pcl::copyPointCloud(*input, *(this->scene_processed));
@@ -357,8 +360,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = right_hand->inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = *right_hand;
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*tmp);
         if (!crop_l_hand)
           pcl::copyPointCloud(*tmp, *(this->scene_processed));
@@ -379,8 +382,8 @@ void VisionNode::process_scene()
         cb.setMin(min);
         cb.setMax(max);
         cb.setNegative(true); //crop what's inside
-        inv_trans = left_hand->inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
+        trans = *left_hand;
+        cb.setTransform(Eigen::Affine3f(trans));
         cb.filter(*(this->scene_processed));
       }
     }
@@ -516,6 +519,80 @@ void VisionNode::spin_broadcaster()
         this->broadcaster_module->markers.markers.push_back(box_marker);
       }
     }
+
+    if(listener_module && en_listener)
+    {
+      boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > > right;
+      if (!this->storage->read_right_arm(right))
+      {
+        right.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> >);
+        right->resize(6);
+        for (auto& x: *right)
+          x.setIdentity();
+      }
+      for (int i=0; i<right->size();++i)
+      {
+        visualization_msgs::Marker box;
+        Box b;
+        if (i ==0)
+        {
+          b.x1 = -0.06;
+          b.y1 = -0.06;
+          b.z1 = -0.06;
+          b.x2 = 0.06;
+          b.y2 = 0.0938;
+          b.z2 = 0.1915;
+        }
+        if (i ==1)
+        {
+          b.x1 = -0.06;
+          b.y1 = -0.06;
+          b.z1 = 0;
+          b.x2 = 0.06;
+          b.y2 = 0.0938;
+          b.z2 = 0.2685;
+        }
+        if ( i ==2)
+        {
+          b.x1 = -0.06;
+          b.y1 = -0.0938;
+          b.z1 = -0.06;
+          b.x2 = 0.06;
+          b.y2 = 0.06;
+          b.z2 = 0.1915;
+        }
+        if ( i ==3)
+        {
+          b.x1 = -0.06;
+          b.y1 = -0.0555;
+          b.z1 =0;
+          b.x2 = 0.06;
+          b.y2 = 0.06;
+          b.z2 = 0.2585;
+        }
+        if (i ==4)
+        {
+          b.x1 = -0.0711;
+          b.y1 = -0.0555;
+          b.z1 = -0.0711;
+          b.x2 = 0.0711;
+          b.y2 = 0.0795;
+          b.z2 = 0.057;
+        }
+        if (i==5)
+        {
+          b.x1 =-0.04;
+          b.y1 = -0.0399;
+          b.z1 = -0.031;
+          b.x2 = 0.04;
+          b.y2 = 0.0399;
+          b.z2 =0;
+        }
+        create_arm_box(right->at(i), box, b, i);
+        this->broadcaster_module->markers.markers.push_back(box);
+      }
+    }
+
     //Actually do the broadcasting. This also sets timestamps of all markers pushed inside the array
     this->broadcaster_module->broadcast_once();
     //spin
@@ -524,6 +601,22 @@ void VisionNode::spin_broadcaster()
   }
   //broadcaster got stopped
   return;
+}
+
+void VisionNode::create_arm_box(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, Box& lim, int i)
+{
+  boost::shared_ptr<Box> pb = boost::make_shared<Box>(lim);
+  this->broadcaster_module->create_box_marker(marker, pb);
+  marker.color.r = 0.0f;
+  marker.color.g = 1.0f;
+  marker.color.b = 0.0f;
+  marker.color.a = 1.0f;
+  geometry_msgs::Pose pose;
+  tf::Transform tf;
+  fromEigen(t, pose, tf);
+  marker.pose = pose;
+  marker.ns = "Right Arm Boxes";
+  marker.id = i+1;
 }
 
 void VisionNode::spin_listener()

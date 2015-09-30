@@ -15,7 +15,7 @@ PoseScanner::PoseScanner(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor) :
   nh.param<int>("/pacman_vision/table_pass", table_pass, 10);
   nh.param<bool>("/pacman_vision/ignore_clicked_point",ignore_clicked_point , false);
   std::string work_dir_s;
-  nh.param<std::string>("/pacman_vision/work_dir", work_dir_s, "~/PoseScanner");
+  nh.param<std::string>("/pacman_vision/work_dir", work_dir_s, "PoseScanner");
   work_dir = work_dir_s;
   timestamp = boost::posix_time::second_clock::local_time();
   session_dir = (work_dir.string() + "/Session_" + to_simple_string(timestamp) + "/");
@@ -48,7 +48,6 @@ bool PoseScanner::computeTableTransform(PT pt, float nx, float ny, float nz)
       0,        0,        0,        1;
     T_tk = T_kt.inverse();
     has_transform = true;
-    std::cout<<T_kt;
   }
   catch (...)
   {
@@ -59,6 +58,9 @@ bool PoseScanner::computeTableTransform(PT pt, float nx, float ny, float nz)
 
 bool PoseScanner::saveTableTransform()
 {
+  //update session dir if it was dynamic reconfigured
+  session_dir = (work_dir.string() + "/Session_" + to_simple_string(timestamp) + "/");
+  ROS_WARN("[session] %s",session_dir.c_str());
   try
   {
     if (!boost::filesystem::exists(session_dir) || !boost::filesystem::is_directory(session_dir))
@@ -67,7 +69,7 @@ bool PoseScanner::saveTableTransform()
     for (size_t i=0; i<T_kt_flann.rows; ++i)
       for (size_t j=0; j<T_kt_flann.cols; ++j)
         T_kt_flann[i][j] = T_kt(i,j);
-    flann::save_to_file(T_kt_flann, session_dir.string()+"/T_kt.h5", "TurnTable with respect to Kinect");
+    flann::save_to_file(T_kt_flann, session_dir.string()+"T_kt.h5", "TurnTable with respect to Kinect");
   }
   catch (...)
   {
@@ -78,6 +80,7 @@ bool PoseScanner::saveTableTransform()
 
 bool PoseScanner::savePoses()
 {
+  //TODO
 }
 
 
@@ -94,9 +97,19 @@ void PoseScanner::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg)
     std::string sensor;
     this->storage->read_scene_processed(scene);
     this->storage->read_sensor_ref_frame(sensor);
-    if (msg->header.frame_id.compare(sensor) |= 0)
+    if (msg->header.frame_id.compare(sensor) != 0)
     {
-      //TODO transform point back into sensor frame
+      tf_listener.waitForTransform(sensor.c_str(), msg->header.frame_id.c_str(), ros::Time(0), ros::Duration(1.0));
+      tf::StampedTransform t_msg;
+      tf_listener.lookupTransform(sensor.c_str(), msg->header.frame_id.c_str(), ros::Time(0), t_msg);
+      Eigen::Matrix4f T;
+      geometry_msgs::Pose pose;
+      fromTF(t_msg, T, pose);
+      PT pt_t;
+      pt_t = pcl::transformPoint<PT>(pt, Eigen::Affine3f(T));
+      pt.x = pt_t.x;
+      pt.y = pt_t.y;
+      pt.z = pt_t.z;
     }
     //compute a normal around its neighborhood (3cm)
     pcl::search::KdTree<PT> kdtree;
@@ -127,8 +140,142 @@ bool PoseScanner::cb_acquire(pacman_vision_comm::acquire::Request& req, pacman_v
     ROS_ERROR("[PoseScanner][%s]\tNo table transform defined, please click and publish a point in rviz",__func__);
     return (false);
   }
-  //TODO
+  std::string name;
+  if (req.objname.compare(0,1,"-") == 0) //check if we wanted flipped object (- in front)
+  {
+    name = req.objname.substr(1); //get all name except first character
+    //TODO still need to implement this... if it is doable
+  }
+  else
+    name = req.objname;
+  PC::Ptr scan (new PC);
+  pcl::PCDWriter writer;
+  //Put table back at zero if it wasnt
+  if(!move_turn_table_smoothly(0))
+  {
+    ROS_ERROR("[PoseScanner][%s]\tCannot move TurnTable correctly!",__func__);
+    return false;
+  }
+  for (int angle=0; angle<360; angle+=table_pass)
+  {
+    if(!move_turn_table_smoothly(angle))
+    {
+      ROS_ERROR("[PoseScanner][%s]\tCannot move TurnTable correctly!",__func__);
+      return false;
+    }
+  }
+  return (true);
 }
+  /*
+      //save scene on disk
+      std::string scenename (scenepath.string() + "/" + name + "_" + std::to_string(lat) + "_" + std::to_string(lon) + ".pcd" );
+      writer.writeBinaryCompressed (scenename.c_str(), *scene_);
+
+      if (! acquire_scene (cloud_, false) )
+      {
+        ROS_ERROR("[posesScanner] Cannot acquire a scene!");
+        return false;
+      }
+      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr temp (new pcl::PointCloud<pcl::PointXYZRGBA>);
+      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr object (new pcl::PointCloud<pcl::PointXYZRGBA>);
+
+      //Transforms used
+      Eigen::Matrix4f T_l0k, T_kl0, T_l0li, T_lil0;
+
+      if (lat==70)
+      {
+        T_kl0 = T_70;
+        T_l0k = T_70.inverse();
+      }
+      if (lat==50)
+      {
+        T_kl0 = T_50;
+        T_l0k = T_50.inverse();
+      }
+      if (lat==30)
+      {
+        T_kl0 = T_30;
+        T_l0k = T_30.inverse();
+      }
+        //temporary transform to local frame (li) for easier cropping
+      pcl::transformPointCloud(*cloud_, *temp, T_l0k);
+      extract_object(lat, temp, object); //temp is in l0
+
+      //save the cloud in local frame (li)
+      Eigen::AngleAxisf rot (lon*D2R, Eigen::Vector3f::UnitZ() );
+      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_local (new pcl::PointCloud<pcl::PointXYZRGBA>);
+      //init matrix as simple rotation around z
+      T_lil0 << rot.matrix()(0,0), rot.matrix()(0,1), rot.matrix()(0,2), 0,
+                rot.matrix()(1,0), rot.matrix()(1,1), rot.matrix()(1,2), 0,
+                rot.matrix()(2,0), rot.matrix()(2,1), rot.matrix()(2,2), 0,
+                0,                 0,                 0,                 1;
+      T_l0li = T_lil0.inverse();
+      pcl::transformPointCloud(*object, *cloud_local, T_lil0); //now cloud local is in li
+
+      //also let user view the local pose
+      _viewer_->updatePointCloud(cloud_local,"pose");
+      _viewer_->spinOnce(300);
+
+      //transform cloud back in sensor frame
+      pcl::transformPointCloud(*cloud_local, *temp, T_l0li );
+      pcl::transformPointCloud(*temp, *cloud_, T_kl0 );
+
+      //get sensor information
+      Eigen::Matrix4f T_sensor; //create one matrix for convinience
+      T_sensor = T_kl0 * T_l0li;
+      //extract quaternion of orientation from it
+      Eigen::Matrix3f R_sensor;
+      R_sensor = T_sensor.topLeftCorner(3,3);
+      Eigen::Quaternionf Q_sensor (R_sensor); //init quaternion from rotation matrix
+      Q_sensor.normalize();
+      Eigen::Vector4f trasl_sensor (T_sensor(0,3), T_sensor(1,3), T_sensor(2,3), 1);
+      //save sensor information in cloud local
+      cloud_local->sensor_origin_ = trasl_sensor;
+      cloud_local->sensor_orientation_ = Q_sensor;
+      //now save local cloud
+      std::string filename (localpath.string() + "/" + name + "_" + std::to_string(lat) + "_" + std::to_string(lon) + ".pcd" );
+      writer.writeBinaryCompressed (filename.c_str(), *cloud_local);
+      //publish local pose
+      pub_poses_.publish(*cloud_local); //automatic conversion to rosmsg
+
+      //save pose in sensor(kinect) on disk
+      std::string kinectname (kinectpath.string() + "/" + name + "_" + std::to_string(lat) + "_" + std::to_string(lon) + ".pcd" );
+      writer.writeBinaryCompressed (kinectname.c_str(), *cloud_);
+
+      //move turntable
+      for (int t=1; t<=lon_pass; ++t)
+      {//for table steps: 1 degree
+        if (lon+t >= 360)
+          break; //skip last step
+        if(!set_turnTable_pos(lon+t) )
+        {
+          ROS_ERROR("[posesScanner] turnTable communication failed!");
+          return false;
+        }
+      }
+    }
+  }//end of acquisitions
+  _viewer_->removePointCloud("pose");
+  _viewer_->removeCoordinateSystem();
+  _viewer_->addText("DO NOT CLOSE THE VIEWER!!\nNODE WILL NOT FUNCTION PROPERLY WITHOUT THE VIEWER", 200,200,18,250,150,150,"text");
+  _viewer_->spinOnce(300);
+  float cur_pos = get_turnTable_pos();
+  if (cur_pos != 0)
+  {
+    float step = -cur_pos/360;
+    for (int i=1; i<=360; i++)
+    {
+      if(!set_turnTable_pos(cur_pos + step*i) )
+      {
+        ROS_ERROR("[posesScanner] turnTable communication failed!");
+        return false;
+      }
+    }
+  }
+  return true;
+    //TODO
+}
+*/
 
 bool PoseScanner::set_turn_table_pos(float pos)
 {
@@ -153,6 +300,42 @@ float PoseScanner::get_turn_table_pos()
     return (-1);
   }
   return (srv.response.current_pos);
+}
+
+bool PoseScanner::move_turn_table_smoothly(float pos)
+{
+  float current_pos = get_turn_table_pos();
+  int count (0);
+  while (current_pos > pos +1 || current_pos < pos -1)
+  {
+    int steps = (int)(pos - current_pos);
+    if (steps >= 0)
+    {
+      //move forward
+      for (int s=0; s < steps; ++s)
+      {
+        if (!set_turn_table_pos(current_pos + s + 1))
+          return (false);
+        boost::this_thread::sleep (boost::posix_time::milliseconds(20));
+      }
+    }
+    else if (steps < 0)
+    {
+      //move backwards
+      for (int s=0; s > steps; --s)
+      {
+        if (!set_turn_table_pos(current_pos + s - 1))
+          return (false);
+        boost::this_thread::sleep (boost::posix_time::milliseconds(20));
+      }
+    }
+    //update position
+    boost::this_thread::sleep (boost::posix_time::milliseconds(100));
+    current_pos = get_turn_table_pos();
+    if (++count > 5) //5 tries are enough
+      return (false);
+  }
+  return (true);
 }
 
 bool PoseScanner::cb_reload(pacman_vision_comm::reload_transform::Request& req, pacman_vision_comm::reload_transform::Response& res)

@@ -14,6 +14,7 @@ pacman_vision:
     enable_listener: false,
     enable_supervoxels: false,
     enable_tracker: false,
+    enable_scanner: false,
     estimated_objects: true,
     estimation_type: 0,
     iterations: 5,
@@ -42,5 +43,8 @@ pacman_vision:
     sensor_type: 2,
     use_service: false,
     use_table_transform: false,
-    voxel_resolution: 0.02
+    voxel_resolution: 0.02,
+    ignore_clicked_point: false,
+    work_dir: "PoseScanner",
+    table_pass: 10
   }

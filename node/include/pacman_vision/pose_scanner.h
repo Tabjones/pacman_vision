@@ -97,6 +97,9 @@ class PoseScanner
     //method to read turn table position
     float get_turn_table_pos();
 
+    //method to move turn table smoothly
+    bool move_turn_table_smoothly(float pos);
+
     //acquire the table transform, given a point and a normal (store it into class)
     bool computeTableTransform(PT pt, float nx, float ny, float nz);
 

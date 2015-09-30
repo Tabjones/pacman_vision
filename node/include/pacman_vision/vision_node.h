@@ -160,6 +160,9 @@ class VisionNode
     void publish_scene_processed();
     //Check which sensor to use
     void check_sensor();
+
+
+    void create_arm_box(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, Box& lim, int i);
 };
 
 #endif
