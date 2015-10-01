@@ -212,12 +212,10 @@ void VisionNode::process_scene()
     vg.setLeafSize(leaf, leaf, leaf);
     vg.setDownsampleAllData(true);
     if (dest)
-      vg.setInputCloud (dest);
+      pcl::copyPointCloud(*dest, *source);
     else
-    {
-      vg.setInputCloud (source);
       dest.reset(new PC);
-    }
+    vg.setInputCloud (source);
     vg.filter (*dest);
   }
   if (plane)
@@ -229,12 +227,10 @@ void VisionNode::process_scene()
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
     //plane segmentation
     if (dest)
-      seg.setInputCloud(dest);
+      pcl::copyPointCloud(*dest, *source);
     else
-    {
-      seg.setInputCloud(source);
       dest.reset(new PC);
-    }
+    seg.setInputCloud(source);
     seg.setOptimizeCoefficients (true);
     seg.setModelType (pcl::SACMODEL_PLANE);
     seg.setMethodType (pcl::SAC_RANSAC);
@@ -274,7 +270,7 @@ void VisionNode::process_scene()
   //Save into storage
   if (dest)
   {
-    this->scene_processed = dest;
+    pcl::copyPointCloud(*dest, *scene_processed);
     this->storage->write_scene_processed(this->scene_processed);
   }
   else
