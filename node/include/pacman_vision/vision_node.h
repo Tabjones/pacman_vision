@@ -154,15 +154,19 @@ class VisionNode
 
     //method to enable/disable modules
     void check_modules();
-    //Process scene method (read scene -> write scene_processed)
-    void process_scene();
     //Publish scene processed
     void publish_scene_processed();
     //Check which sensor to use
     void check_sensor();
 
-
-    void create_arm_box(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, Box& lim, int i);
+    //Process scene method (read scene -> write scene_processed)
+    void process_scene();
+    //Create a box marker
+    void create_arm_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, Box& lim, int i);
+    //Crop source point cloud into dest, previously transforming it with trans
+    void crop_a_box(PC::Ptr source, PC::Ptr& dest,const Eigen::Matrix4f& trans, boost::shared_ptr<Box> &lim, bool inside=false);
+    //Crop out a vito arm
+    void crop_arm(PC::Ptr source, PC::Ptr& dest, bool right=true);
 };
 
 #endif

@@ -18,6 +18,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 set(SOURCES
   src/vision_node.cpp
+  src/node_utils.cpp
   src/broadcaster.cpp
   src/pose_scanner.cpp
   src/utility.cpp

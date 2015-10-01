@@ -30,6 +30,7 @@
 #include <boost/range/algorithm.hpp>
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
+#include <pcl/filters/crop_box.h>
 
 #define D2R 0.017453293  //deg to rad conversion
 
