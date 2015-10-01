@@ -1,12 +1,12 @@
 //TODO:
 //1)Remove broadcaster module! Recompute only changed markers! Each module broadcasts.
-//2)Make a separated thread for Kinect2Processor ?!
-//3)Hardcode meshes bounding boxes into files (not code) in Listener, possibly adding scale
-//4)Listen table recheck transforms and filter limits are not updated when using table transf
-//5)Listener should crop robot itself
+//2)Listener should crop robot itself, take care of sync with main node, probably have to review also process scene.
+//3)Listen table recheck transforms and filter limits are not updated when using table transf
+//4)Hardcode meshes bounding boxes into files (not code) in Listener, possibly adding scale
 //5)Fill tracker service grasp verification
 //6)Fix transformation in cropbox arms (probably inverse)
-//7)tracker refind object in scene: save relative transform hand-object, so you can start from it
+//7)when tracker re-finds object in scene: save relative transform hand-object, so you can start from it
+//8)Make a separated thread for Kinect2Processor ?! (wait until libfreenect2 is more developed)
 
 #include <pacman_vision/vision_node.h>
 
