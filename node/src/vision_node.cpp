@@ -1,10 +1,7 @@
 //TODO:
-//1)Remove broadcaster module! Recompute only changed markers! Each module broadcasts.
-//2)Listener should crop robot itself, take care of sync with main node, probably have to review also process scene.
 //3)Listen table recheck transforms and filter limits are not updated when using table transf
-//4)Hardcode meshes bounding boxes into files (not code) in Listener, possibly adding scale
+//4)Add scale to vito geometry
 //5)Fill tracker service grasp verification
-//6)Fix transformation in cropbox arms (probably inverse)
 //7)when tracker re-finds object in scene: save relative transform hand-object, so you can start from it
 //8)Make a separated thread for Kinect2Processor ?! (wait until libfreenect2 is more developed)
 
