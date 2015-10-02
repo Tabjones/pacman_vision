@@ -110,11 +110,7 @@ void crop_a_box(PC::Ptr source, PC::Ptr& dest, const Eigen::Matrix4f& trans, con
   if(!dest)
     dest.reset(new PC);
   pcl::CropBox<PT> cb;
-  //check if we need to maintain cloud organized
-  if (organized)
-    cb.setKeepOrganized(true);
-  else
-    cb.setKeepOrganized(false);
+  cb.setKeepOrganized(organized);
   cb.setInputCloud (source);
   Eigen::Vector4f min,max;
   min << lim.x1, lim.y1, lim.z1, 1;

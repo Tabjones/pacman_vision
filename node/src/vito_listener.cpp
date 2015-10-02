@@ -213,7 +213,7 @@ void Listener::listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::P
   this->storage->read_sensor_ref_frame(sens_ref_frame);
   tf::StampedTransform tf_piece;
   piece = detailed_hand_naming[idx];
-  Eigen::Matrix4f trans, inv;
+  Eigen::Matrix4f trans;
   geometry_msgs::Pose pose;
   if (right)
     hand = "right_hand";
@@ -232,84 +232,18 @@ void Listener::listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::P
     trans.setIdentity();
   }
   //crop it
-  pcl::CropBox<PT> cb;
-  Eigen::Vector4f min, max; //bounduaries
-  inv = trans.inverse();
-  cb.setInputCloud(cloud);
-  cb.setNegative (true); //crop what's inside the box
-  cb.setTransform(Eigen::Affine3f(inv));
-  PC out;
-  if (idx == 0)
+  PC::Ptr out (new PC);
+  if (idx==0)
   {
-    Eigen::Vector4f bb_min, bb_max; //external bounding box bounduaries
-    pcl::CropBox<PT> cb_bb;
-    cb_bb.setTransform(Eigen::Affine3f(inv));
-    cb_bb.setInputCloud(cloud);
-    cb_bb.setNegative (false);
-    bb_min << -0.25, -0.25, 0 ,1;
-    bb_max << 0.25, 0.25, 0.5, 1;
-    cb_bb.setMin(bb_min);
-    cb_bb.setMax(bb_max);
-    cb_bb.filter(out);
-    pcl::copyPointCloud(out, *cloud);
-    cb.setInputCloud(cloud);
-    cb.setNegative (true); //crop what's inside the box
-    cb.setTransform(Eigen::Affine3f(inv));
-    //base
-    min << -0.038, -0.038, 0, 1;
-    max << 0.038, 0.038, 0.068, 1;
+    Box outer_box(-0.25, -0.25, 0, 0.25, 0.25, 0.5);
+    crop_a_box(cloud, out, trans, outer_box, false, true);
+    pcl::copyPointCloud(*out, *cloud);
   }
-  else if (idx == 1)
-  {
-    //palm_link
-    if (right)
-    {
-      min << -0.032, -0.054, -0.017, 1;
-      max << 0.017, 0.045, 0.119, 1;
-    }
-    else
-    {
-      min << -0.032, -0.045, -0.017, 1;
-      max << 0.017, 0.054, 0.119, 1;
-    }
-  }
-  else if (idx == 2 || idx == 6 || idx == 10 || idx == 14)
-  {
-    //knuckle
-    min << -0.022, -0.012, -0.015, 1;
-    max << 0.023, 0.012, 0.018, 1;
-  }
-  else if (idx == 3 || idx == 7 || idx == 11 || idx == 15 || idx == 19
-      || idx == 4 || idx == 8 || idx == 12 || idx == 16 )
-  {
-    //proximal = middle
-    min << -0.013, -0.012, -0.014, 1;
-    max << 0.023, 0.012, 0.015, 1;
-  }
-  else if (idx == 5 || idx == 9 || idx == 13 || idx == 17 || idx == 20)
-  {
-    //distal
-    min << -0.013, -0.012, -0.014, 1;
-    max << 0.03, 0.012, 0.016, 1;
-  }
+  if (right)
+    crop_a_box(cloud, out, trans, soft_hand_right[idx], true, true);
   else
-  {
-    //thumb_knuckle
-    if (right)
-    {
-      min << -0.011, -0.019, -0.016, 1;
-      max << 0.036, 0.011, 0.017, 1;
-    }
-    else
-    {
-      min << -0.011, -0.011, -0.016, 1;
-      max << 0.036, 0.019, 0.017, 1;
-    }
-  }
-  cb.setMin (min);
-  cb.setMax (max);
-  cb.filter(out);
-  pcl::copyPointCloud(out, *cloud);
+    crop_a_box(cloud, out, trans, soft_hand_left[idx], true, true);
+  pcl::copyPointCloud(*out, *cloud);
 }
 
 void Listener::listen_and_extract_detailed_hand_piece(bool right, size_t idx, PC::Ptr& cloud, PC::Ptr& piece)
@@ -337,66 +271,8 @@ void Listener::listen_and_extract_detailed_hand_piece(bool right, size_t idx, PC
     trans.setIdentity();
   }
   //crop it
-  pcl::CropBox<PT> cb;
-  Eigen::Vector4f min, max; //bounduaries
-  inv = trans.inverse();
-  cb.setInputCloud(cloud);
-  cb.setNegative (false); //crop what's outside the box
-  cb.setTransform(Eigen::Affine3f(inv));
-  if (idx == 0)
-  {
-    //base
-    min << -0.038, -0.038, 0, 1;
-    max << 0.038, 0.038, 0.067, 1;
-  }
-  else if (idx == 1)
-  {
-    //palm_link
-    if (right)
-    {
-      min << -0.032, -0.054, -0.017, 1;
-      max << 0.017, 0.045, 0.119, 1;
-    }
-    else
-    {
-      min << -0.032, -0.045, -0.017, 1;
-      max << 0.017, 0.054, 0.119, 1;
-    }
-  }
-  else if (idx == 2 || idx == 6 || idx == 10 || idx == 14)
-  {
-    //knuckle
-    min << -0.022, -0.012, -0.017, 1;
-    max << 0.023, 0.012, 0.018, 1;
-  }
-  else if (idx == 3 || idx == 7 || idx == 11 || idx == 15 || idx == 19
-      || idx == 4 || idx == 8 || idx == 12 || idx == 16 )
-  {
-    //proximal = middle
-    min << -0.013, -0.012, -0.014, 1;
-    max << 0.023, 0.012, 0.015, 1;
-  }
-  else if (idx == 5 || idx == 9 || idx == 13 || idx == 17 || idx == 20)
-  {
-    //distal
-    min << -0.013, -0.012, -0.014, 1;
-    max << 0.03, 0.012, 0.016, 1;
-  }
+  if (right)
+    crop_a_box(cloud, piece, trans, soft_hand_right[idx], false, true);
   else
-  {
-    //thumb_knuckle
-    if (right)
-    {
-      min << -0.011, -0.019, -0.016, 1;
-      max << 0.036, 0.011, 0.017, 1;
-    }
-    else
-    {
-      min << -0.011, -0.011, -0.016, 1;
-      max << 0.036, 0.019, 0.017, 1;
-    }
-  }
-  cb.setMin (min);
-  cb.setMax (max);
-  cb.filter(*piece);
+    crop_a_box(cloud, piece, trans, soft_hand_left[idx], false, true);
 }
