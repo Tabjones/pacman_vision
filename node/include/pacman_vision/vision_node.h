@@ -13,7 +13,6 @@
 //PCL
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/crop_box.h>
-#include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/ModelCoefficients.h>
@@ -154,17 +153,16 @@ class VisionNode
 
     //method to enable/disable modules
     void check_modules();
-    //Publish scene processed
-    void publish_scene_processed();
     //Check which sensor to use
     void check_sensor();
 
+    //Into node utils//
+    //Publish scene processed
+    void publish_scene_processed();
     //Process scene method (read scene -> write scene_processed)
     void process_scene();
     //Create a box marker
-    void create_arm_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, Box& lim, int i);
-    //Crop source point cloud into dest, previously transforming it with trans
-    void crop_a_box(PC::Ptr source, PC::Ptr& dest,const Eigen::Matrix4f& trans, boost::shared_ptr<Box> &lim, bool inside=false);
+    void create_arm_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, const Box lim, int i, bool right=true);
     //Crop out a vito arm
     void crop_arm(PC::Ptr source, PC::Ptr& dest, bool right=true);
 };

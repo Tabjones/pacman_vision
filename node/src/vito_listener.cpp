@@ -16,13 +16,14 @@ Listener::Listener(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   nh.param<bool>("/pacman_vision/crop_left_hand", listen_left_hand, false);
   nh.param<bool>("/pacman_vision/crop_right_hand", listen_right_hand, false);
   //initializing arm naming
-  arm_naming.resize(6);
-  arm_naming[0]= "_arm_2_link";
-  arm_naming[1]= "_arm_3_link";
-  arm_naming[2]= "_arm_4_link";
-  arm_naming[3]= "_arm_5_link";
-  arm_naming[4]= "_arm_6_link";
-  arm_naming[5]= "_arm_7_link";
+  arm_naming.resize(7);
+  arm_naming[0]= "_arm_1_link";
+  arm_naming[1]= "_arm_2_link";
+  arm_naming[2]= "_arm_3_link";
+  arm_naming[3]= "_arm_4_link";
+  arm_naming[4]= "_arm_5_link";
+  arm_naming[5]= "_arm_6_link";
+  arm_naming[6]= "_arm_7_link";
   detailed_hand_naming.resize(21);
   detailed_hand_naming[0]= "_softhand_base";
   detailed_hand_naming[1]= "_palm_link";
@@ -246,7 +247,7 @@ void Listener::listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::P
     cb_bb.setInputCloud(cloud);
     cb_bb.setNegative (false);
     bb_min << -0.25, -0.25, 0 ,1;
-    bb_max << 0.25, 0.25, 0.6, 1;
+    bb_max << 0.25, 0.25, 0.5, 1;
     cb_bb.setMin(bb_min);
     cb_bb.setMax(bb_max);
     cb_bb.filter(out);

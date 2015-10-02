@@ -107,23 +107,6 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
   }
 }
 
-
-void VisionNode::publish_scene_processed()
-{
-  //republish processed cloud
-  if (scene_processed && scene)
-  {
-    if (!scene_processed->empty() && !scene->empty())
-    {
-      /* |passt   | voxelgrid   |segment | | arms or hands croppings                                 */
-      if ((filter || downsample || plane || crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand ) && (pub_scene.getNumSubscribers()>0))
-        pub_scene.publish(*scene_processed);
-      else if (pub_scene.getNumSubscribers()>0)
-        pub_scene.publish(*scene);
-    }
-  }
-}
-
 ////////////////////////////////
 ///////Spinner threads//////////
 ////////////////////////////////
@@ -214,10 +197,10 @@ void VisionNode::spin_broadcaster()
 #endif
 
     //publish Passthrough filter limits as a box
-    if(limits && filter && broadcaster_module->pass_limits)
+    if(filter && broadcaster_module->pass_limits)
     {
       visualization_msgs::Marker box_marker;
-      if(this->broadcaster_module->create_box_marker(box_marker, limits))
+      if(this->broadcaster_module->create_box_marker(box_marker, *limits))
       {
         box_marker.color.r = 1.0f;
         box_marker.color.g = 0.0f;
@@ -238,75 +221,37 @@ void VisionNode::spin_broadcaster()
 
     if(listener_module && en_listener)
     {
-      //missing left arm markers TODO
-      boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > > right;
-      if (!this->storage->read_right_arm(right))
+      if (crop_r_arm)
       {
-        right.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> >);
-        right->resize(6);
-        for (auto& x: *right)
-          x.setIdentity();
+        if (!this->storage->read_right_arm(right_arm))
+        {
+          right_arm.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> >);
+          right_arm->resize(7);
+          for (auto& x: *right_arm)
+            x.setIdentity();
+        }
+        for (int i=0; i<right_arm->size();++i)
+        {
+          visualization_msgs::Marker box;
+          create_arm_box_marker(right_arm->at(i), box, lwr_arm[i], i, true);
+          this->broadcaster_module->markers.markers.push_back(box);
+        }
       }
-      for (int i=0; i<right->size();++i)
+      if (crop_l_arm)
       {
-        visualization_msgs::Marker box;
-        Box b;
-        if (i ==0)
+        if (!this->storage->read_left_arm(left_arm))
         {
-          b.x1 = -0.06;
-          b.y1 = -0.06;
-          b.z1 = -0.06;
-          b.x2 = 0.06;
-          b.y2 = 0.0938;
-          b.z2 = 0.1915;
+          left_arm.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> >);
+          left_arm->resize(7);
+          for (auto& x: *left_arm)
+            x.setIdentity();
         }
-        if (i ==1)
+        for (int i=0; i<left_arm->size();++i)
         {
-          b.x1 = -0.06;
-          b.y1 = -0.06;
-          b.z1 = 0;
-          b.x2 = 0.06;
-          b.y2 = 0.0938;
-          b.z2 = 0.2685;
+          visualization_msgs::Marker box;
+          create_arm_box_marker(left_arm->at(i), box, lwr_arm[i], i, false);
+          this->broadcaster_module->markers.markers.push_back(box);
         }
-        if ( i ==2)
-        {
-          b.x1 = -0.06;
-          b.y1 = -0.0938;
-          b.z1 = -0.06;
-          b.x2 = 0.06;
-          b.y2 = 0.06;
-          b.z2 = 0.1915;
-        }
-        if ( i ==3)
-        {
-          b.x1 = -0.06;
-          b.y1 = -0.0555;
-          b.z1 =0;
-          b.x2 = 0.06;
-          b.y2 = 0.06;
-          b.z2 = 0.2585;
-        }
-        if (i ==4)
-        {
-          b.x1 = -0.0711;
-          b.y1 = -0.0555;
-          b.z1 = -0.0711;
-          b.x2 = 0.0711;
-          b.y2 = 0.0795;
-          b.z2 = 0.057;
-        }
-        if (i==5)
-        {
-          b.x1 =-0.04;
-          b.y1 = -0.0399;
-          b.z1 = -0.031;
-          b.x2 = 0.04;
-          b.y2 = 0.0399;
-          b.z2 =0;
-        }
-        create_arm_box_marker(right->at(i), box, b, i);
-        this->broadcaster_module->markers.markers.push_back(box);
       }
     }
 

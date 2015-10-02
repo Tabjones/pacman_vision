@@ -102,3 +102,31 @@ void fromTF(tf::Transform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &p
   pose_dest.position.y = t(1);
   pose_dest.position.z = t(2);
 }
+
+void crop_a_box(PC::Ptr source, PC::Ptr& dest, const Eigen::Matrix4f& trans, const Box lim, bool crop_inside, bool organized)
+{
+  if(!source)
+    return;
+  if(!dest)
+    dest.reset(new PC);
+  pcl::CropBox<PT> cb;
+  //check if we need to maintain cloud organized
+  if (organized)
+    cb.setKeepOrganized(true);
+  else
+    cb.setKeepOrganized(false);
+  cb.setInputCloud (source);
+  Eigen::Vector4f min,max;
+  min << lim.x1, lim.y1, lim.z1, 1;
+  max << lim.x2, lim.y2, lim.z2, 1;
+  cb.setMin(min);
+  cb.setMax(max);
+  //Note this transform is applied to the box, not the cloud
+  Eigen::Matrix3f Rot = trans.block<3,3>(0,0); //3x3 block starting at 0,0
+  Eigen::Vector3f angles = Rot.eulerAngles(0,1,2);
+  Eigen::Vector3f translation( trans(0,3), trans(1,3), trans(2,3));
+  cb.setTranslation(translation);
+  cb.setRotation(angles);
+  cb.setNegative(crop_inside);
+  cb.filter (*dest);
+}

@@ -73,7 +73,7 @@ void Broadcaster::elaborate_estimated_objects_markers()
         visualization_msgs::Marker box_marker;
         boost::shared_ptr<Box> bb;
         this->storage->read_tracked_box(bb);
-        this->create_box_marker(box_marker, bb);
+        this->create_box_marker(box_marker, *bb);
         box_marker.ns = "Tracked Object Bounding Box";
         box_marker.id = 0;
         tf::Transform t;
@@ -94,14 +94,9 @@ void Broadcaster::elaborate_estimated_objects_markers()
   }
 }
 
-bool Broadcaster::create_box_marker(visualization_msgs::Marker &box, boost::shared_ptr<Box> &limits)
+bool Broadcaster::create_box_marker(visualization_msgs::Marker &box, const Box limits)
 {
   //Does not set time header, pose, namespace and id of marker
-  if(!limits)
-  {
-    ROS_ERROR("[Broadcaster][%s] Cannot create a box marker with empty passed limits, aborting...", __func__);
-    return false;
-  }
   std::string sensor_ref_frame;
   this->storage->read_sensor_ref_frame(sensor_ref_frame);
   box.type = visualization_msgs::Marker::LINE_LIST;
@@ -121,86 +116,86 @@ bool Broadcaster::create_box_marker(visualization_msgs::Marker &box, boost::shar
   box.lifetime = ros::Duration(1);
   geometry_msgs::Point p, pf;
   //0-1
-  p.x = limits->x1;
-  p.y = limits->y1;
-  p.z = limits->z1;
-  pf.x = limits->x2;
-  pf.y = limits->y1;
-  pf.z = limits->z1;
+  p.x = limits.x1;
+  p.y = limits.y1;
+  p.z = limits.z1;
+  pf.x = limits.x2;
+  pf.y = limits.y1;
+  pf.z = limits.z1;
   box.points.push_back(p);
   box.points.push_back(pf);
   //2-3
-  pf.x = limits->x1;
-  pf.y = limits->y2;
+  pf.x = limits.x1;
+  pf.y = limits.y2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //4-5
-  pf.x = limits->x1;
-  pf.y = limits->y1;
-  pf.z = limits->z2;
+  pf.x = limits.x1;
+  pf.y = limits.y1;
+  pf.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //6-7
-  p.x = limits->x2;
-  p.y = limits->y2;
-  p.z = limits->z2;
-  pf.x = limits->x2;
-  pf.y = limits->y2;
-  pf.z = limits->z1;
+  p.x = limits.x2;
+  p.y = limits.y2;
+  p.z = limits.z2;
+  pf.x = limits.x2;
+  pf.y = limits.y2;
+  pf.z = limits.z1;
   box.points.push_back(p);
   box.points.push_back(pf);
   //8-9
-  pf.x = limits->x1;
-  pf.y = limits->y2;
-  pf.z = limits->z2;
+  pf.x = limits.x1;
+  pf.y = limits.y2;
+  pf.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //10-11
-  pf.x = limits->x2;
-  pf.y = limits->y1;
-  pf.z = limits->z2;
+  pf.x = limits.x2;
+  pf.y = limits.y1;
+  pf.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //12-13
-  p.x = limits->x1;
-  p.y = limits->y1;
-  p.z = limits->z2;
+  p.x = limits.x1;
+  p.y = limits.y1;
+  p.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //14-15
-  pf.x = limits->x1;
-  pf.y = limits->y2;
-  pf.z = limits->z2;
+  pf.x = limits.x1;
+  pf.y = limits.y2;
+  pf.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //16-17
-  p.x = limits->x2;
-  p.y = limits->y2;
-  p.z = limits->z1;
-  pf.x = limits->x2;
-  pf.y = limits->y1;
-  pf.z = limits->z1;
+  p.x = limits.x2;
+  p.y = limits.y2;
+  p.z = limits.z1;
+  pf.x = limits.x2;
+  pf.y = limits.y1;
+  pf.z = limits.z1;
   box.points.push_back(p);
   box.points.push_back(pf);
   //18-19
-  pf.x = limits->x1;
-  pf.y = limits->y2;
-  pf.z = limits->z1;
+  pf.x = limits.x1;
+  pf.y = limits.y2;
+  pf.z = limits.z1;
   box.points.push_back(p);
   box.points.push_back(pf);
   //20-21
-  p.x = limits->x1;
-  p.y = limits->y2;
-  p.z = limits->z2;
+  p.x = limits.x1;
+  p.y = limits.y2;
+  p.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //22-23
-  p.x = limits->x2;
-  p.y = limits->y1;
-  p.z = limits->z2;
-  pf.x = limits->x2;
-  pf.y = limits->y1;
-  pf.z = limits->z1;
+  p.x = limits.x2;
+  p.y = limits.y1;
+  p.z = limits.z2;
+  pf.x = limits.x2;
+  pf.y = limits.y1;
+  pf.z = limits.z1;
   box.points.push_back(p);
   box.points.push_back(pf);
   return true;

@@ -50,7 +50,7 @@ class Broadcaster
     //method to broadcast
     void broadcast_once();
     void elaborate_estimated_objects_markers();
-    bool create_box_marker(visualization_msgs::Marker &box, boost::shared_ptr<Box> &limits);
+    bool create_box_marker(visualization_msgs::Marker &box, const Box limits);
 
 };
 #endif
