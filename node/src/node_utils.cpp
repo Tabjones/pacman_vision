@@ -29,6 +29,22 @@ void VisionNode::crop_a_box(PC::Ptr source, PC::Ptr& dest, const Eigen::Matrix4f
   cb.filter (*dest);
 }
 
+void VisionNode::create_arm_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, Box& lim, int i)
+{
+  boost::shared_ptr<Box> pb = boost::make_shared<Box>(lim);
+  this->broadcaster_module->create_box_marker(marker, pb);
+  marker.color.r = 0.0f;
+  marker.color.g = 1.0f;
+  marker.color.b = 0.0f;
+  marker.color.a = 1.0f;
+  geometry_msgs::Pose pose;
+  tf::Transform tf;
+  fromEigen(t, pose, tf);
+  marker.pose = pose;
+  marker.ns = "Right Arm Boxes";
+  marker.id = i+1;
+}
+
 void VisionNode::crop_arm(PC::Ptr source, PC::Ptr& dest, bool right)
 {
   if(!source)

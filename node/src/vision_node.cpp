@@ -188,7 +188,7 @@ void VisionNode::spin_tracker()
       }
     }
     this->tracker_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go as fast as possible
+    boost::this_thread::sleep(boost::posix_time::milliseconds(20)); //tracker could try to go as fast as reasonably possible (50Hz)
   }
   //tracker got stopped
   return;
@@ -209,7 +209,7 @@ void VisionNode::spin_broadcaster()
     {
       if (broadcaster_module->obj_markers || broadcaster_module->obj_tf || broadcaster_module->tracker_bb)
         //this takes care of markers and TFs of all pose estimated objects, plus tracked object and its bounding box
-        broadcaster_module->elaborate_estimated_objects();
+        broadcaster_module->elaborate_estimated_objects_markers();
     }
 #endif
 
@@ -238,6 +238,7 @@ void VisionNode::spin_broadcaster()
 
     if(listener_module && en_listener)
     {
+      //missing left arm markers TODO
       boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > > right;
       if (!this->storage->read_right_arm(right))
       {
@@ -313,26 +314,10 @@ void VisionNode::spin_broadcaster()
     this->broadcaster_module->broadcast_once();
     //spin
     this->broadcaster_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(20)); //broadcaster could try to go at 50Hz
+    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //broadcaster could try to go at 20Hz
   }
   //broadcaster got stopped
   return;
-}
-
-void VisionNode::create_arm_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, Box& lim, int i)
-{
-  boost::shared_ptr<Box> pb = boost::make_shared<Box>(lim);
-  this->broadcaster_module->create_box_marker(marker, pb);
-  marker.color.r = 0.0f;
-  marker.color.g = 1.0f;
-  marker.color.b = 0.0f;
-  marker.color.a = 1.0f;
-  geometry_msgs::Pose pose;
-  tf::Transform tf;
-  fromEigen(t, pose, tf);
-  marker.pose = pose;
-  marker.ns = "Right Arm Boxes";
-  marker.id = i+1;
 }
 
 void VisionNode::spin_listener()

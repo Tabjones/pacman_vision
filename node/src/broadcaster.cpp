@@ -20,7 +20,7 @@ Broadcaster::~Broadcaster()
   this->nh.shutdown();
 }
 
-void Broadcaster::elaborate_estimated_objects()
+void Broadcaster::elaborate_estimated_objects_markers()
 {
   if (!this->storage->read_obj_transforms(estimated) || !this->storage->read_obj_names(names) )
   {
