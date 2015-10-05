@@ -15,7 +15,7 @@ Listener::Listener(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   nh.param<bool>("/pacman_vision/crop_right_arm", listen_right_arm, false);
   nh.param<bool>("/pacman_vision/crop_left_hand", listen_left_hand, false);
   nh.param<bool>("/pacman_vision/crop_right_hand", listen_right_hand, false);
-  nh.param<float>("/pacman_vision/geometry_scale", box_scale, 1.0f);
+  nh.param<double>("/pacman_vision/geometry_scale", box_scale, 1.0);
   //initializing arm naming
   arm_naming.resize(7);
   arm_naming[0]= "_arm_1_link";

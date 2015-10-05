@@ -1,13 +1,12 @@
 //TODO:
-//3)Listen table recheck transforms and filter limits are not updated when using table transf
-//4)Add scale to vito geometry
-//5)Fill tracker service grasp verification
-//7)when tracker re-finds object in scene: save relative transform hand-object, so you can start from it
-//8)Make a separated thread for Kinect2Processor ?! (wait until libfreenect2 is more developed)
+//0)Add hand box markers
+//1)when tracker re-finds object in scene: save relative transform hand-object, so you can start from it
+//2)Fill tracker service grasp verification
+//3)Make a separated thread for Kinect2Processor ?! (wait until libfreenect2 is more developed)
 
 #include <pacman_vision/vision_node.h>
 
-VisionNode::VisionNode()
+VisionNode::VisionNode() : box_scale(1.0f), rqt_init(true)
 {
   this->nh = ros::NodeHandle("pacman_vision");
   this->storage.reset(new Storage);
@@ -17,7 +16,6 @@ VisionNode::VisionNode()
   this->scene.reset(new PC);
   this->limits.reset(new Box);
   //first call of dynamic reconfigure callback will only set gui to loaded parameters
-  rqt_init = true;
   //service callback init
   srv_get_scene = nh.advertiseService("get_scene_processed", &VisionNode::cb_get_scene, this);
   pub_scene = nh.advertise<PC> ("scene_processed", 5);
@@ -218,7 +216,7 @@ void VisionNode::spin_broadcaster()
 
     if(listener_module && en_listener)
     {
-      if (crop_r_arm)
+      if (crop_r_arm && broadcaster_module->arm_boxes)
       {
         if (!this->storage->read_right_arm(right_arm))
         {
@@ -230,11 +228,11 @@ void VisionNode::spin_broadcaster()
         for (int i=0; i<right_arm->size();++i)
         {
           visualization_msgs::Marker box;
-          create_arm_box_marker(right_arm->at(i), box, lwr_arm[i], i, true);
+          create_arm_box_marker(right_arm->at(i), box, lwr_arm[i]*box_scale, i, true);
           this->broadcaster_module->markers.markers.push_back(box);
         }
       }
-      if (crop_l_arm)
+      if (crop_l_arm && broadcaster_module->arm_boxes)
       {
         if (!this->storage->read_left_arm(left_arm))
         {
@@ -246,10 +244,11 @@ void VisionNode::spin_broadcaster()
         for (int i=0; i<left_arm->size();++i)
         {
           visualization_msgs::Marker box;
-          create_arm_box_marker(left_arm->at(i), box, lwr_arm[i], i, false);
+          create_arm_box_marker(left_arm->at(i), box, lwr_arm[i]*box_scale, i, false);
           this->broadcaster_module->markers.markers.push_back(box);
         }
       }
+    //TODO add hand boxes
     }
 
     //Actually do the broadcasting. This also sets timestamps of all markers pushed inside the array
@@ -264,7 +263,7 @@ void VisionNode::spin_broadcaster()
 
 void VisionNode::spin_listener()
 {
-  int count_to_table (0);
+  size_t count_to_table (0);
   ROS_INFO("[Listener] Listener module will try to read Vito Robot arms and hands transformations to perform hands/arms cropping on the processed scene.");
   //instant fetch of table transform, it will refetch it later
   listener_module->listen_table();
@@ -272,7 +271,7 @@ void VisionNode::spin_listener()
   //spin until we disable it or it dies somehow
   while (this->en_listener && this->listener_module)
   {
-    if (count_to_table > 1000)
+    if (count_to_table > 10000)
     {
       //Re-read table, as a precaution, but it should not have been changed
       listener_module->listen_table();
@@ -588,8 +587,11 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("crop_right_hand", config.groups.listener_module.crop_right_hand);
     nh.getParam("crop_left_hand", config.groups.listener_module.crop_left_hand);
     nh.getParam("use_table_transform", config.groups.listener_module.use_table_transform);
+    nh.getParam("geometry_scale", config.groups.listener_module.geometry_scale);
     //broadcaster
     nh.getParam("passthrough_limits", config.groups.broadcaster_module.passthrough_limits);
+    nh.getParam("arm_boxes", config.groups.broadcaster_module.arm_boxes);
+    nh.getParam("sensor_fake_calibration", config.groups.broadcaster_module.sensor_fake_calibration);
     //Supervoxels
     nh.getParam("use_service", config.groups.supervoxels_module.use_service);
     nh.getParam("voxel_resolution", config.groups.supervoxels_module.voxel_resolution);
@@ -682,6 +684,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->crop_l_arm    = config.groups.listener_module.crop_left_arm;
     this->crop_r_hand   = config.groups.listener_module.crop_right_hand;
     this->crop_l_hand   = config.groups.listener_module.crop_left_hand;
+    this->box_scale = listener_module->box_scale = config.groups.listener_module.geometry_scale;
     this->use_table_trans   = config.groups.listener_module.use_table_transform;
     this->listener_module->listen_left_arm = this->crop_l_arm;
     this->listener_module->listen_right_arm = this->crop_r_arm;
@@ -697,6 +700,8 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->broadcaster_module->tracker_bb  = config.groups.broadcaster_module.tracker_bounding_box;
 #endif
     this->broadcaster_module->pass_limits = config.groups.broadcaster_module.passthrough_limits;
+    this->broadcaster_module->arm_boxes = config.groups.broadcaster_module.arm_boxes;
+    this->broadcaster_module->sensor_fake_calibration = config.groups.broadcaster_module.sensor_fake_calibration;
   }
   //Supervoxels Module
   if (this->supervoxels_module && this->en_supervoxels)

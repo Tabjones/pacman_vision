@@ -13,6 +13,8 @@ Broadcaster::Broadcaster(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   nh.param<bool>("/pacman_vision/estimated_objects", obj_markers, false);
   nh.param<bool>("/pacman_vision/passthrough_limits", pass_limits, false);
   nh.param<bool>("/pacman_vision/tracker_bounding_box", tracker_bb, false);
+  nh.param<bool>("/pacman_vision/arm_boxes", arm_boxes, false);
+  nh.param<bool>("/pacman_vision/sensor_fake_calibration", sensor_fake_calibration, false);
   rviz_markers_pub = nh.advertise<visualization_msgs::MarkerArray>("broadcasted_markers", 1);
 }
 Broadcaster::~Broadcaster()
@@ -203,6 +205,21 @@ bool Broadcaster::create_box_marker(visualization_msgs::Marker &box, const Box l
 
 void Broadcaster::broadcast_once()
 {
+  if (sensor_fake_calibration)
+  {
+    std::string frame, anchor;
+    tf::Transform t;
+    t.setOrigin(tf::Vector3(0,0,1));
+    t.setRotation(tf::Quaternion(tf::Vector3(0,0,1),3.14));
+    this->storage->read_sensor_ref_frame(frame);
+    if (frame.compare("/camera_rgb_optical_frame") == 0)
+      anchor = "/camera_link";
+    else if (frame.compare("/kinect2_rgb_optical_frame") == 0)
+      anchor = "/kinect2_link";
+    else
+      anchor = "/kinect2_anchor";
+    tf_broadcaster.sendTransform(tf::StampedTransform(t, ros::Time::now(), "vito_anchor", anchor.c_str()));
+  }
   if (obj_tf)
   {
     std::string frame;
@@ -210,7 +227,7 @@ void Broadcaster::broadcast_once()
     for (int i = 0; i < transforms.size(); ++i)
       tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), frame.c_str(), names->at(i).first.c_str()));
   }
-  if (obj_markers || pass_limits || tracker_bb)
+  if (obj_markers || pass_limits || tracker_bb || arm_boxes)
   {
     for (int i = 0; i< markers.markers.size(); ++i)
       markers.markers[i].header.stamp = ros::Time();

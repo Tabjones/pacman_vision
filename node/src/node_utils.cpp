@@ -36,7 +36,7 @@ void VisionNode::crop_arm(PC::Ptr source, PC::Ptr& dest, bool right)
     }
     for(int i=0; i<right_arm->size(); ++i)
     {
-      crop_a_box(source, dest, right_arm->at(i), lwr_arm[i], true, false);
+      crop_a_box(source, dest, right_arm->at(i), lwr_arm[i]*box_scale, true, false);
       pcl::copyPointCloud(*dest, *source);
     }
   }
@@ -51,9 +51,35 @@ void VisionNode::crop_arm(PC::Ptr source, PC::Ptr& dest, bool right)
     }
     for(int i=0; i<left_arm->size(); ++i)
     {
-      crop_a_box(source, dest, left_arm->at(i), lwr_arm[i], true, false);
+      crop_a_box(source, dest, left_arm->at(i), lwr_arm[i]*box_scale, true, false);
       pcl::copyPointCloud(*dest, *source);
     }
+  }
+}
+
+void VisionNode::crop_hand(PC::Ptr source, PC::Ptr& dest, bool right)
+{
+  if(!source)
+    return;
+  if(!dest)
+    dest.reset(new PC);
+  if (right)
+  {
+    if(! this->storage->read_right_hand(right_hand) )
+    {
+      right_hand.reset(new Eigen::Matrix4f);
+      right_hand->setIdentity();
+    }
+    crop_a_box(source, dest, *right_hand, hand*box_scale, true, false);
+  }
+  else
+  {
+    if(! this->storage->read_left_hand(left_hand) )
+    {
+      left_hand.reset(new Eigen::Matrix4f);
+      left_hand->setIdentity();
+    }
+    crop_a_box(source, dest, *left_hand, hand*box_scale, true, false);
   }
 }
 
@@ -135,11 +161,15 @@ void VisionNode::process_scene()
     }
     if (crop_r_hand)
     {
-      //right hand //TODO
+      if(dest)
+        pcl::copyPointCloud(*dest, *source);
+      crop_hand(source, dest, true);
     }
     if (crop_l_hand)
     {
-      //left_hand //TODO
+      if (dest)
+        pcl::copyPointCloud(*dest, *source);
+      crop_hand(source, dest, false);
     }
   }
   //Save into storage
@@ -158,14 +188,7 @@ void VisionNode::publish_scene_processed()
 {
   //republish processed cloud
   if (scene_processed && scene)
-  {
     if (!scene_processed->empty() && !scene->empty())
-    {
-      /* |passt   | voxelgrid   |segment | | arms or hands croppings                                 */
-      if ((filter || downsample || plane || crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand ) && (pub_scene.getNumSubscribers()>0))
+      if (pub_scene.getNumSubscribers()>0)
         pub_scene.publish(*scene_processed);
-      else if (pub_scene.getNumSubscribers()>0)
-        pub_scene.publish(*scene);
-    }
-  }
 }

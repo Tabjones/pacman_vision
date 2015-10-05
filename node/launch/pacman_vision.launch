@@ -11,6 +11,9 @@
   <!-- launch_openni2 -->
   <arg name="launch_openni2" default="false" doc="true if you want to include openni2_launch file. Requires calibration package installed. Note that launching openni2 and kinect2 simultaneously might not be the best idea!" />
 
+  <!-- launch_vito -->
+  <arg name="launch_vito" default="false" doc="true if you want to include vito description launch file. It will be run in simulation mode and fake calibration." />
+
   <!-- asus -->
   <arg name="which_asus" default="asus1" doc="If launching openni2 specifies which asus you are using. asus1 or asus2 (there's a label on top of them)." />
 
@@ -59,6 +62,11 @@
       <arg name="rgb_camera_info_url" value="file://$(find calibration)/config/intrinsics/rgb_$(arg which_asus).yaml"/>
       <arg name="depth_camera_info_url" value="file://$(find calibration)/config/intrinsics/depth_$(arg which_asus).yaml"/>
     </include>
+  </group>
+
+  <group if="$(arg launch_vito)">
+    <!-- Launch vito description -->
+    <include file="$(find vito_description)/launch/display.launch"/>
   </group>
 
   <rosparam command="load" file="$(find pacman_vision)/params/$(arg load).yaml"/>

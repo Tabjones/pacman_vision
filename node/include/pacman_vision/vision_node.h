@@ -87,6 +87,8 @@ class VisionNode
     bool crop_r_arm, crop_l_arm, crop_r_hand, crop_l_hand;
     //use table transformation to apply passthrough or not
     bool use_table_trans;
+    //global geometry scale (robot meshes and filters)
+    double box_scale;
 
     //Service Server to retrieve processed scene
     ros::ServiceServer srv_get_scene;
@@ -165,6 +167,8 @@ class VisionNode
     void create_arm_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, const Box lim, int i, bool right=true);
     //Crop out a vito arm
     void crop_arm(PC::Ptr source, PC::Ptr& dest, bool right=true);
+    //Crop out a softhand
+    void crop_hand(PC::Ptr source, PC::Ptr& dest, bool right=true);
 };
 
 #endif

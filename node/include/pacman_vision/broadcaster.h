@@ -27,7 +27,7 @@ class Broadcaster
     boost::shared_ptr<Storage> storage;
 
     //bools to control what to broadcast
-    bool obj_tf, obj_markers, pass_limits, tracker_bb;
+    bool obj_tf, obj_markers, pass_limits, tracker_bb, arm_boxes, sensor_fake_calibration;
 
     //what to broadcast from estimator results and/or tracker
     /////////////////////////////////////////////////////////

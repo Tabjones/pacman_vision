@@ -46,5 +46,6 @@ pacman_vision:
     voxel_resolution: 0.02,
     ignore_clicked_point: false,
     work_dir: "PoseScanner",
-    table_pass: 10
+    table_pass: 10,
+    geometry_scale: 1.0
   }
