@@ -94,6 +94,10 @@ class Box
       z2= std::move(other.z2);
       return *this;
     }
+    const Box operator* (const float scale) const
+    {
+      return (Box(this->x1*scale, this->y1*scale, this->z1*scale, this->x2*scale, this->y2*scale, this->z2*scale));
+    }
 };
 
 //Crop a source point cloud into dest, previously transforming it with trans

@@ -15,6 +15,7 @@ Listener::Listener(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   nh.param<bool>("/pacman_vision/crop_right_arm", listen_right_arm, false);
   nh.param<bool>("/pacman_vision/crop_left_hand", listen_left_hand, false);
   nh.param<bool>("/pacman_vision/crop_right_hand", listen_right_hand, false);
+  nh.param<float>("/pacman_vision/geometry_scale", box_scale, 1.0f);
   //initializing arm naming
   arm_naming.resize(7);
   arm_naming[0]= "_arm_1_link";
@@ -240,9 +241,9 @@ void Listener::listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::P
     pcl::copyPointCloud(*out, *cloud);
   }
   if (right)
-    crop_a_box(cloud, out, trans, soft_hand_right[idx], true, true);
+    crop_a_box(cloud, out, trans, soft_hand_right[idx]*box_scale, true, true);
   else
-    crop_a_box(cloud, out, trans, soft_hand_left[idx], true, true);
+    crop_a_box(cloud, out, trans, soft_hand_left[idx]*box_scale, true, true);
   pcl::copyPointCloud(*out, *cloud);
 }
 
@@ -272,7 +273,7 @@ void Listener::listen_and_extract_detailed_hand_piece(bool right, size_t idx, PC
   }
   //crop it
   if (right)
-    crop_a_box(cloud, piece, trans, soft_hand_right[idx], false, true);
+    crop_a_box(cloud, piece, trans, soft_hand_right[idx]*box_scale, false, true);
   else
-    crop_a_box(cloud, piece, trans, soft_hand_left[idx], false, true);
+    crop_a_box(cloud, piece, trans, soft_hand_left[idx]*box_scale, false, true);
 }

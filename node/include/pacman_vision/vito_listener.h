@@ -40,6 +40,7 @@ class Listener
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
     boost::shared_ptr<Storage> storage;
 
+    float box_scale;
     std::vector<std::string> arm_naming;
     std::vector<std::string> detailed_hand_naming;
     //eigen transform
