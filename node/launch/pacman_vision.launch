@@ -18,7 +18,7 @@
   <arg name="kinect2_max_depth" default="12.0" doc="Maximum distance in meters to consider when creating the point clouds from kinect2. Smaller values increase performance, reducing total number of points processed. Ignored if launch_kinect2 is false." />
 
   <!-- kinect2_calib_path -->
-  <arg name="kinect2_calib_path" default="$(find kinect2_bridge)/data/" doc="Path to calibration data for Kinect2" />
+  <!-- arg name="kinect2_calib_path" default="$(find kinect2_bridge)/data/" doc="Path to calibration data for Kinect2" / -->
 
   <!-- separate_term: Launch the node in a separate Terminal -->
   <arg name="separate_term" default="false" doc="Launch PaCMan Vision into a separate Terminal instance. Useful to clearly read output."/>
