@@ -1,13 +1,12 @@
 //TODO:
-//0)kinect2 processor does not stop if changing sensor type
-//1)Rework broadcaster module to recompute only changed markers, actually broadcasting faster.
-//2)Make a separated thread for Kinect2Processor ?!
-//3)Hardcode meshes bounding boxes into files (not code) in Listener, possibly adding scale
-//4)Listen table recheck transforms and filter limits are not updated when using table transf
+//0)Add hand box markers
+//1)when tracker re-finds object in scene: save relative transform hand-object, so you can start from it
+//2)Fill tracker service grasp verification
+//3)Make a separated thread for Kinect2Processor ?! (wait until libfreenect2 is more developed)
 
 #include <pacman_vision/vision_node.h>
 
-VisionNode::VisionNode()
+VisionNode::VisionNode() : box_scale(1.0f), rqt_init(true)
 {
   this->nh = ros::NodeHandle("pacman_vision");
   this->storage.reset(new Storage);
@@ -17,7 +16,6 @@ VisionNode::VisionNode()
   this->scene.reset(new PC);
   this->limits.reset(new Box);
   //first call of dynamic reconfigure callback will only set gui to loaded parameters
-  rqt_init = true;
   //service callback init
   srv_get_scene = nh.advertiseService("get_scene_processed", &VisionNode::cb_get_scene, this);
   pub_scene = nh.advertise<PC> ("scene_processed", 5);
@@ -27,6 +25,7 @@ VisionNode::VisionNode()
   nh.param<bool>("enable_broadcaster", en_broadcaster, false);
   nh.param<bool>("enable_listener", en_listener, false);
   nh.param<bool>("enable_supervoxels", en_supervoxels, false);
+  nh.param<bool>("enable_scanner", en_scanner, false);
   nh.param<bool>("passthrough", filter, true);
   nh.param<bool>("downsampling", downsample, false);
   nh.param<bool>("plane_segmentation", plane, false);
@@ -103,307 +102,6 @@ void VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
   }
 }
 
-void VisionNode::process_scene()
-{
-  PC::Ptr tmp (new PC);
-  //filters
-  //check if we need to filter scene
-  if (filter)
-  {
-    PassThrough<PT> pass;
-    //check if have a table transform
-    if (use_table_trans)
-    {
-      this->storage->read_table(table_trans);
-      if (table_trans)
-      {
-        pcl::CropBox<PT> cb;
-        Eigen::Matrix4f inv_trans;
-        inv_trans = table_trans->inverse();
-        //check if we need to maintain scene organized
-        if (keep_organized)
-          cb.setKeepOrganized(true);
-        else
-          cb.setKeepOrganized(false);
-        cb.setInputCloud (this->scene);
-        Eigen::Vector4f min,max;
-        //hardcoded table dimensions TODO make it dynamic reconfigurable if possible
-        min << -0.1, -1.15, -0.1, 1;
-        max << 0.825, 0.1, 1.5, 1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter (*(this->scene_processed));
-      }
-    }
-    else
-    {
-      PC::Ptr t (new PC);
-      //check if we need to maintain scene organized
-      if (keep_organized)
-        pass.setKeepOrganized(true);
-      else
-        pass.setKeepOrganized(false);
-      pass.setInputCloud (this->scene);
-      pass.setFilterFieldName ("z");
-      pass.setFilterLimits (limits->z1, limits->z2);
-      pass.filter (*tmp);
-      pass.setInputCloud (tmp);
-      pass.setFilterFieldName ("y");
-      pass.setFilterLimits (limits->y1, limits->y2);
-      pass.filter (*t);
-      pass.setInputCloud (t);
-      pass.setFilterFieldName ("x");
-      pass.setFilterLimits (limits->x1, limits->x2);
-      pass.filter (*(this->scene_processed));
-    }
-  }
-  //check if we need to downsample scene
-  if (downsample) //cannot keep organized cloud after voxelgrid
-  {
-    VoxelGrid<PT> vg;
-    vg.setLeafSize(leaf, leaf, leaf);
-    vg.setDownsampleAllData(true);
-    if (filter)
-      vg.setInputCloud (this->scene_processed);
-    else
-      vg.setInputCloud (this->scene);
-    vg.filter (*tmp);
-    pcl::copyPointCloud(*tmp, *(this->scene_processed));
-  }
-  if (plane)
-  {
-    pcl::SACSegmentation<PT> seg;
-    pcl::ExtractIndices<PT> extract;
-    //coefficients
-    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    //plane segmentation
-    if (filter || downsample)
-      seg.setInputCloud(this->scene_processed);
-    else
-      seg.setInputCloud(this->scene);
-    seg.setOptimizeCoefficients (true);
-    seg.setModelType (pcl::SACMODEL_PLANE);
-    seg.setMethodType (pcl::SAC_RANSAC);
-    seg.setMaxIterations (100);
-    seg.setDistanceThreshold (this->plane_tol);
-    seg.segment(*inliers, *coefficients);
-    //extract what's on top of plane
-    extract.setInputCloud(seg.getInputCloud());
-    extract.setIndices(inliers);
-    extract.setNegative(true);
-    extract.filter(*tmp);
-    pcl::copyPointCloud(*tmp, *(this->scene_processed));
-  }
-  //crop arms if listener is active and we set it
-  if ( (crop_r_arm || crop_l_arm || crop_r_hand || crop_l_hand) && this->en_listener && this->listener_module )
-  {
-    PC::Ptr input (new PC);
-    PC::Ptr output (new PC);
-    pcl::CropBox<PT> cb;
-    Eigen::Matrix4f inv_trans;
-    Eigen::Vector4f min,max;
-    if (filter || downsample || plane)
-      pcl::copyPointCloud(*(this->scene_processed), *input);
-    else
-      pcl::copyPointCloud(*(this->scene), *input);
-    if (crop_l_arm)
-    {
-      if( this->storage->read_left_arm(left_arm) )
-      {
-        //left2
-        cb.setInputCloud(input);
-        min << -0.06, -0.06, -0.06, 1;
-        max << 0.06, 0.0938, 0.1915, 1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(0).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter (*(tmp));
-        //left3
-        cb.setInputCloud(tmp);
-        min << -0.06,-0.06,0,1;
-        max << 0.06,0.0938,0.2685,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(1).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*input);
-        //left4
-        cb.setInputCloud(input);
-        min << -0.06,-0.0938,-0.06,1;
-        max << 0.06,0.06,0.1915,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(2).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*tmp);
-        //left5
-        cb.setInputCloud(tmp);
-        min << -0.06,-0.0555,0,1;
-        max << 0.06,0.06,0.2585,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(3).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*input);
-        //left6shared_ptr<
-        cb.setInputCloud(input);
-        min << -0.0711,-0.0555,-0.0711,1;
-        max << 0.0711,0.0795,0.057,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(4).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*tmp);
-        //left7
-        cb.setInputCloud(tmp);
-        min << -0.04,-0.0399,-0.031,1;
-        max << 0.04,0.0399,0,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = left_arm->at(5).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*input);
-        if (!crop_r_arm && !crop_r_hand && !crop_l_hand)
-          pcl::copyPointCloud(*input, *(this->scene_processed));
-      }
-    }
-    if (crop_r_arm)
-    {
-      if ( this->storage->read_right_arm(right_arm) )
-      {
-        //right2
-        cb.setInputCloud(input);
-        min << -0.06, -0.06, -0.06, 1;
-        max << 0.06, 0.0938, 0.1915, 1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(0).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*tmp);
-        //right3
-        cb.setInputCloud(tmp);
-        min << -0.06,-0.06,0,1;
-        max << 0.06,0.0938,0.2685,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(1).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*input);
-        //right4
-        cb.setInputCloud(input);
-        min << -0.06,-0.0938,-0.06,1;
-        max << 0.06,0.06,0.1915,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(2).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*tmp);
-        //right5
-        cb.setInputCloud(tmp);
-        min << -0.06,-0.0555,0,1;
-        max << 0.06,0.06,0.2585,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(3).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*input);
-        //right6
-        cb.setInputCloud(input);
-        min << -0.0711,-0.0555,-0.0711,1;
-        max << 0.0711,0.0795,0.057,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(4).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*tmp);
-        //right7
-        cb.setInputCloud(tmp);
-        min << -0.04,-0.0399,-0.031,1;
-        max << 0.04,0.0399,0,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = right_arm->at(5).inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*input);
-        if (!crop_r_hand && !crop_l_hand)
-          pcl::copyPointCloud(*input, *(this->scene_processed));
-      }
-    }
-    if (crop_r_hand)
-    {
-      //right hand //TODO hand measures
-      this->storage->read_right_hand(right_hand);
-      if (right_hand)
-      {
-        cb.setInputCloud(input);
-        min << 0,0,0,1;
-        max << 0,0,0,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = right_hand->inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*tmp);
-        if (!crop_l_hand)
-          pcl::copyPointCloud(*tmp, *(this->scene_processed));
-      }
-    }
-    if (crop_l_hand)
-    {
-      //left_hand //TODO hand measures
-      this->storage->read_left_hand(left_hand);
-      if (left_hand)
-      {
-        if (crop_r_hand && right_hand)
-          cb.setInputCloud(tmp);
-        else
-          cb.setInputCloud(input);
-        min << 0,0,0,1;
-        max << 0,0,0,1;
-        cb.setMin(min);
-        cb.setMax(max);
-        cb.setNegative(true); //crop what's inside
-        inv_trans = left_hand->inverse();
-        cb.setTransform(Eigen::Affine3f(inv_trans));
-        cb.filter(*(this->scene_processed));
-      }
-    }
-  }
-  //Save into storage
-  this->storage->write_scene_processed(this->scene_processed);
-}
-
-void VisionNode::publish_scene_processed()
-{
-  //republish processed cloud
-  if (scene_processed && scene)
-  {
-    if (!scene_processed->empty() && !scene->empty())
-    {
-      /* |passt   | voxelgrid   |segment | | arms or hands croppings                                 */
-      if ((filter || downsample || plane || crop_l_arm || crop_r_arm || crop_r_hand || crop_l_hand ) && (pub_scene.getNumSubscribers()>0))
-        pub_scene.publish(*scene_processed);
-      else if (pub_scene.getNumSubscribers()>0)
-        pub_scene.publish(*scene);
-    }
-  }
-}
-
 ////////////////////////////////
 ///////Spinner threads//////////
 ////////////////////////////////
@@ -468,7 +166,7 @@ void VisionNode::spin_tracker()
       }
     }
     this->tracker_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //tracker could try to go as fast as possible
+    boost::this_thread::sleep(boost::posix_time::milliseconds(20)); //tracker could try to go as fast as reasonably possible (50Hz)
   }
   //tracker got stopped
   return;
@@ -489,15 +187,15 @@ void VisionNode::spin_broadcaster()
     {
       if (broadcaster_module->obj_markers || broadcaster_module->obj_tf || broadcaster_module->tracker_bb)
         //this takes care of markers and TFs of all pose estimated objects, plus tracked object and its bounding box
-        broadcaster_module->elaborate_estimated_objects();
+        broadcaster_module->elaborate_estimated_objects_markers();
     }
 #endif
 
     //publish Passthrough filter limits as a box
-    if(limits && filter && broadcaster_module->pass_limits)
+    if(filter && broadcaster_module->pass_limits)
     {
       visualization_msgs::Marker box_marker;
-      if(this->broadcaster_module->create_box_marker(box_marker, limits))
+      if(this->broadcaster_module->create_box_marker(box_marker, *limits))
       {
         box_marker.color.r = 1.0f;
         box_marker.color.g = 0.0f;
@@ -515,11 +213,49 @@ void VisionNode::spin_broadcaster()
         this->broadcaster_module->markers.markers.push_back(box_marker);
       }
     }
+
+    if(listener_module && en_listener)
+    {
+      if (crop_r_arm && broadcaster_module->arm_boxes)
+      {
+        if (!this->storage->read_right_arm(right_arm))
+        {
+          right_arm.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> >);
+          right_arm->resize(7);
+          for (auto& x: *right_arm)
+            x.setIdentity();
+        }
+        for (int i=0; i<right_arm->size();++i)
+        {
+          visualization_msgs::Marker box;
+          create_arm_box_marker(right_arm->at(i), box, lwr_arm[i]*box_scale, i, true);
+          this->broadcaster_module->markers.markers.push_back(box);
+        }
+      }
+      if (crop_l_arm && broadcaster_module->arm_boxes)
+      {
+        if (!this->storage->read_left_arm(left_arm))
+        {
+          left_arm.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> >);
+          left_arm->resize(7);
+          for (auto& x: *left_arm)
+            x.setIdentity();
+        }
+        for (int i=0; i<left_arm->size();++i)
+        {
+          visualization_msgs::Marker box;
+          create_arm_box_marker(left_arm->at(i), box, lwr_arm[i]*box_scale, i, false);
+          this->broadcaster_module->markers.markers.push_back(box);
+        }
+      }
+    //TODO add hand boxes
+    }
+
     //Actually do the broadcasting. This also sets timestamps of all markers pushed inside the array
     this->broadcaster_module->broadcast_once();
     //spin
     this->broadcaster_module->spin_once();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(20)); //broadcaster could try to go at 50Hz
+    boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //broadcaster could try to go at 20Hz
   }
   //broadcaster got stopped
   return;
@@ -527,7 +263,7 @@ void VisionNode::spin_broadcaster()
 
 void VisionNode::spin_listener()
 {
-  int count_to_table (0);
+  size_t count_to_table (0);
   ROS_INFO("[Listener] Listener module will try to read Vito Robot arms and hands transformations to perform hands/arms cropping on the processed scene.");
   //instant fetch of table transform, it will refetch it later
   listener_module->listen_table();
@@ -535,7 +271,7 @@ void VisionNode::spin_listener()
   //spin until we disable it or it dies somehow
   while (this->en_listener && this->listener_module)
   {
-    if (count_to_table > 1000)
+    if (count_to_table > 10000)
     {
       //Re-read table, as a precaution, but it should not have been changed
       listener_module->listen_table();
@@ -566,6 +302,20 @@ void VisionNode::spin_supervoxels()
     boost::this_thread::sleep(boost::posix_time::milliseconds(50)); //Supervoxels can try to go at 20Hz
   }
   //supervoxels got stopped
+  return;
+}
+
+void VisionNode::spin_scanner()
+{
+  ROS_INFO("[Pose Scanner] Pose Scanner module will perform acquisition of objects poses when calling appropriated service.");
+  //spin until we disable it or it dies somehow
+  while (this->en_scanner && this->scanner_module)
+  {
+    //spin
+    this->scanner_module->spin_once();
+    boost::this_thread::sleep(boost::posix_time::milliseconds(100)); //Scanner can try to go at 10Hz
+  }
+  //scanner got stopped
   return;
 }
 
@@ -659,6 +409,23 @@ void VisionNode::check_modules()
     supervoxels_driver.join();
     //kill the module
     this->supervoxels_module.reset();
+  }
+
+  //check if we want pose scanner module and it is not started, or if it is started but we want it disabled
+  if (this->en_scanner && !this->scanner_module && !master_disable)
+  {
+    ROS_WARN("[PaCMaN Vision] Started Pose Scanner module");
+    this->scanner_module.reset( new PoseScanner(this->nh, this->storage) );
+    //spawn a thread to handle the module spinning
+    scanner_driver = boost::thread(&VisionNode::spin_scanner, this);
+  }
+  else if (!this->en_scanner && this->scanner_module)
+  {
+    ROS_WARN("[PaCMaN Vision] Stopped Pose Scanner module");
+    //wait for the thread to stop, if not already, if already stopped this results in a no_op
+    scanner_driver.join();
+    //kill the module
+    this->scanner_module.reset();
   }
 }
 
@@ -800,6 +567,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.enable_broadcaster = en_broadcaster;
     config.enable_listener = en_listener;
     config.enable_supervoxels = en_supervoxels;
+    config.enable_scanner = en_scanner;
     config.Master_Disable = master_disable;
     config.groups.base_node_filters.downsampling = downsample;
     config.groups.base_node_filters.passthrough = filter;
@@ -819,8 +587,11 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("crop_right_hand", config.groups.listener_module.crop_right_hand);
     nh.getParam("crop_left_hand", config.groups.listener_module.crop_left_hand);
     nh.getParam("use_table_transform", config.groups.listener_module.use_table_transform);
+    nh.getParam("geometry_scale", config.groups.listener_module.geometry_scale);
     //broadcaster
     nh.getParam("passthrough_limits", config.groups.broadcaster_module.passthrough_limits);
+    nh.getParam("arm_boxes", config.groups.broadcaster_module.arm_boxes);
+    nh.getParam("sensor_fake_calibration", config.groups.broadcaster_module.sensor_fake_calibration);
     //Supervoxels
     nh.getParam("use_service", config.groups.supervoxels_module.use_service);
     nh.getParam("voxel_resolution", config.groups.supervoxels_module.voxel_resolution);
@@ -830,6 +601,10 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     nh.getParam("normal_importance", config.groups.supervoxels_module.normal_importance);
     nh.getParam("refinement_iterations", config.groups.supervoxels_module.refinement_iterations);
     nh.getParam("normals_search_radius", config.groups.supervoxels_module.normals_search_radius);
+    //Pose Scanner
+    nh.getParam("ignore_clicked_point", config.groups.pose_scanner_module.ignore_clicked_point);
+    nh.getParam("work_dir", config.groups.pose_scanner_module.work_dir);
+    nh.getParam("table_pass", config.groups.pose_scanner_module.table_pass);
     //Finish gui initialization
     this->rqt_init = false;
     this->sensor.needs_update = true;
@@ -864,6 +639,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
   this->en_broadcaster  = config.enable_broadcaster;
   this->en_listener     = config.enable_listener;
   this->en_supervoxels  = config.enable_supervoxels;
+  this->en_scanner      = config.enable_scanner;
   //Global Node Disable
   this->master_disable = config.Master_Disable;
   if (this->master_disable)
@@ -873,8 +649,8 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     config.enable_estimator = config.enable_tracker = false;
     en_estimator = en_tracker = false;
 #endif
-    config.enable_listener = config.enable_broadcaster = config.enable_supervoxels = false;
-    en_broadcaster = en_listener = en_supervoxels = false;
+    config.enable_listener = config.enable_broadcaster = config.enable_supervoxels = config.enable_scanner = false;
+    en_broadcaster = en_listener = en_supervoxels = en_scanner = false;
   }
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
   if (sensor.resolution != config.external_kinect2_resolution)
@@ -908,6 +684,7 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->crop_l_arm    = config.groups.listener_module.crop_left_arm;
     this->crop_r_hand   = config.groups.listener_module.crop_right_hand;
     this->crop_l_hand   = config.groups.listener_module.crop_left_hand;
+    this->box_scale = listener_module->box_scale = config.groups.listener_module.geometry_scale;
     this->use_table_trans   = config.groups.listener_module.use_table_transform;
     this->listener_module->listen_left_arm = this->crop_l_arm;
     this->listener_module->listen_right_arm = this->crop_r_arm;
@@ -923,6 +700,8 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->broadcaster_module->tracker_bb  = config.groups.broadcaster_module.tracker_bounding_box;
 #endif
     this->broadcaster_module->pass_limits = config.groups.broadcaster_module.passthrough_limits;
+    this->broadcaster_module->arm_boxes = config.groups.broadcaster_module.arm_boxes;
+    this->broadcaster_module->sensor_fake_calibration = config.groups.broadcaster_module.sensor_fake_calibration;
   }
   //Supervoxels Module
   if (this->supervoxels_module && this->en_supervoxels)
@@ -936,12 +715,19 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->supervoxels_module->num_iterations = config.groups.supervoxels_module.refinement_iterations;
     this->supervoxels_module->normal_radius = config.groups.supervoxels_module.normals_search_radius;
   }
+  //Pose Scanner Module
+  if (this->scanner_module && this->en_scanner)
+  {
+    this->scanner_module->table_pass   = config.groups.pose_scanner_module.table_pass;
+    this->scanner_module->work_dir  = config.groups.pose_scanner_module.work_dir;
+    this->scanner_module->ignore_clicked_point = config.groups.pose_scanner_module.ignore_clicked_point;
+  }
   ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
 }
 
 void VisionNode::shutdown()
 {
-  en_tracker = en_broadcaster = en_estimator = en_listener = en_supervoxels = false;
+  en_tracker = en_broadcaster = en_estimator = en_listener = en_supervoxels = en_scanner = false;
   this->check_modules();
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
   this->kinect2->close();

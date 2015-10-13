@@ -13,6 +13,8 @@ Broadcaster::Broadcaster(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
   nh.param<bool>("/pacman_vision/estimated_objects", obj_markers, false);
   nh.param<bool>("/pacman_vision/passthrough_limits", pass_limits, false);
   nh.param<bool>("/pacman_vision/tracker_bounding_box", tracker_bb, false);
+  nh.param<bool>("/pacman_vision/arm_boxes", arm_boxes, false);
+  nh.param<bool>("/pacman_vision/sensor_fake_calibration", sensor_fake_calibration, false);
   rviz_markers_pub = nh.advertise<visualization_msgs::MarkerArray>("broadcasted_markers", 1);
 }
 Broadcaster::~Broadcaster()
@@ -20,7 +22,7 @@ Broadcaster::~Broadcaster()
   this->nh.shutdown();
 }
 
-void Broadcaster::elaborate_estimated_objects()
+void Broadcaster::elaborate_estimated_objects_markers()
 {
   if (!this->storage->read_obj_transforms(estimated) || !this->storage->read_obj_names(names) )
   {
@@ -73,7 +75,7 @@ void Broadcaster::elaborate_estimated_objects()
         visualization_msgs::Marker box_marker;
         boost::shared_ptr<Box> bb;
         this->storage->read_tracked_box(bb);
-        this->create_box_marker(box_marker, bb);
+        this->create_box_marker(box_marker, *bb);
         box_marker.ns = "Tracked Object Bounding Box";
         box_marker.id = 0;
         tf::Transform t;
@@ -94,14 +96,9 @@ void Broadcaster::elaborate_estimated_objects()
   }
 }
 
-bool Broadcaster::create_box_marker(visualization_msgs::Marker &box, boost::shared_ptr<Box> &limits)
+bool Broadcaster::create_box_marker(visualization_msgs::Marker &box, const Box limits)
 {
   //Does not set time header, pose, namespace and id of marker
-  if(!limits)
-  {
-    ROS_ERROR("[Broadcaster][%s] Cannot create a box marker with empty passed limits, aborting...", __func__);
-    return false;
-  }
   std::string sensor_ref_frame;
   this->storage->read_sensor_ref_frame(sensor_ref_frame);
   box.type = visualization_msgs::Marker::LINE_LIST;
@@ -121,86 +118,86 @@ bool Broadcaster::create_box_marker(visualization_msgs::Marker &box, boost::shar
   box.lifetime = ros::Duration(1);
   geometry_msgs::Point p, pf;
   //0-1
-  p.x = limits->x1;
-  p.y = limits->y1;
-  p.z = limits->z1;
-  pf.x = limits->x2;
-  pf.y = limits->y1;
-  pf.z = limits->z1;
+  p.x = limits.x1;
+  p.y = limits.y1;
+  p.z = limits.z1;
+  pf.x = limits.x2;
+  pf.y = limits.y1;
+  pf.z = limits.z1;
   box.points.push_back(p);
   box.points.push_back(pf);
   //2-3
-  pf.x = limits->x1;
-  pf.y = limits->y2;
+  pf.x = limits.x1;
+  pf.y = limits.y2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //4-5
-  pf.x = limits->x1;
-  pf.y = limits->y1;
-  pf.z = limits->z2;
+  pf.x = limits.x1;
+  pf.y = limits.y1;
+  pf.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //6-7
-  p.x = limits->x2;
-  p.y = limits->y2;
-  p.z = limits->z2;
-  pf.x = limits->x2;
-  pf.y = limits->y2;
-  pf.z = limits->z1;
+  p.x = limits.x2;
+  p.y = limits.y2;
+  p.z = limits.z2;
+  pf.x = limits.x2;
+  pf.y = limits.y2;
+  pf.z = limits.z1;
   box.points.push_back(p);
   box.points.push_back(pf);
   //8-9
-  pf.x = limits->x1;
-  pf.y = limits->y2;
-  pf.z = limits->z2;
+  pf.x = limits.x1;
+  pf.y = limits.y2;
+  pf.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //10-11
-  pf.x = limits->x2;
-  pf.y = limits->y1;
-  pf.z = limits->z2;
+  pf.x = limits.x2;
+  pf.y = limits.y1;
+  pf.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //12-13
-  p.x = limits->x1;
-  p.y = limits->y1;
-  p.z = limits->z2;
+  p.x = limits.x1;
+  p.y = limits.y1;
+  p.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //14-15
-  pf.x = limits->x1;
-  pf.y = limits->y2;
-  pf.z = limits->z2;
+  pf.x = limits.x1;
+  pf.y = limits.y2;
+  pf.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //16-17
-  p.x = limits->x2;
-  p.y = limits->y2;
-  p.z = limits->z1;
-  pf.x = limits->x2;
-  pf.y = limits->y1;
-  pf.z = limits->z1;
+  p.x = limits.x2;
+  p.y = limits.y2;
+  p.z = limits.z1;
+  pf.x = limits.x2;
+  pf.y = limits.y1;
+  pf.z = limits.z1;
   box.points.push_back(p);
   box.points.push_back(pf);
   //18-19
-  pf.x = limits->x1;
-  pf.y = limits->y2;
-  pf.z = limits->z1;
+  pf.x = limits.x1;
+  pf.y = limits.y2;
+  pf.z = limits.z1;
   box.points.push_back(p);
   box.points.push_back(pf);
   //20-21
-  p.x = limits->x1;
-  p.y = limits->y2;
-  p.z = limits->z2;
+  p.x = limits.x1;
+  p.y = limits.y2;
+  p.z = limits.z2;
   box.points.push_back(p);
   box.points.push_back(pf);
   //22-23
-  p.x = limits->x2;
-  p.y = limits->y1;
-  p.z = limits->z2;
-  pf.x = limits->x2;
-  pf.y = limits->y1;
-  pf.z = limits->z1;
+  p.x = limits.x2;
+  p.y = limits.y1;
+  p.z = limits.z2;
+  pf.x = limits.x2;
+  pf.y = limits.y1;
+  pf.z = limits.z1;
   box.points.push_back(p);
   box.points.push_back(pf);
   return true;
@@ -208,6 +205,21 @@ bool Broadcaster::create_box_marker(visualization_msgs::Marker &box, boost::shar
 
 void Broadcaster::broadcast_once()
 {
+  if (sensor_fake_calibration)
+  {
+    std::string frame, anchor;
+    tf::Transform t;
+    t.setOrigin(tf::Vector3(0,0,1));
+    t.setRotation(tf::Quaternion(tf::Vector3(0,0,1),3.14));
+    this->storage->read_sensor_ref_frame(frame);
+    if (frame.compare("/camera_rgb_optical_frame") == 0)
+      anchor = "/camera_link";
+    else if (frame.compare("/kinect2_rgb_optical_frame") == 0)
+      anchor = "/kinect2_link";
+    else
+      anchor = "/kinect2_anchor";
+    tf_broadcaster.sendTransform(tf::StampedTransform(t, ros::Time::now(), "vito_anchor", anchor.c_str()));
+  }
   if (obj_tf)
   {
     std::string frame;
@@ -215,7 +227,7 @@ void Broadcaster::broadcast_once()
     for (int i = 0; i < transforms.size(); ++i)
       tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), frame.c_str(), names->at(i).first.c_str()));
   }
-  if (obj_markers || pass_limits || tracker_bb)
+  if (obj_markers || pass_limits || tracker_bb || arm_boxes)
   {
     for (int i = 0; i< markers.markers.size(); ++i)
       markers.markers[i].header.stamp = ros::Time();

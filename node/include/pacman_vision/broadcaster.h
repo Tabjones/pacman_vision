@@ -27,7 +27,7 @@ class Broadcaster
     boost::shared_ptr<Storage> storage;
 
     //bools to control what to broadcast
-    bool obj_tf, obj_markers, pass_limits, tracker_bb;
+    bool obj_tf, obj_markers, pass_limits, tracker_bb, arm_boxes, sensor_fake_calibration;
 
     //what to broadcast from estimator results and/or tracker
     /////////////////////////////////////////////////////////
@@ -49,8 +49,8 @@ class Broadcaster
     void spin_once();
     //method to broadcast
     void broadcast_once();
-    void elaborate_estimated_objects();
-    bool create_box_marker(visualization_msgs::Marker &box, boost::shared_ptr<Box> &limits);
+    void elaborate_estimated_objects_markers();
+    bool create_box_marker(visualization_msgs::Marker &box, const Box limits);
 
 };
 #endif

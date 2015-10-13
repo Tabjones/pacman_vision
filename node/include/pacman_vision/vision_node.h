@@ -13,7 +13,6 @@
 //PCL
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/crop_box.h>
-#include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/ModelCoefficients.h>
@@ -41,6 +40,7 @@
 #include <pacman_vision/broadcaster.h>
 #include <pacman_vision/vito_listener.h>
 #include <pacman_vision/supervoxels.h>
+#include <pacman_vision/pose_scanner.h>
 
 class VisionNode
 {
@@ -71,7 +71,7 @@ class VisionNode
     //Globally disable all functionalities
     bool master_disable;
     //bools to control modules
-    bool en_estimator, en_tracker, en_broadcaster, en_listener, en_supervoxels;
+    bool en_estimator, en_tracker, en_broadcaster, en_listener, en_supervoxels, en_scanner;
     //bool to initialize rqt_reconfigure with user parameters (instead of those written in cfg file)
     bool rqt_init;
     //sensor information
@@ -87,6 +87,8 @@ class VisionNode
     bool crop_r_arm, crop_l_arm, crop_r_hand, crop_l_hand;
     //use table transformation to apply passthrough or not
     bool use_table_trans;
+    //global geometry scale (robot meshes and filters)
+    double box_scale;
 
     //Service Server to retrieve processed scene
     ros::ServiceServer srv_get_scene;
@@ -120,10 +122,14 @@ class VisionNode
     boost::shared_ptr<Broadcaster> broadcaster_module;
     boost::shared_ptr<Listener> listener_module;
     boost::shared_ptr<Supervoxels> supervoxels_module;
+    boost::shared_ptr<PoseScanner> scanner_module;
     //slave spinner threads for modules
     //broadcaster
     boost::thread broadcaster_driver;
     void spin_broadcaster();
+    //pose scanner
+    boost::thread scanner_driver;
+    void spin_scanner();
     //listenerr
     boost::thread listener_driver;
     void spin_listener();
@@ -149,12 +155,20 @@ class VisionNode
 
     //method to enable/disable modules
     void check_modules();
-    //Process scene method (read scene -> write scene_processed)
-    void process_scene();
-    //Publish scene processed
-    void publish_scene_processed();
     //Check which sensor to use
     void check_sensor();
+
+    //Into node utils//
+    //Publish scene processed
+    void publish_scene_processed();
+    //Process scene method (read scene -> write scene_processed)
+    void process_scene();
+    //Create a box marker
+    void create_arm_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, const Box lim, int i, bool right=true);
+    //Crop out a vito arm
+    void crop_arm(PC::Ptr source, PC::Ptr& dest, bool right=true);
+    //Crop out a softhand
+    void crop_hand(PC::Ptr source, PC::Ptr& dest, bool right=true);
 };
 
 #endif

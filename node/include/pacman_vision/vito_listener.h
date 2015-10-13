@@ -19,6 +19,7 @@
 #include <pacman_vision/storage.h>
 //Ros generated
 #include <pacman_vision_comm/get_cloud_in_hand.h>
+#include <pacman_vision/vito_geometry.h>
 
 class VisionNode;
 
@@ -39,6 +40,7 @@ class Listener
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
     boost::shared_ptr<Storage> storage;
 
+    double box_scale;
     std::vector<std::string> arm_naming;
     std::vector<std::string> detailed_hand_naming;
     //eigen transform
@@ -64,7 +66,5 @@ class Listener
     void listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::Ptr& cloud);
     //method to listen to a piece of soft hand, and extract its content.
     void listen_and_extract_detailed_hand_piece(bool right, size_t idx, PC::Ptr& cloud, PC::Ptr& piece);
-
-
 };
 #endif
