@@ -65,20 +65,12 @@ void VisionNode::crop_hand(PC::Ptr source, PC::Ptr& dest, bool right)
     dest.reset(new PC);
   if (right)
   {
-    if(! this->storage->read_right_hand(right_hand) )
-    {
-      right_hand.reset(new Eigen::Matrix4f);
-      right_hand->setIdentity();
-    }
+    this->storage->read_right_hand(right_hand);
     crop_a_box(source, dest, *right_hand, hand*box_scale, true, false);
   }
   else
   {
-    if(! this->storage->read_left_hand(left_hand) )
-    {
-      left_hand.reset(new Eigen::Matrix4f);
-      left_hand->setIdentity();
-    }
+    this->storage->read_left_hand(left_hand);
     crop_a_box(source, dest, *left_hand, hand*box_scale, true, false);
   }
 }
