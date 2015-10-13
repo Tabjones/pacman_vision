@@ -305,6 +305,7 @@ void VisionNode::spin_supervoxels()
   return;
 }
 
+/*
 void VisionNode::spin_scanner()
 {
   ROS_INFO("[Pose Scanner] Pose Scanner module will perform acquisition of objects poses when calling appropriated service.");
@@ -318,7 +319,7 @@ void VisionNode::spin_scanner()
   //scanner got stopped
   return;
 }
-
+*/
 ////////////////////////////////////
 ////// Checkers methods ////////////
 ////////////////////////////////////
@@ -410,7 +411,7 @@ void VisionNode::check_modules()
     //kill the module
     this->supervoxels_module.reset();
   }
-
+/*
   //check if we want pose scanner module and it is not started, or if it is started but we want it disabled
   if (this->en_scanner && !this->scanner_module && !master_disable)
   {
@@ -427,6 +428,7 @@ void VisionNode::check_modules()
     //kill the module
     this->scanner_module.reset();
   }
+*/
 }
 
 void VisionNode::check_sensor()
@@ -716,12 +718,13 @@ void VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint
     this->supervoxels_module->normal_radius = config.groups.supervoxels_module.normals_search_radius;
   }
   //Pose Scanner Module
-  if (this->scanner_module && this->en_scanner)
+  /*if (this->scanner_module && this->en_scanner)
   {
     this->scanner_module->table_pass   = config.groups.pose_scanner_module.table_pass;
     this->scanner_module->work_dir  = config.groups.pose_scanner_module.work_dir;
     this->scanner_module->ignore_clicked_point = config.groups.pose_scanner_module.ignore_clicked_point;
   }
+  */
   ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
 }
 
