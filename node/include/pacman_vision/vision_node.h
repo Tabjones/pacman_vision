@@ -40,7 +40,7 @@
 #include <pacman_vision/broadcaster.h>
 #include <pacman_vision/vito_listener.h>
 #include <pacman_vision/supervoxels.h>
-#include <pacman_vision/pose_scanner.h>
+//#include <pacman_vision/pose_scanner.h>
 
 class VisionNode
 {
@@ -122,14 +122,14 @@ class VisionNode
     boost::shared_ptr<Broadcaster> broadcaster_module;
     boost::shared_ptr<Listener> listener_module;
     boost::shared_ptr<Supervoxels> supervoxels_module;
-    boost::shared_ptr<PoseScanner> scanner_module;
+    //boost::shared_ptr<PoseScanner> scanner_module;
     //slave spinner threads for modules
     //broadcaster
     boost::thread broadcaster_driver;
     void spin_broadcaster();
     //pose scanner
-    boost::thread scanner_driver;
-    void spin_scanner();
+    //boost::thread scanner_driver;
+    //void spin_scanner();
     //listenerr
     boost::thread listener_driver;
     void spin_listener();

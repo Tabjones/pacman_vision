@@ -20,7 +20,7 @@ set(SOURCES
   src/vision_node.cpp
   src/node_utils.cpp
   src/broadcaster.cpp
-  src/pose_scanner.cpp
+  #src/pose_scanner.cpp
   src/utility.cpp
   src/vito_listener.cpp
   src/storage.cpp
