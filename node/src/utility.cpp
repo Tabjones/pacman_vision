@@ -103,7 +103,7 @@ void fromTF(tf::Transform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &p
   pose_dest.position.z = t(2);
 }
 
-void crop_a_box(PC::Ptr source, PC::Ptr& dest, const Eigen::Matrix4f& trans, const Box lim, bool crop_inside, bool organized)
+void crop_a_box(PC::Ptr source, PC::Ptr& dest, const Eigen::Matrix4f& trans, const Box lim, bool remove_inside, bool organized)
 {
   if(!source)
     return;
@@ -123,6 +123,6 @@ void crop_a_box(PC::Ptr source, PC::Ptr& dest, const Eigen::Matrix4f& trans, con
   Eigen::Vector3f translation( trans(0,3), trans(1,3), trans(2,3));
   cb.setTranslation(translation);
   cb.setRotation(angles);
-  cb.setNegative(crop_inside);
+  cb.setNegative(remove_inside);
   cb.filter (*dest);
 }
