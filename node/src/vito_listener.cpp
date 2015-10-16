@@ -1,5 +1,6 @@
 #include <pacman_vision/vito_listener.h>
 #include <boost/filesystem.hpp>
+#include <pcl/io/pcd_io.h>
 
 //////////////
 // Listener //
@@ -168,7 +169,7 @@ bool Listener::cb_get_cloud_in_hand(pacman_vision_comm::get_cloud_in_hand::Reque
 {
   PC::Ptr cloud (new PC); //gets progressively overwritten
   PC::Ptr cloud_original (new PC);
-  PC::Ptr obj (new PC);
+  PC::Ptr hand (new PC);
   PC::Ptr piece (new PC);
   this->storage->read_scene_processed(cloud);
   pcl::copyPointCloud(*cloud, *cloud_original);
@@ -176,10 +177,11 @@ bool Listener::cb_get_cloud_in_hand(pacman_vision_comm::get_cloud_in_hand::Reque
   for (size_t i=0; i<detailed_hand_naming.size(); ++i)
   {
     if (i == 0)
-      listen_and_extract_detailed_hand_piece(req.right, i, cloud_original, obj);
-    listen_and_extract_detailed_hand_piece(req.right, i, cloud_original, piece);
+      listen_and_extract_detailed_hand_piece(req.right, i, cloud_original, hand);
+    else
+      listen_and_extract_detailed_hand_piece(req.right, i, cloud_original, piece);
     listen_and_crop_detailed_hand_piece(req.right, i, cloud);
-    *obj += *piece;
+    *hand += *piece;
   }
   sensor_msgs::PointCloud2 msg, msg2;
   if (req.save.compare("false") != 0)
@@ -187,8 +189,12 @@ bool Listener::cb_get_cloud_in_hand(pacman_vision_comm::get_cloud_in_hand::Reque
     boost::filesystem::path save_dir (req.save);
     if (boost::filesystem::exists(save_dir) && boost::filesystem::is_directory(save_dir))
     {
-      pcl::io::savePCDFile( (save_dir.string() + "/obj.pcd").c_str(), *cloud );
-      pcl::io::savePCDFile( (save_dir.string() + "/hand.pcd").c_str(), *obj );
+      pcl::PointCloud<pcl::PointXYZRGBA> obj_rgba, hand_rgba;
+      pcl::copyPointCloud(*cloud, obj_rgba);
+      pcl::copyPointCloud(*hand, hand_rgba);
+      pcl::PCDWriter writer;
+      writer.writeASCII((save_dir.string() + "/obj.pcd").c_str(), obj_rgba );
+      writer.writeASCII((save_dir.string() + "/hand.pcd").c_str(), hand_rgba );
     }
     else
     {
@@ -197,7 +203,7 @@ bool Listener::cb_get_cloud_in_hand(pacman_vision_comm::get_cloud_in_hand::Reque
     }
   }
   pcl::toROSMsg(*cloud, msg);
-  pcl::toROSMsg(*obj, msg2);
+  pcl::toROSMsg(*hand, msg2);
   res.obj = msg;
   res.hand = msg2;
   return true;
@@ -236,7 +242,7 @@ void Listener::listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::P
   PC::Ptr out (new PC);
   if (idx==0)
   {
-    Box outer_box(-0.25, -0.25, 0, 0.25, 0.25, 0.5);
+    Box outer_box(-0.15, -0.15, 0, 0.15, 0.15, 0.3);
     crop_a_box(cloud, out, trans, outer_box, false, true);
     pcl::copyPointCloud(*out, *cloud);
   }

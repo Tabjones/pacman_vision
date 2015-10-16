@@ -36,7 +36,7 @@ void VisionNode::crop_arm(PC::Ptr source, PC::Ptr& dest, bool right)
     }
     for(int i=0; i<right_arm->size(); ++i)
     {
-      crop_a_box(source, dest, right_arm->at(i), lwr_arm[i]*box_scale, true, false);
+      crop_a_box(source, dest, right_arm->at(i), lwr_arm[i]*box_scale, true, true);
       pcl::copyPointCloud(*dest, *source);
     }
   }
@@ -51,7 +51,7 @@ void VisionNode::crop_arm(PC::Ptr source, PC::Ptr& dest, bool right)
     }
     for(int i=0; i<left_arm->size(); ++i)
     {
-      crop_a_box(source, dest, left_arm->at(i), lwr_arm[i]*box_scale, true, false);
+      crop_a_box(source, dest, left_arm->at(i), lwr_arm[i]*box_scale, true, true);
       pcl::copyPointCloud(*dest, *source);
     }
   }
@@ -79,7 +79,7 @@ void VisionNode::process_scene()
 {
   PC::Ptr source (new PC);
   PC::Ptr dest;
-  source = this->scene;
+  this->storage->read_scene(source);
   //check if we need to crop scene
   if (filter)
   {
