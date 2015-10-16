@@ -192,9 +192,10 @@ bool Listener::cb_get_cloud_in_hand(pacman_vision_comm::get_cloud_in_hand::Reque
       pcl::PointCloud<pcl::PointXYZRGBA> obj_rgba, hand_rgba;
       pcl::copyPointCloud(*cloud, obj_rgba);
       pcl::copyPointCloud(*hand, hand_rgba);
+      hand_rgba.is_dense = obj_rgba.is_dense = true;
       pcl::PCDWriter writer;
-      writer.writeASCII((save_dir.string() + "/obj.pcd").c_str(), obj_rgba );
-      writer.writeASCII((save_dir.string() + "/hand.pcd").c_str(), hand_rgba );
+      writer.writeASCII((save_dir.string() + "/obj.pcd").c_str(), obj_rgba,16 );
+      writer.writeASCII((save_dir.string() + "/hand.pcd").c_str(), hand_rgba,16 );
     }
     else
     {
@@ -240,16 +241,10 @@ void Listener::listen_and_crop_detailed_hand_piece(bool right, size_t idx, PC::P
   }
   //crop it
   PC::Ptr out (new PC);
-  if (idx==0)
-  {
-    Box outer_box(-0.15, -0.15, 0, 0.15, 0.15, 0.3);
-    crop_a_box(cloud, out, trans, outer_box, false, true);
-    pcl::copyPointCloud(*out, *cloud);
-  }
   if (right)
-    crop_a_box(cloud, out, trans, soft_hand_right[idx]*box_scale, true, true);
+    crop_a_box(cloud, out, trans, soft_hand_right[idx]*box_scale, true, false);
   else
-    crop_a_box(cloud, out, trans, soft_hand_left[idx]*box_scale, true, true);
+    crop_a_box(cloud, out, trans, soft_hand_left[idx]*box_scale, true, false);
   pcl::copyPointCloud(*out, *cloud);
 }
 
@@ -279,7 +274,7 @@ void Listener::listen_and_extract_detailed_hand_piece(bool right, size_t idx, PC
   }
   //crop it
   if (right)
-    crop_a_box(cloud, piece, trans, soft_hand_right[idx]*box_scale, false, true);
+    crop_a_box(cloud, piece, trans, soft_hand_right[idx]*box_scale, false, false);
   else
-    crop_a_box(cloud, piece, trans, soft_hand_left[idx]*box_scale, false, true);
+    crop_a_box(cloud, piece, trans, soft_hand_left[idx]*box_scale, false, false);
 }
