@@ -1,6 +1,7 @@
 //TODO:
 //0)Add hand box markers, rework vito geometry and scale
 //0.5)Add modular pose scanner, based on find turn table and hdf5
+//0.75) Finish pose scanner
 //1)when tracker re-finds object in scene: save relative transform hand-object, so you can start from it
 //2)Fill tracker service grasp verification
 //3)Make a separated thread for Kinect2Processor ?! (wait until libfreenect2 is more developed)
