@@ -38,12 +38,20 @@
 using namespace pcl;
 
 //convert from eigen matrix to tf and pose
-void fromEigen(Eigen::Matrix4f &source, geometry_msgs::Pose &dest, tf::Transform &tf_dest);
+void
+fromEigen(Eigen::Matrix4f &source, geometry_msgs::Pose &dest,
+                                                    tf::Transform &tf_dest);
 //converto from pose to eigen matrix and tf
-void fromPose(geometry_msgs::Pose &source, Eigen::Matrix4f &dest, tf::Transform &tf_dest);
+void
+fromPose(geometry_msgs::Pose &source, Eigen::Matrix4f &dest,
+                                                    tf::Transform &tf_dest);
 //convert from tf to eigen matrix and pose
-void fromTF(tf::Transform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &pose_dest);
-void fromTF(tf::StampedTransform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &pose_dest);
+void
+fromTF(tf::Transform &source, Eigen::Matrix4f &dest,
+                                            geometry_msgs::Pose &pose_dest);
+void
+fromTF(tf::StampedTransform &source, Eigen::Matrix4f &dest,
+                                            geometry_msgs::Pose &pose_dest);
 
 // Convenient Typedefs
 typedef pcl::PointXYZRGB PT; //default point type
@@ -63,45 +71,52 @@ typedef boost::lock_guard<boost::mutex> LOCK; //default lock type
 //Data structure for box, defined by bounduaries
 class Box
 {
-  public:
-    double x1,x2;
-    double y1,y2;
-    double z1,z2;
-    Box(){}
-    Box(double xmin, double ymin, double zmin, double xmax, double ymax, double zmax) : x1(xmin), y1(ymin),
-      z1(zmin), x2(xmax), y2(ymax), z2(zmax) {}
-    Box(const Box& other) : x1(other.x1), x2(other.x2), y1(other.y1), y2(other.y2), z1(other.z1), z2(other.z2) {}
-    Box(Box&& other) : x1(std::move(other.x1)), x2(std::move(other.x2)), y1(std::move(other.y1)),
-      y2(std::move(other.y2)), z1(std::move(other.z1)), z2(std::move(other.z2)) {}
-    ~Box(){}
-    Box& operator= (const Box& other)
-    {
-      x1=other.x1;
-      x2=other.x2;
-      y1=other.y1;
-      y2=other.y2;
-      z1=other.z1;
-      z2=other.z2;
-      return *this;
-    }
-    Box& operator= (Box&& other)
-    {
-      x1= std::move(other.x1);
-      x2= std::move(other.x2);
-      y1= std::move(other.y1);
-      y2= std::move(other.y2);
-      z1= std::move(other.z1);
-      z2= std::move(other.z2);
-      return *this;
-    }
-    const Box operator* (const float scale) const
-    {
-      return (Box(this->x1*scale, this->y1*scale, this->z1*scale, this->x2*scale, this->y2*scale, this->z2*scale));
-    }
+    public:
+        double x1,x2;
+        double y1,y2;
+        double z1,z2;
+        //ctors
+        Box(){}
+        Box(double xmin, double ymin, double zmin, double xmax, double ymax,
+            double zmax) : x1(xmin), y1(ymin), z1(zmin), x2(xmax), y2(ymax),
+                                                                    z2(zmax) {}
+        Box(const Box& other) : x1(other.x1), x2(other.x2), y1(other.y1),
+                                    y2(other.y2), z1(other.z1), z2(other.z2) {}
+        Box(Box&& other) : x1(std::move(other.x1)), x2(std::move(other.x2)),
+                            y1(std::move(other.y1)),y2(std::move(other.y2)),
+                            z1(std::move(other.z1)), z2(std::move(other.z2)) {}
+        //dtor
+        ~Box(){}
+        Box& operator= (const Box& other)
+        {
+            x1=other.x1;
+            x2=other.x2;
+            y1=other.y1;
+            y2=other.y2;
+            z1=other.z1;
+            z2=other.z2;
+            return *this;
+        }
+        Box& operator= (Box&& other)
+        {
+            x1= std::move(other.x1);
+            x2= std::move(other.x2);
+            y1= std::move(other.y1);
+            y2= std::move(other.y2);
+            z1= std::move(other.z1);
+            z2= std::move(other.z2);
+            return *this;
+        }
+        const Box operator* (const float scale) const
+        {
+            return (Box(this->x1*scale, this->y1*scale, this->z1*scale,
+                            this->x2*scale, this->y2*scale, this->z2*scale));
+        }
 };
 
 //Crop a source point cloud into dest, previously transforming it with trans
-void crop_a_box(PC::Ptr source, PC::Ptr& dest,const Eigen::Matrix4f& trans, const Box lim, bool crop_inside=false, bool organized=true);
+void crop_a_box(PC::Ptr source, PC::Ptr& dest,const Eigen::Matrix4f& trans,
+                const Box lim, bool crop_inside=false, bool organized=true);
 
 #endif
 

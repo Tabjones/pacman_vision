@@ -44,81 +44,85 @@ class VisionNode;
 
 class PoseScanner
 {
-  friend class VisionNode;
+    friend class VisionNode;
 
-  public:
+    public:
     PoseScanner(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~PoseScanner(){};
     //Eigen alignment
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  private:
-    ros::NodeHandle nh;
-    boost::shared_ptr<ros::CallbackQueue> queue_ptr;
-    boost::shared_ptr<Storage> storage;
-    //Service Server
-    ros::ServiceServer srv_acquire;
-    ros::ServiceServer srv_reload;
+    private:
+        ros::NodeHandle nh;
+        boost::shared_ptr<ros::CallbackQueue> queue_ptr;
+        boost::shared_ptr<Storage> storage;
+        //Service Server
+        ros::ServiceServer srv_acquire;
+        ros::ServiceServer srv_reload;
 
-    //subscriber to clickedpoints
-    ros::Subscriber sub_clicked;
+        //subscriber to clickedpoints
+        ros::Subscriber sub_clicked;
 
-    //publisher of poses
-    ros::Publisher pub_poses;
+        //publisher of poses
+        ros::Publisher pub_poses;
 
-    //transform broadcaster and listener
-    tf::TransformBroadcaster tf_table_trans;
-    tf::TransformListener tf_listener;
+        //transform broadcaster and listener
+        tf::TransformBroadcaster tf_table_trans;
+        tf::TransformListener tf_listener;
 
-    //table transforms
-    Eigen::Matrix4f T_kt, T_tk;
-    //has a table trasform ?
-    bool has_transform;
+        //table transforms
+        Eigen::Matrix4f T_kt, T_tk;
+        //has a table trasform ?
+        bool has_transform;
 
-    //Acquired poses
-    boost::shared_ptr<std::vector<PC>> poses;
+        //Acquired poses
+        boost::shared_ptr<std::vector<PC>> poses;
 
-    //Save location informations
-    boost::filesystem::path work_dir;
-    boost::filesystem::path session_dir;
-    boost::posix_time::ptime timestamp;
+        //Save location informations
+        boost::filesystem::path work_dir;
+        boost::filesystem::path session_dir;
+        boost::posix_time::ptime timestamp;
 
-    //Scene processed
-    PC::Ptr scene;
+        //Scene processed
+        PC::Ptr scene;
 
-    //table pass in degrees
-    int table_pass;
+        //table pass in degrees
+        int table_pass;
 
-    //ignore accidentally clicked points
-    bool ignore_clicked_point;
+        //ignore accidentally clicked points
+        bool
+        ignore_clicked_point;
+        //method to move turn table
+        bool
+        set_turn_table_pos(float pos);
+        //method to read turn table position
+        float
+        get_turn_table_pos();
+        //method to move turn table smoothly
+        bool
+        move_turn_table_smoothly(float pos);
+        //acquire the table transform, given a point and a normal
+        bool
+        computeTableTransform(PT pt, float nx, float ny, float nz);
+        //save computed transforms to disk
+        bool
+        saveTableTransform();
+        //save acquired poses to disk
+        bool
+        savePoses();
+        //acquire service callback
+        bool
+        cb_acquire(pacman_vision_comm::acquire::Request& req,
+                                pacman_vision_comm::acquire::Response& res);
+        //reload service callback
+        bool
+        cb_reload(pacman_vision_comm::reload_transform::Request& req,
+                        pacman_vision_comm::reload_transform::Response& res);
+        //Callback from clicked_point
+        void
+        cb_clicked(const geometry_msgs::PointStamped::ConstPtr& msg);
 
-    //method to move turn table
-    bool set_turn_table_pos(float pos);
-
-    //method to read turn table position
-    float get_turn_table_pos();
-
-    //method to move turn table smoothly
-    bool move_turn_table_smoothly(float pos);
-
-    //acquire the table transform, given a point and a normal (store it into class)
-    bool computeTableTransform(PT pt, float nx, float ny, float nz);
-
-    //save computed transforms to disk
-    bool saveTableTransform();
-
-    //save acquired poses to disk
-    bool savePoses();
-
-    //acquire service callback
-    bool cb_acquire(pacman_vision_comm::acquire::Request& req, pacman_vision_comm::acquire::Response& res);
-
-    //reload service callback
-    bool cb_reload(pacman_vision_comm::reload_transform::Request& req, pacman_vision_comm::reload_transform::Response& res);
-
-    //Callback from clicked_point
-    void cb_clicked(const geometry_msgs::PointStamped::ConstPtr& msg);
-
-    //custom spin method
-    void spin_once();
+        //custom spin method
+        void
+        spin_once();
 };
 #endif

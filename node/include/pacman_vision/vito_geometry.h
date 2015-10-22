@@ -110,5 +110,7 @@ const static std::array<Box,21> soft_hand_left{ {
        0.03,   0.012,  0.016) //distal
 } };
 
-const static Box hand(-0.032, -0.012, -0.017, 0.017, 0.054, 0.3); //TODO check dimensions
+//TODO check dimensions
+const static Box hand(-0.032, -0.012, -0.017, 0.017, 0.054, 0.3);
+
 #endif

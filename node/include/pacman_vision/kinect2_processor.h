@@ -13,64 +13,64 @@
 
 class Kinect2Processor
 {
-  public:
-    Kinect2Processor ();
-    ~Kinect2Processor ()
-    {
-      delete colorFrame;
-      delete irFrame;
-      delete depthFrame;
-      delete undistorted;
-      delete registered;
-      delete packetPipeline;
-      delete listener_depth;
-      delete listener_color;
-      delete registration;
-      delete device;
-    }
-    bool started, initialized;
-    //init Kinect2 Device
-    bool
-    initDevice ();
-    //Start Kinect2
-    void
-    start ()
-    {
-      device->start();
-      started = true;
-    }
-    //Stop Kinect2
-    void
-    stop ()
-    {
-      device->stop();
-      started = false;
-    }
-    //close kinect2
-    void
-    close ()
-    {
-      device->close();
-      initialized=false;
-    }
-    //Recive and process data
-    void
-    processData();
-    //Compute a PointCloud from processed data
-    void
-    computePointCloud(PC::Ptr& out_cloud);
-  private:
-    libfreenect2::Freenect2 freenect2;
-    libfreenect2::Freenect2Device *device;
-    libfreenect2::SyncMultiFrameListener *listener_color;
-    libfreenect2::SyncMultiFrameListener *listener_depth;
-    libfreenect2::PacketPipeline *packetPipeline;
-    libfreenect2::Registration *registration;
-    libfreenect2::Freenect2Device::ColorCameraParams colorParams;
-    libfreenect2::Freenect2Device::IrCameraParams irParams;
-    libfreenect2::Frame *colorFrame, *irFrame, *depthFrame;
-    libfreenect2::Frame *undistorted, *registered;
-    libfreenect2::FrameMap frames_c, frames_d;
+    public:
+        Kinect2Processor ();
+        ~Kinect2Processor ()
+        {
+            delete colorFrame;
+            delete irFrame;
+            delete depthFrame;
+            delete undistorted;
+            delete registered;
+            delete packetPipeline;
+            delete listener_depth;
+            delete listener_color;
+            delete registration;
+            delete device;
+        }
+        bool started, initialized;
+        //init Kinect2 Device
+        bool
+        initDevice ();
+        //Start Kinect2
+        void
+        start ()
+        {
+            device->start();
+            started = true;
+        }
+        //Stop Kinect2
+        void
+        stop ()
+        {
+            device->stop();
+            started = false;
+        }
+        //close kinect2
+        void
+        close ()
+        {
+            device->close();
+            initialized=false;
+        }
+        //Recive and process data
+        void
+        processData();
+        //Compute a PointCloud from processed data
+        void
+        computePointCloud(PC::Ptr& out_cloud);
+    private:
+        libfreenect2::Freenect2 freenect2;
+        libfreenect2::Freenect2Device *device;
+        libfreenect2::SyncMultiFrameListener *listener_color;
+        libfreenect2::SyncMultiFrameListener *listener_depth;
+        libfreenect2::PacketPipeline *packetPipeline;
+        libfreenect2::Registration *registration;
+        libfreenect2::Freenect2Device::ColorCameraParams colorParams;
+        libfreenect2::Freenect2Device::IrCameraParams irParams;
+        libfreenect2::Frame *colorFrame, *irFrame, *depthFrame;
+        libfreenect2::Frame *undistorted, *registered;
+        libfreenect2::FrameMap frames_c, frames_d;
 };
 
 #endif
