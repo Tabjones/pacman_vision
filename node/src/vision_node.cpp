@@ -277,7 +277,53 @@ VisionNode::spin_broadcaster()
                     this->broadcaster_module->markers.markers.push_back(box);
                 }
             }
-            //TODO add hand boxes
+            if (crop_l_hand && broadcaster_module->hand_boxes)
+            {
+                this->storage->read_left_hand(left_hand);
+                visualization_msgs::Marker box;
+                create_hand_box_marker(*left_hand, box,
+                        hand_left*box_scale, false);
+                this->broadcaster_module->markers.markers.push_back(box);
+            }
+            if (crop_r_hand && broadcaster_module->hand_boxes)
+            {
+                this->storage->read_right_hand(right_hand);
+                visualization_msgs::Marker box;
+                create_hand_box_marker(*right_hand, box,
+                        hand_right*box_scale, false);
+                this->broadcaster_module->markers.markers.push_back(box);
+            }
+            if (broadcaster_module->detailed_hand_boxes)
+            {
+                for (size_t i = 0; i<21; ++i)
+                {
+                    geometry_msgs::Pose pose;
+                    listener_module->listen_detailed_hand_piece(true, i, pose);
+                    visualization_msgs::Marker mark;
+                    broadcaster_module->create_box_marker(mark,
+                                                soft_hand_right[i]*box_scale);
+                    mark.color.r = 1.0f;
+                    mark.color.g = 0.0f;
+                    mark.color.b = 1.0f;
+                    mark.color.a = 1.0f;
+                    mark.pose = pose;
+                    mark.ns = "Right Hand Detailed Boxes";
+                    mark.id = i+1;
+                    this->broadcaster_module->markers.markers.push_back(mark);
+                    listener_module->listen_detailed_hand_piece(false, i, pose);
+                    visualization_msgs::Marker marker;
+                    broadcaster_module->create_box_marker(marker,
+                                                soft_hand_left[i]*box_scale);
+                    marker.color.r = 1.0f;
+                    marker.color.g = 0.0f;
+                    marker.color.b = 1.0f;
+                    marker.color.a = 1.0f;
+                    marker.pose = pose;
+                    marker.ns = "Left Hand Detailed Boxes";
+                    marker.id = i+1;
+                    this->broadcaster_module->markers.markers.push_back(marker);
+                }
+            }
         }
 
         //Actually do the broadcasting.
@@ -658,6 +704,9 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
         nh.getParam("arm_boxes", config.groups.broadcaster_module.arm_boxes);
         nh.getParam("sensor_fake_calibration",
                     config.groups.broadcaster_module.sensor_fake_calibration);
+        nh.getParam("hand_boxes", config.groups.broadcaster_module.hand_boxes);
+        nh.getParam("detailed_hand_boxes", config.groups.broadcaster_module.
+                                                        detailed_hand_boxes);
         //Supervoxels
         nh.getParam("use_service",
                                 config.groups.supervoxels_module.use_service);
@@ -792,6 +841,10 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
                                     config.groups.broadcaster_module.arm_boxes;
         this->broadcaster_module->sensor_fake_calibration =
                     config.groups.broadcaster_module.sensor_fake_calibration;
+        this->broadcaster_module->hand_boxes =
+                                    config.groups.broadcaster_module.hand_boxes;
+        this->broadcaster_module->detailed_hand_boxes =
+                        config.groups.broadcaster_module.detailed_hand_boxes;
     }
     //Supervoxels Module
     if (this->supervoxels_module && this->en_supervoxels)

@@ -325,3 +325,32 @@ Listener::listen_and_extract_detailed_hand_piece(bool right, size_t idx,
         crop_a_box(cloud, piece, trans, soft_hand_left[idx]*box_scale, false,
                                                                         false);
 }
+void
+Listener::listen_detailed_hand_piece(bool right, size_t idx,
+                                                    geometry_msgs::Pose &pose)
+{
+    std::string sens_ref_frame, hand, hand_piece;
+    this->storage->read_sensor_ref_frame(sens_ref_frame);
+    tf::StampedTransform tf_piece;
+    hand_piece = detailed_hand_naming[idx];
+    Eigen::Matrix4f trans;
+    if (right)
+        hand = "right_hand";
+    else
+        hand = "left_hand";
+    try
+    {
+        tf_listener.waitForTransform(sens_ref_frame.c_str(),
+                (hand+hand_piece).c_str(), ros::Time(0), ros::Duration(2.0));
+        tf_listener.lookupTransform(sens_ref_frame.c_str(),
+                            (hand+hand_piece).c_str(), ros::Time(0), tf_piece);
+        fromTF(tf_piece, trans, pose);
+    }
+    catch (tf::TransformException& ex)
+    {
+        ROS_WARN("%s", ex.what());
+        ROS_WARN("[Listener][%s] Can not find %s Transformation, setting identity"
+                                        ,__func__,(hand+hand_piece).c_str() );
+        trans.setIdentity();
+    }
+}

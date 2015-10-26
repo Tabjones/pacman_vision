@@ -48,6 +48,26 @@ VisionNode::create_arm_box_marker(Eigen::Matrix4f& t,
 }
 
 void
+VisionNode::create_hand_box_marker(Eigen::Matrix4f& t,
+        visualization_msgs::Marker &marker, const Box lim, bool right)
+{
+    this->broadcaster_module->create_box_marker(marker, lim);
+    marker.color.r = 0.0f;
+    marker.color.g = 1.0f;
+    marker.color.b = 1.0f;
+    marker.color.a = 1.0f;
+    geometry_msgs::Pose pose;
+    tf::Transform tf;
+    fromEigen(t, pose, tf);
+    marker.pose = pose;
+    if (right)
+        marker.ns = "Right Hand Box";
+    else
+        marker.ns = "Left Hand Box";
+    marker.id = 0;
+}
+
+void
 VisionNode::crop_arm(PC::Ptr source, PC::Ptr& dest, bool right)
 {
     if(!source)
@@ -100,12 +120,12 @@ VisionNode::crop_hand(PC::Ptr source, PC::Ptr& dest, bool right)
     if (right)
     {
         this->storage->read_right_hand(right_hand);
-        crop_a_box(source, dest, *right_hand, hand*box_scale, true, false);
+        crop_a_box(source, dest, *right_hand, hand_right*box_scale, true, false);
     }
     else
     {
         this->storage->read_left_hand(left_hand);
-        crop_a_box(source, dest, *left_hand, hand*box_scale, true, false);
+        crop_a_box(source, dest, *left_hand, hand_left*box_scale, true, false);
     }
 }
 

@@ -14,6 +14,8 @@ Broadcaster::Broadcaster(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
     nh.param<bool>("/pacman_vision/passthrough_limits", pass_limits, false);
     nh.param<bool>("/pacman_vision/tracker_bounding_box", tracker_bb, false);
     nh.param<bool>("/pacman_vision/arm_boxes", arm_boxes, false);
+    nh.param<bool>("/pacman_vision/hand_boxes", hand_boxes, false);
+    nh.param<bool>("/pacman_vision/detailed_hand_boxes", detailed_hand_boxes, false);
     nh.param<bool>("/pacman_vision/sensor_fake_calibration",
                                             sensor_fake_calibration, false);
     rviz_markers_pub = nh.advertise<visualization_msgs::MarkerArray>
@@ -238,7 +240,8 @@ Broadcaster::broadcast_once()
             tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i],
                 ros::Time::now(), frame.c_str(), names->at(i).first.c_str()));
     }
-    if (obj_markers || pass_limits || tracker_bb || arm_boxes)
+    if (obj_markers || pass_limits || tracker_bb || arm_boxes || hand_boxes ||
+            detailed_hand_boxes)
     {
         for (int i = 0; i< markers.markers.size(); ++i)
             markers.markers[i].header.stamp = ros::Time();

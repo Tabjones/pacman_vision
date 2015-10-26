@@ -197,10 +197,13 @@ class VisionNode
         void
         create_arm_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker
                             &marker, const Box lim, int i, bool right=true);
+        void
+        create_hand_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker
+                            &marker, const Box lim, bool right=true);
         //Crop out a vito arm
         void
         crop_arm(PC::Ptr source, PC::Ptr& dest, bool right=true);
-        //Crop out a softhand
+        //Crop out a softhand, approximately with one bounding box
         void
         crop_hand(PC::Ptr source, PC::Ptr& dest, bool right=true);
 };

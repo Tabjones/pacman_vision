@@ -28,7 +28,7 @@ class Broadcaster
 
         //bools to control what to broadcast
         bool obj_tf, obj_markers, pass_limits, tracker_bb, arm_boxes;
-        bool sensor_fake_calibration;
+        bool sensor_fake_calibration, hand_boxes, detailed_hand_boxes;
 
         //what to broadcast from estimator results and/or tracker
         /////////////////////////////////////////////////////////

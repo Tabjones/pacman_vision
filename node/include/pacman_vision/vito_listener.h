@@ -77,5 +77,9 @@ class Listener
         void
         listen_and_extract_detailed_hand_piece(bool right, size_t idx,
                                             PC::Ptr& cloud, PC::Ptr& piece);
+        //method to listen to a piece of a soft hand and return its transform.
+        void
+        listen_detailed_hand_piece(bool right, size_t idx,
+                                                    geometry_msgs::Pose &pose);
 };
 #endif
