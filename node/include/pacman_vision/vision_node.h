@@ -105,6 +105,8 @@ class VisionNode
         bool use_table_trans;
         //global geometry scale (robot meshes and filters)
         double box_scale;
+        //tells which hand is grasping an object
+        bool grasp_with_right;
 
         //Service Server to retrieve processed scene
         ros::ServiceServer srv_get_scene;

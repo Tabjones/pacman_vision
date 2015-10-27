@@ -1,8 +1,9 @@
 //TODO:
-//0.5)Add modular pose scanner, based on find turn table and hdf5
-//0.75) Finish pose scanner
-//1)when tracker re-finds object in scene: save relative transform hand-object, so you can start from it
-//2)Fill tracker service grasp verification
+//1) Rename pose scanner to in-hand-scanner, and modify it
+//1)when tracker re-finds object in scene: make use of hand-obj rel trans
+//  as a starting condition
+//2)Fill tracker service grasp verification, also design a service that fills
+//  which hand is grasping
 //3)Make a separated thread for Kinect2Processor ?! (wait until libfreenect2 is more developed)
 
 #include <pacman_vision/vision_node.h>
@@ -53,6 +54,7 @@ VisionNode::VisionNode() : box_scale(1.0f), rqt_init(true)
     //set callback for dynamic reconfigure
     this->dyn_srv.setCallback(boost::bind(&VisionNode::cb_reconfigure, this,
                                                                     _1, _2));
+    grasp_with_right = true; //TODO tmp, this has to be set via service
 #ifndef PACMAN_VISION_WITH_KINECT2_SUPPORT
     //force use of openni2
     sensor.type = 2;
@@ -168,6 +170,42 @@ VisionNode::spin_tracker()
                 this->estimator_module->disabled = true;
             }
             this->tracker_module->track();
+            //Save relative object pose to hand
+            if (this->en_listener && this->listener_module)
+            {
+                //TODO needs to know which hand is grasping
+                //Assume someone tells the tracker which hand is grasping,
+                //via service. (state manager, dual manipulation will do it)
+                int tr_idx;
+                boost::shared_ptr<std::vector<std::pair<std::string,
+                                                        std::string>>> names;
+                this->storage->read_tracked_index(tr_idx);
+                this->storage->read_obj_names(names);
+                std::string tracked = names->at(tr_idx).first;
+                tf::StampedTransform hand_obj_tf;
+                geometry_msgs::Pose hand_obj_pose;
+                boost::shared_ptr<Eigen::Matrix4f> hand_obj (new Eigen::Matrix4f);
+                //TODO maybe it's better to save to storage and not into tracker
+                //directly.
+                //Also should find a way to read the transform from listener,
+                //instead of listening directly, to save time.
+                if (grasp_with_right)
+                {
+                        listener_module->tf_listener.waitForTransform("/right_hand_palm_link",
+                            tracked.c_str(), ros::Time(0), ros::Duration(2.0));
+                        listener_module->tf_listener.lookupTransform("/right_hand_palm_link",
+                                tracked.c_str(), ros::Time(0), hand_obj_tf);
+                }
+                else
+                {
+                        listener_module->tf_listener.waitForTransform("/left_hand_palm_link",
+                            tracked.c_str(), ros::Time(0), ros::Duration(2.0));
+                        listener_module->tf_listener.lookupTransform("/left_hand_palm_link",
+                                tracked.c_str(), ros::Time(0), hand_obj_tf);
+                }
+                fromTF(hand_obj_tf, *hand_obj, hand_obj_pose);
+                *(tracker_module->hand_obj_trans)= *hand_obj;
+            }
         }
         else if (this->tracker_module->lost_it &&
                                                 !this->tracker_module->started)

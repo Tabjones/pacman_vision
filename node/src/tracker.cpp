@@ -270,8 +270,9 @@ void
 Tracker::find_object_in_scene()
 {
     this->storage->read_scene_processed(scene);
-    if (scene->points.size() > model->points.size()/3)
+    if (scene->points.size() > model->points.size()/2)
     {
+        //TODO incorporate relative hand-obj transform as a starting condition
         pcl::CentroidPoint<PX> tc;
         for (int i=0; i<scene->points.size(); ++i)
             tc.add(scene->points[i]);

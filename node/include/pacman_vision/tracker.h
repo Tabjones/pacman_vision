@@ -62,6 +62,8 @@ class Tracker
     //tracker transforms
     boost::shared_ptr<Eigen::Matrix4f> transform;
     Eigen::Matrix4f T_rotx, T_rotz, T_roty;
+    //hand-object relative pose
+    boost::shared_ptr<Eigen::Matrix4f> hand_obj_trans;
 
     //name and id of object to be tracked
     std::string name;
