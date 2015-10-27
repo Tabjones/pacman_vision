@@ -40,7 +40,7 @@
 #include <pacman_vision/broadcaster.h>
 #include <pacman_vision/vito_listener.h>
 #include <pacman_vision/supervoxels.h>
-//#include <pacman_vision/pose_scanner.h>
+#include <pacman_vision/in_hand_modeler.h>
 
 class VisionNode
 {
@@ -83,7 +83,7 @@ class VisionNode
         bool master_disable;
         //bools to control modules
         bool en_estimator, en_tracker, en_broadcaster, en_listener;
-        bool en_supervoxels, en_scanner;
+        bool en_supervoxels, en_modeler;
         /*
          * bool to initialize rqt_reconfigure with user parameters
          * instead of those written in cfg file
@@ -142,16 +142,17 @@ class VisionNode
         boost::shared_ptr<Broadcaster> broadcaster_module;
         boost::shared_ptr<Listener> listener_module;
         boost::shared_ptr<Supervoxels> supervoxels_module;
-        //boost::shared_ptr<PoseScanner> scanner_module;
+        boost::shared_ptr<InHandModeler> modeler_module;
         //slave spinner threads for modules
         //broadcaster
         boost::thread broadcaster_driver;
         void
         spin_broadcaster();
-        //pose scanner
-        //boost::thread scanner_driver;
-        //void spin_scanner();
-        //listenerr
+        //in hand modeler
+        boost::thread modeler_driver;
+        void
+        spin_modeler();
+        //listener
         boost::thread listener_driver;
         void
         spin_listener();

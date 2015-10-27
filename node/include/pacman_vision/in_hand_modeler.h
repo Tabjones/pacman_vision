@@ -28,10 +28,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/visualization/pcl_visualizer.h>
 // ROS generated headers
-#include <turn_table_interface/setPos.h>
-#include <turn_table_interface/getPos.h>
 #include <pacman_vision_comm/acquire.h>
-#include <pacman_vision_comm/reload_transform.h>
 //general utilities
 #include <ctime>
 #include <algorithm>
@@ -42,13 +39,13 @@
 
 class VisionNode;
 
-class PoseScanner
+class InHandModeler
 {
     friend class VisionNode;
 
     public:
-    PoseScanner(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
-    ~PoseScanner(){};
+    InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
+    ~InHandModeler(){};
     //Eigen alignment
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:
@@ -57,25 +54,24 @@ class PoseScanner
         boost::shared_ptr<Storage> storage;
         //Service Server
         ros::ServiceServer srv_acquire;
-        ros::ServiceServer srv_reload;
 
         //subscriber to clickedpoints
         ros::Subscriber sub_clicked;
 
-        //publisher of poses
-        ros::Publisher pub_poses;
+        //publisher of model
+        ros::Publisher pub_model;
 
         //transform broadcaster and listener
         tf::TransformBroadcaster tf_table_trans;
         tf::TransformListener tf_listener;
 
-        //table transforms
-        Eigen::Matrix4f T_kt, T_tk;
-        //has a table trasform ?
+        //model transforms
+        Eigen::Matrix4f T_km, T_mk;
+        //has a model trasform ?
         bool has_transform;
 
-        //Acquired poses
-        boost::shared_ptr<std::vector<PC>> poses;
+        //Acquired model so far
+        PC::Ptr model;
 
         //Save location informations
         boost::filesystem::path work_dir;
@@ -85,38 +81,18 @@ class PoseScanner
         //Scene processed
         PC::Ptr scene;
 
-        //table pass in degrees
-        int table_pass;
-
         //ignore accidentally clicked points
+        bool ignore_clicked_point;
+
         bool
-        ignore_clicked_point;
-        //method to move turn table
+        computeModelTransform(PT pt, float nx, float ny, float nz);
+        //save acquired model to disk
         bool
-        set_turn_table_pos(float pos);
-        //method to read turn table position
-        float
-        get_turn_table_pos();
-        //method to move turn table smoothly
-        bool
-        move_turn_table_smoothly(float pos);
-        //acquire the table transform, given a point and a normal
-        bool
-        computeTableTransform(PT pt, float nx, float ny, float nz);
-        //save computed transforms to disk
-        bool
-        saveTableTransform();
-        //save acquired poses to disk
-        bool
-        savePoses();
+        saveModel();
         //acquire service callback
         bool
         cb_acquire(pacman_vision_comm::acquire::Request& req,
                                 pacman_vision_comm::acquire::Response& res);
-        //reload service callback
-        bool
-        cb_reload(pacman_vision_comm::reload_transform::Request& req,
-                        pacman_vision_comm::reload_transform::Response& res);
         //Callback from clicked_point
         void
         cb_clicked(const geometry_msgs::PointStamped::ConstPtr& msg);
