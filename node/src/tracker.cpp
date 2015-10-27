@@ -235,9 +235,8 @@ Tracker::track()
         fitness = icp.getFitnessScore();
         *(this->transform) = icp.getFinalTransformation();
     }
-    //TODO tmp info, to remove in the future
-    ROS_INFO("corr: %d, final_corr: %d, fitness: %g", (int)corr.size(),
-                                            (int)final_corr.size(), fitness);
+    //ROS_INFO("corr: %d, final_corr: %d, fitness: %g", (int)corr.size(),
+    //                                        (int)final_corr.size(), fitness);
     this->storage->write_obj_transform_by_index(index, this->transform);
     //adjust distance and factor according to fitness
     if (fitness > 0.0008 ) //something is probably wrong
