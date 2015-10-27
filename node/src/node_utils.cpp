@@ -213,13 +213,27 @@ VisionNode::process_scene()
         {
             if(dest)
                 pcl::copyPointCloud(*dest, *source);
-            crop_hand(source, dest, true);
+            if (detailed_hand_crop)
+            {
+                for (size_t i=0; i<21; ++i)
+                    listener_module->listen_and_crop_detailed_hand_piece(true, i, source);
+                pcl::copyPointCloud(*source, *dest);
+            }
+            else
+                crop_hand(source, dest, true);
         }
         if (crop_l_hand)
         {
             if (dest)
                 pcl::copyPointCloud(*dest, *source);
-            crop_hand(source, dest, false);
+            if (detailed_hand_crop)
+            {
+                for (size_t i=0; i<21; ++i)
+                    listener_module->listen_and_crop_detailed_hand_piece(false, i, source);
+                pcl::copyPointCloud(*source, *dest);
+            }
+            else
+                crop_hand(source, dest, false);
         }
     }
     //Save into storage

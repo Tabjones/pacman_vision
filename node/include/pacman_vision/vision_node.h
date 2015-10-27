@@ -100,7 +100,7 @@ class VisionNode
         //table transform from vito listener
         boost::shared_ptr<Eigen::Matrix4f> table_trans;
         //crop or not
-        bool crop_r_arm, crop_l_arm, crop_r_hand, crop_l_hand;
+        bool crop_r_arm, crop_l_arm, crop_r_hand, crop_l_hand, detailed_hand_crop;
         //use table transformation to apply passthrough or not
         bool use_table_trans;
         //global geometry scale (robot meshes and filters)

@@ -1,5 +1,4 @@
 //TODO:
-//0)Add hand box markers, rework vito geometry and scale
 //0.5)Add modular pose scanner, based on find turn table and hdf5
 //0.75) Finish pose scanner
 //1)when tracker re-finds object in scene: save relative transform hand-object, so you can start from it
@@ -46,6 +45,7 @@ VisionNode::VisionNode() : box_scale(1.0f), rqt_init(true)
     nh.param<bool>("crop_left_arm", crop_l_arm, false);
     nh.param<bool>("crop_right_hand", crop_r_hand, false);
     nh.param<bool>("crop_left_hand", crop_l_hand, false);
+    nh.param<bool>("detailed_hand_crop", detailed_hand_crop, false);
     nh.param<bool>("use_table_transform", use_table_trans, false);
     nh.param<int>("sensor_type", sensor.type, 0);
     nh.param<bool>("Master_Disable", master_disable, false);
@@ -694,6 +694,8 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
                                 config.groups.listener_module.crop_right_hand);
         nh.getParam("crop_left_hand",
                                 config.groups.listener_module.crop_left_hand);
+        nh.getParam("detailed_hand_crop",
+                            config.groups.listener_module.detailed_hand_crop);
         nh.getParam("use_table_transform",
                             config.groups.listener_module.use_table_transform);
         nh.getParam("geometry_scale",
@@ -816,6 +818,8 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
         this->crop_l_arm = config.groups.listener_module.crop_left_arm;
         this->crop_r_hand = config.groups.listener_module.crop_right_hand;
         this->crop_l_hand = config.groups.listener_module.crop_left_hand;
+        this->detailed_hand_crop =
+                            config.groups.listener_module.detailed_hand_crop;
         this->box_scale = listener_module->box_scale =
                                 config.groups.listener_module.geometry_scale;
         this->use_table_trans = config.groups.listener_module.use_table_transform;
