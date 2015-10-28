@@ -107,8 +107,7 @@ class Tracker
     pcl::registration::CorrespondenceRejectorDistance::Ptr crd;
     pcl::registration::CorrespondenceRejectorTrimmed::Ptr crt;
     pcl::registration::CorrespondenceRejectorOneToOne::Ptr cro2o;
-    pcl::registration::TransformationEstimationDualQuaternion<PX,PX,float>::Ptr
-                                                                        teDQ;
+    pcl::registration::TransformationEstimationDualQuaternion<PX,PX,float>::Ptr teDQ;
 //  pcl::registration::CorrespondenceRejectorSampleConsensus< PX >::Ptr crsc;
 
     //filters
