@@ -12,23 +12,22 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud_conversion.h>
 //PCL
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/eigen.h>
-#include <pcl/filters/project_inliers.h>
+#include <pcl/octree/octree_pointcloud_adjacency.h>
+#include <pcl/octree/octree_pointcloud_changedetector.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_ros/transforms.h>
 #include <pcl/features/normal_3d.h>
-#include <pcl/ModelCoefficients.h>
-#include <pcl/search/kdtree.h>
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/sample_consensus/model_types.h>
-#include <pcl/sample_consensus/ransac.h>
-#include <pcl/sample_consensus/sac_model_plane.h>
-#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/registration/correspondence_rejection_distance.h>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/transformation_estimation_dual_quaternion.h>
 #include <pcl/visualization/pcl_visualizer.h>
 // ROS generated headers
-#include <pacman_vision_comm/acquire.h>
+#include <pacman_vision_comm/start_modeler.h>
+#include <pacman_vision_comm/stop_modeler.h>
 //general utilities
 #include <ctime>
 #include <algorithm>
@@ -53,7 +52,8 @@ class InHandModeler
         boost::shared_ptr<ros::CallbackQueue> queue_ptr;
         boost::shared_ptr<Storage> storage;
         //Service Server
-        ros::ServiceServer srv_acquire;
+        ros::ServiceServer srv_start;
+        ros::ServiceServer srv_stop;
 
         //subscriber to clickedpoints
         ros::Subscriber sub_clicked;
@@ -62,28 +62,42 @@ class InHandModeler
         ros::Publisher pub_model;
 
         //transform broadcaster and listener
-        tf::TransformBroadcaster tf_table_trans;
+        ////TODO move this broadcasting to broadcaster module !
+        tf::TransformBroadcaster tf_broadcaster;
         tf::TransformListener tf_listener;
 
         //model transforms
         Eigen::Matrix4f T_km, T_mk;
         //has a model trasform ?
         bool has_transform;
+        //needs to iterate ?
+        bool do_iterations;
 
-        //Acquired model so far
-        PC::Ptr model;
+        //pointclouds
+        //actual scene in kinect and model reference frame
+        PC::Ptr actual_k, actual_m;
+        //previous scene in kinect and model reference frame
+        PC::Ptr previous_k, previous_m;
+        //model and downsampled model
+        PC::Ptr model, model_ds;
 
-        //Save location informations
-        boost::filesystem::path work_dir;
-        boost::filesystem::path session_dir;
-        boost::posix_time::ptime timestamp;
+        //Voxelgrid downsampling
+        pcl::VoxelGrid<PT> vg;
 
-        //Scene processed
-        PC::Ptr scene;
+        //ICP object
+        pcl::IterativeClosestPoint<PT, PT, float> icp;
+        pcl::registration::CorrespondenceRejectorDistance::Ptr crd;
+        pcl::registration::TransformationEstimationDualQuaternion<PT, PT, float>::Ptr teDQ;
 
+        //Dynamic reconfigurable parameters
         //ignore accidentally clicked points
         bool ignore_clicked_point;
+        //Save location informations
+        boost::filesystem::path work_dir;
+        //Model leaf size
+        double model_ls;
 
+        //Methods
         bool
         computeModelTransform(PT pt, float nx, float ny, float nz);
         //save acquired model to disk
@@ -91,11 +105,16 @@ class InHandModeler
         saveModel();
         //acquire service callback
         bool
-        cb_acquire(pacman_vision_comm::acquire::Request& req,
-                                pacman_vision_comm::acquire::Response& res);
+        cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_vision_comm::start_modeler::Response& res);
+        //stop service callback
+        bool
+        cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vision_comm::stop_modeler::Response& res);
         //Callback from clicked_point
         void
         cb_clicked(const geometry_msgs::PointStamped::ConstPtr& msg);
+        //Do one step of iterations
+        void
+        iterate_once();
 
         //custom spin method
         void

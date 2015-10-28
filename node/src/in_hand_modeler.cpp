@@ -1,25 +1,23 @@
 #include <pacman_vision/in_hand_modeler.h>
-#include <flann/flann.h>
-#include <flann/io/hdf5.h>
 
-InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor):
-                                                        has_transform(false)
+InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_iterations(false)
 {
-    this->scene.reset(new PC);
-    this->nh = ros::NodeHandle(n, "pose_scanner");
+    this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
     this->nh.setCallbackQueue(&(*this->queue_ptr));
     this->storage = stor;
-    this->srv_acquire = nh.advertiseService("acquire", &InHandModeler::cb_acquire, this);
+    this->srv_start = nh.advertiseService("start", &InHandModeler::cb_start, this);
+    this->srv_stop = nh.advertiseService("stop", &InHandModeler::cb_stop, this);
     this->model.reset(new PC);
     nh.param<bool>("/pacman_vision/ignore_clicked_point",ignore_clicked_point , false);
+    nh.param<double>("/pacman_vision/model_leaf_size",model_ls, 0.001);
     std::string work_dir_s;
     nh.param<std::string>("/pacman_vision/work_dir", work_dir_s, "InHandModeler");
     work_dir = work_dir_s;
-    timestamp = boost::posix_time::second_clock::local_time();
-    session_dir = (work_dir.string() + "/Session_" + to_simple_string(timestamp) + "/");
     sub_clicked = nh.subscribe(nh.resolveName("/clicked_point"), 1, &InHandModeler::cb_clicked, this);
     pub_model = nh.advertise<PC> ("in_hand_model",1);
+    crd.reset(new pcl::registration::CorrespondenceRejectorDistance);
+    teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PT, PT, float>);
 }
 
 bool
@@ -64,11 +62,9 @@ bool InHandModeler::saveModel()
     //TODO
 }
 
-
 void InHandModeler::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg)
 {
-    if(!ignore_clicked_point)
-    {
+    if(!ignore_clicked_point){
         float nx,ny,nz;
         PT pt;
         //Get clicked point
@@ -76,15 +72,12 @@ void InHandModeler::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg
         pt.y = msg->point.y;
         pt.z = msg->point.z;
         std::string sensor;
-        this->storage->read_scene_processed(scene);
+        this->storage->read_scene_processed(actual_k);
         this->storage->read_sensor_ref_frame(sensor);
-        if (msg->header.frame_id.compare(sensor) != 0)
-        {
-            tf_listener.waitForTransform(sensor.c_str(),
-                msg->header.frame_id.c_str(), ros::Time(0), ros::Duration(1.0));
+        if (msg->header.frame_id.compare(sensor) != 0){
+            tf_listener.waitForTransform(sensor.c_str(), msg->header.frame_id.c_str(), ros::Time(0), ros::Duration(1.0));
             tf::StampedTransform t_msg;
-            tf_listener.lookupTransform(sensor.c_str(),
-                            msg->header.frame_id.c_str(), ros::Time(0), t_msg);
+            tf_listener.lookupTransform(sensor.c_str(), msg->header.frame_id.c_str(), ros::Time(0), t_msg);
             Eigen::Matrix4f T;
             geometry_msgs::Pose pose;
             fromTF(t_msg, T, pose);
@@ -96,55 +89,84 @@ void InHandModeler::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg
         }
         //compute a normal around its neighborhood (3cm)
         pcl::search::KdTree<PT> kdtree;
-        std::vector<int> idx(scene->points.size());
-        std::vector<float> dist(scene->points.size());
-        kdtree.setInputCloud(scene);
+        std::vector<int> idx(actual_k->points.size());
+        std::vector<float> dist(actual_k->points.size());
+        kdtree.setInputCloud(actual_k);
         kdtree.radiusSearch(pt, 0.03, idx, dist);
         pcl::NormalEstimation<PT, pcl::Normal> ne;
-        ne.setInputCloud(scene);
+        ne.setInputCloud(actual_k);
         ne.useSensorOriginAsViewPoint();
         float curv;
-        ne.computePointNormal (*scene, idx, nx,ny,nz, curv);
-        //Compute table transform
-        if (!computeModelTransform(pt,nx,ny,nz))
-        {
-            ROS_WARN("[InHandModeler][%s]\tFailed to compute ModelTransform, please click again!"
-                                                                    ,__func__);
+        ne.computePointNormal (*actual_k, idx, nx,ny,nz, curv);
+        //Compute model transform
+        if (!computeModelTransform(pt,nx,ny,nz)){
+            ROS_WARN("[InHandModeler][%s]\tFailed to compute Model Transform, please click again!", __func__);
             return;
         }
     }
 }
 
 bool
-InHandModeler::cb_acquire(pacman_vision_comm::acquire::Request& req,
-                                    pacman_vision_comm::acquire::Response& res)
+InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_vision_comm::start_modeler::Response& res)
 {
-    if (!has_transform)
-    {
-        ROS_ERROR("[InHandModeler][%s]\tNo model transform defined, please click and publish a point in rviz"
-                                                                    ,__func__);
+    if (!has_transform){
+        ROS_ERROR("[InHandModeler][%s]\tNo model transform defined, please click and publish a point in rviz", __func__);
         return (false);
     }
-    //TODO
+    //Init ICP
+    icp.setUseReciprocalCorrespondences(true);
+    icp.setMaximumIterations(50);
+    icp.setTransformationEpsilon(1e-4);
+    icp.setEuclideanFitnessEpsilon(1e-4);
+    crd->setMaximumDistance(0.02); //2cm
+    icp.addCorrespondenceRejector(crd);
+    icp.setTransformationEstimation(teDQ);
+    //transform actual scene in model ref frame
+    storage->read_scene_processed(actual_k);
+    if (!actual_m)
+        actual_m.reset(new PC);
+    pcl::transformPointCloud(*actual_k, *actual_m, T_mk);
+    //initialize the model with actual scene
+    if (!model)
+        model.reset(new PC);
+    if (!model_ds)
+        model_ds.reset(new PC);
+    pcl::copyPointCloud(*actual_m, *model);
+    vg.setInputCloud(model);
+    vg.setLeafSize(model_ls, model_ls, model_ls);
+    vg.filter(*model_ds);
+    //start iterations
+    do_iterations = true;
     return (true);
+}
+
+bool
+InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vision_comm::stop_modeler::Response& res)
+{
+    do_iterations = false;
+    //TODO add save model to disk
+    return (true);
+}
+
+void
+InHandModeler::iterate_once()
+{
+    //TODO
 }
 
 void
 InHandModeler::spin_once()
 {
-    //update session dir if it was dynamic reconfigured
-    session_dir = (work_dir.string() + "/Session_" +
-                                            to_simple_string(timestamp) + "/");
-    if (has_transform)
-    {
+    if (has_transform){
         tf::Transform t_km;
         geometry_msgs::Pose pose;
         fromEigen(T_km, pose, t_km);
         std::string sensor_ref_frame;
         this->storage->read_sensor_ref_frame(sensor_ref_frame);
-        tf_table_trans.sendTransform(tf::StampedTransform(t_km,
-                    ros::Time::now(), sensor_ref_frame.c_str(), "turn_table"));
+        tf_broadcaster.sendTransform(tf::StampedTransform(t_km, ros::Time::now(), sensor_ref_frame.c_str(), "in_hand_model_frame"));
     }
+    if (do_iterations)
+        iterate_once();
     //process this module callbacks
     this->queue_ptr->callAvailable(ros::WallDuration(0));
 }
