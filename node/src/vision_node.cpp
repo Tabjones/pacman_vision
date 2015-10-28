@@ -20,8 +20,7 @@ VisionNode::VisionNode() : box_scale(1.0f), rqt_init(true)
     //first call of dynamic reconfigure callback will only set gui
     //to loaded parameters
     //service callback init
-    srv_get_scene = nh.advertiseService("get_scene_processed",
-                                            &VisionNode::cb_get_scene, this);
+    srv_get_scene = nh.advertiseService("get_scene_processed", &VisionNode::cb_get_scene, this);
     pub_scene = nh.advertise<PC> ("scene_processed", 5);
     //init node params
     nh.param<bool>("enable_estimator", en_estimator, false);
@@ -52,8 +51,7 @@ VisionNode::VisionNode() : box_scale(1.0f), rqt_init(true)
     nh.param<bool>("Master_Disable", master_disable, false);
     nh.param<double>("plane_tolerance", plane_tol, 0.004);
     //set callback for dynamic reconfigure
-    this->dyn_srv.setCallback(boost::bind(&VisionNode::cb_reconfigure, this,
-                                                                    _1, _2));
+    this->dyn_srv.setCallback(boost::bind(&VisionNode::cb_reconfigure, this, _1, _2));
     grasp_with_right = true; //TODO tmp, this has to be set via service
 #ifndef PACMAN_VISION_WITH_KINECT2_SUPPORT
     //force use of openni2
@@ -64,39 +62,28 @@ VisionNode::VisionNode() : box_scale(1.0f), rqt_init(true)
 
 //when service to get scene is called
 bool
-VisionNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req,
-                                pacman_vision_comm::get_scene::Response& res)
+VisionNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res)
 {
-    if (!master_disable)
-    {
-        if (this->scene_processed)
-        {
+    if (!master_disable){
+        if (this->scene_processed){
             sensor_msgs::PointCloud2 msg;
-            if (req.save.compare("false") != 0)
-            {
+            if (req.save.compare("false") != 0){
                 std::string home = std::getenv("HOME");
-                pcl::io::savePCDFile( (home + "/" + req.save + ".pcd").c_str(),
-                                                            *scene_processed);
-                ROS_INFO("[PaCMaN Vision][%s] Processed scene saved to %s"
-                        ,__func__, (home + "/" + req.save + ".pcd").c_str());
+                pcl::io::savePCDFile( (home + "/" + req.save + ".pcd").c_str(), *scene_processed);
+                ROS_INFO("[PaCMaN Vision][%s] Processed scene saved to %s", __func__, (home + "/" + req.save + ".pcd").c_str());
             }
             pcl::toROSMsg(*scene_processed, msg);
             res.scene = msg;
-            ROS_INFO("[PaCMaN Vision][%s] Sent processed scene to service response."
-                                                                    ,__func__);
+            ROS_INFO("[PaCMaN Vision][%s] Sent processed scene to service response.", __func__);
             return true;
         }
-        else
-        {
-            ROS_WARN("[PaCMaN Vision][%s] No Processed Scene to send to Service!"
-                                                                    ,__func__);
+        else{
+            ROS_WARN("[PaCMaN Vision][%s] No Processed Scene to send to Service!", __func__);
             return false;
         }
     }
-    else
-    {
-        ROS_WARN("[PaCMaN Vision][%s] Node is globally disabled, renable it!"
-                                                                    ,__func__);
+    else{
+        ROS_WARN("[PaCMaN Vision][%s] Node is globally disabled, renable it!", __func__);
         return false;
     }
 }
@@ -105,8 +92,7 @@ VisionNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req,
 void
 VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
 {
-    if(!master_disable)
-    {
+    if(!master_disable){
         if (!this->scene_processed)
             this->scene_processed.reset( new PC);
         pcl::fromROSMsg (*message, *(this->scene));
@@ -129,13 +115,9 @@ VisionNode::spin_estimator()
     while (this->en_estimator && this->estimator_module)
     {
         if(!plane)
-        {
             ROS_WARN_THROTTLE(30,"[Estimator] Estimator module will not function properly without plane segmentation. Please enable at least plane segmentation for scene processing.");
-        }
         if(downsample && (leaf < 0.001 || leaf > 0.01))
-        {
             ROS_WARN_THROTTLE(30,"[Estimator] Estimator module uses a prebuilt database of poses with its own downsampling leaf size. Database downsampling leaf size is hardcoded at 0.005, thus it is not recommended to use a scene leaf size too far from that value. Current scene leaf size is %g", leaf);
-        }
         //This module actually does nothing directly,
         //it just waits for user to call the service
         this->estimator_module->spin_once();
@@ -156,14 +138,10 @@ VisionNode::spin_tracker()
         if (downsample)
             this->tracker_module->leaf = this->leaf;
         else
-        {
             ROS_WARN_THROTTLE(30, "[Tracker] Tracker module will not function properly without scene downsampling, please enable it.");
-        }
         //spin it
-        if (this->tracker_module->started)
-        {
-            if (this->en_estimator && this->estimator_module)
-            {
+        if (this->tracker_module->started){
+            if (this->en_estimator && this->estimator_module){
                 //Better to temporary disable Estimator while tracker is
                 //tracking so it doesnt mess up with estimated objects
                 //in storage!
@@ -171,8 +149,7 @@ VisionNode::spin_tracker()
             }
             this->tracker_module->track();
             //Save relative object pose to hand
-            if (this->en_listener && this->listener_module)
-            {
+            if (this->en_listener && this->listener_module){
                 //TODO needs to know which hand is grasping
                 //Assume someone tells the tracker which hand is grasping,
                 //via service. (state manager, dual manipulation will do it)
@@ -189,35 +166,25 @@ VisionNode::spin_tracker()
                 //directly.
                 //Also should find a way to read the transform from listener,
                 //instead of listening directly, to save time.
-                if (grasp_with_right)
-                {
-                        listener_module->tf_listener.waitForTransform("/right_hand_palm_link",
-                            tracked.c_str(), ros::Time(0), ros::Duration(2.0));
-                        listener_module->tf_listener.lookupTransform("/right_hand_palm_link",
-                                tracked.c_str(), ros::Time(0), hand_obj_tf);
+                if (grasp_with_right){
+                        listener_module->tf_listener.waitForTransform("/right_hand_palm_link", tracked.c_str(), ros::Time(0), ros::Duration(2.0));
+                        listener_module->tf_listener.lookupTransform("/right_hand_palm_link", tracked.c_str(), ros::Time(0), hand_obj_tf);
                 }
-                else
-                {
-                        listener_module->tf_listener.waitForTransform("/left_hand_palm_link",
-                            tracked.c_str(), ros::Time(0), ros::Duration(2.0));
-                        listener_module->tf_listener.lookupTransform("/left_hand_palm_link",
-                                tracked.c_str(), ros::Time(0), hand_obj_tf);
+                else{
+                        listener_module->tf_listener.waitForTransform("/left_hand_palm_link", tracked.c_str(), ros::Time(0), ros::Duration(2.0));
+                        listener_module->tf_listener.lookupTransform("/left_hand_palm_link", tracked.c_str(), ros::Time(0), hand_obj_tf);
                 }
                 fromTF(hand_obj_tf, *hand_obj, hand_obj_pose);
                 *(tracker_module->hand_obj_trans)= *hand_obj;
             }
         }
-        else if (this->tracker_module->lost_it &&
-                                                !this->tracker_module->started)
-        {
+        else if (this->tracker_module->lost_it && !this->tracker_module->started){
             //The object is lost...  what now!? Lets try to find it
             this->tracker_module->find_object_in_scene();
         }
-        else
-        {
+        else{
             //Tracker is not started
-            if (this->en_estimator && this->estimator_module)
-            {
+            if (this->en_estimator && this->estimator_module){
                 //Re-enable Estimator if it was disabled,
                 //tracker is not tracking anymore
                 this->estimator_module->disabled = false;
@@ -243,23 +210,16 @@ VisionNode::spin_broadcaster()
         broadcaster_module->markers.markers.clear();
 #ifdef PACMAN_VISION_WITH_PEL_SUPPORT
         //Check if we have to publish estimated objects or tracked one
-        if ( (this->en_estimator && this->estimator_module) ||
-                                    (this->tracker_module && this->en_tracker))
-        {
-            if (broadcaster_module->obj_markers || broadcaster_module->obj_tf
-                                            || broadcaster_module->tracker_bb)
+        if ( (this->en_estimator && this->estimator_module) || (this->tracker_module && this->en_tracker))
+            if (broadcaster_module->obj_markers || broadcaster_module->obj_tf || broadcaster_module->tracker_bb)
                 //this takes care of markers and TFs of all pose estimated
                 //objects, plus tracked object and its bounding box
                 broadcaster_module->elaborate_estimated_objects_markers();
-        }
 #endif
-
         //publish Passthrough filter limits as a box
-        if(filter && broadcaster_module->pass_limits)
-        {
+        if(filter && broadcaster_module->pass_limits){
             visualization_msgs::Marker box_marker;
-            if(this->broadcaster_module->create_box_marker(box_marker, *limits))
-            {
+            if(this->broadcaster_module->create_box_marker(box_marker, *limits)){
                 box_marker.color.r = 1.0f;
                 box_marker.color.g = 0.0f;
                 box_marker.color.b = 0.0f;
@@ -277,14 +237,10 @@ VisionNode::spin_broadcaster()
             }
         }
 
-        if(listener_module && en_listener)
-        {
-            if (crop_r_arm && broadcaster_module->arm_boxes)
-            {
-                if (!this->storage->read_right_arm(right_arm))
-                {
-                    right_arm.reset(new std::vector<Eigen::Matrix4f,
-                                    Eigen::aligned_allocator<Eigen::Matrix4f>>);
+        if(listener_module && en_listener){
+            if (crop_r_arm && broadcaster_module->arm_boxes){
+                if (!this->storage->read_right_arm(right_arm)){
+                    right_arm.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>);
                     right_arm->resize(7);
                     for (auto& x: *right_arm)
                         x.setIdentity();
@@ -292,17 +248,13 @@ VisionNode::spin_broadcaster()
                 for (int i=0; i<right_arm->size();++i)
                 {
                     visualization_msgs::Marker box;
-                    create_arm_box_marker(right_arm->at(i), box,
-                                                lwr_arm[i]*box_scale, i, true);
+                    create_arm_box_marker(right_arm->at(i), box, lwr_arm[i]*box_scale, i, true);
                     this->broadcaster_module->markers.markers.push_back(box);
                 }
             }
-            if (crop_l_arm && broadcaster_module->arm_boxes)
-            {
-                if (!this->storage->read_left_arm(left_arm))
-                {
-                    left_arm.reset(new std::vector<Eigen::Matrix4f,
-                                    Eigen::aligned_allocator<Eigen::Matrix4f>>);
+            if (crop_l_arm && broadcaster_module->arm_boxes){
+                if (!this->storage->read_left_arm(left_arm)){
+                    left_arm.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>);
                     left_arm->resize(7);
                     for (auto& x: *left_arm)
                         x.setIdentity();
@@ -310,36 +262,29 @@ VisionNode::spin_broadcaster()
                 for (int i=0; i<left_arm->size();++i)
                 {
                     visualization_msgs::Marker box;
-                    create_arm_box_marker(left_arm->at(i), box,
-                                            lwr_arm[i]*box_scale, i, false);
+                    create_arm_box_marker(left_arm->at(i), box, lwr_arm[i]*box_scale, i, false);
                     this->broadcaster_module->markers.markers.push_back(box);
                 }
             }
-            if (crop_l_hand && broadcaster_module->hand_boxes)
-            {
+            if (crop_l_hand && broadcaster_module->hand_boxes){
                 this->storage->read_left_hand(left_hand);
                 visualization_msgs::Marker box;
-                create_hand_box_marker(*left_hand, box,
-                        hand_left*box_scale, false);
+                create_hand_box_marker(*left_hand, box, hand_left*box_scale, false);
                 this->broadcaster_module->markers.markers.push_back(box);
             }
-            if (crop_r_hand && broadcaster_module->hand_boxes)
-            {
+            if (crop_r_hand && broadcaster_module->hand_boxes){
                 this->storage->read_right_hand(right_hand);
                 visualization_msgs::Marker box;
-                create_hand_box_marker(*right_hand, box,
-                        hand_right*box_scale, false);
+                create_hand_box_marker(*right_hand, box, hand_right*box_scale, false);
                 this->broadcaster_module->markers.markers.push_back(box);
             }
-            if (broadcaster_module->detailed_hand_boxes)
-            {
+            if (broadcaster_module->detailed_hand_boxes){
                 for (size_t i = 0; i<21; ++i)
                 {
                     geometry_msgs::Pose pose;
                     listener_module->listen_detailed_hand_piece(true, i, pose);
                     visualization_msgs::Marker mark;
-                    broadcaster_module->create_box_marker(mark,
-                                                soft_hand_right[i]*box_scale);
+                    broadcaster_module->create_box_marker(mark, soft_hand_right[i]*box_scale);
                     mark.color.r = 1.0f;
                     mark.color.g = 0.0f;
                     mark.color.b = 1.0f;
@@ -350,8 +295,7 @@ VisionNode::spin_broadcaster()
                     this->broadcaster_module->markers.markers.push_back(mark);
                     listener_module->listen_detailed_hand_piece(false, i, pose);
                     visualization_msgs::Marker marker;
-                    broadcaster_module->create_box_marker(marker,
-                                                soft_hand_left[i]*box_scale);
+                    broadcaster_module->create_box_marker(marker, soft_hand_left[i]*box_scale);
                     marker.color.r = 1.0f;
                     marker.color.g = 0.0f;
                     marker.color.b = 1.0f;
@@ -387,8 +331,7 @@ VisionNode::spin_listener()
     //spin until we disable it or it dies somehow
     while (this->en_listener && this->listener_module)
     {
-        if (count_to_table > 10000)
-        {
+        if (count_to_table > 10000){
             //Re-read table, as a precaution, but it should not change
             listener_module->listen_table();
             count_to_table = 0;
@@ -414,7 +357,6 @@ VisionNode::spin_supervoxels()
     {
         if (!this->supervoxels_module->serviced)
             this->supervoxels_module->clustering();
-
         //spin
         this->supervoxels_module->spin_once();
         boost::this_thread::sleep(boost::posix_time::milliseconds(50));
@@ -433,7 +375,8 @@ VisionNode::spin_modeler()
     {
         //spin
         this->modeler_module->spin_once();
-        boost::this_thread::sleep(boost::posix_time::milliseconds(10)); //In hand modeler can try to go at 100Hz a.k.a as fast as possible
+        boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+        //In hand modeler can try to go at 100Hz a.k.a as fast as possible
     }
 //modeler got stopped
 return;
@@ -448,15 +391,13 @@ VisionNode::check_modules()
 #ifdef PACMAN_VISION_WITH_PEL_SUPPORT
     //check if we want estimator module and it is not started,
     //or if it is started but we want it disabled
-    if (this->en_estimator && !this->estimator_module && !master_disable)
-    {
+    if (this->en_estimator && !this->estimator_module && !master_disable){
         ROS_WARN("[PaCMaN Vision] Started Estimator module");
-        this->estimator_module.reset( new Estimator(this->nh, this->storage) );
+        this->estimator_module.reset(new Estimator(this->nh, this->storage));
         //spawn a thread to handle the module spinning
         estimator_driver = boost::thread(&VisionNode::spin_estimator, this);
     }
-    else if (!this->en_estimator && this->estimator_module)
-    {
+    else if (!this->en_estimator && this->estimator_module){
         ROS_WARN("[PaCMaN Vision] Stopped Estimator module");
         //wait for the thread to stop, if not already,
         //if already stopped this results in a no_op
@@ -467,15 +408,13 @@ VisionNode::check_modules()
 
     //check if we want tracker module and it is not started,
     //or if it is started but we want it disabled
-    if (this->en_tracker && !this->tracker_module && !master_disable)
-    {
+    if (this->en_tracker && !this->tracker_module && !master_disable){
         ROS_WARN("[PaCMaN Vision] Started Tracker module");
         this->tracker_module.reset( new Tracker(this->nh, this->storage) );
         //spawn a thread to handle the module spinning
         tracker_driver = boost::thread(&VisionNode::spin_tracker, this);
     }
-    else if (!this->en_tracker && this->tracker_module)
-    {
+    else if (!this->en_tracker && this->tracker_module){
         ROS_WARN("[PaCMaN Vision] Stopped Tracker module");
         //wait for the thread to stop, if not already,
         //if already stopped this results in a no_op
@@ -487,15 +426,13 @@ VisionNode::check_modules()
 
     //check if we want broadcaster module and it is not started,
     //or if it is started but we want it disabled
-    if (this->en_broadcaster && !this->broadcaster_module && !master_disable)
-    {
+    if (this->en_broadcaster && !this->broadcaster_module && !master_disable){
         ROS_WARN("[PaCMaN Vision] Started Broadcaster module");
         this->broadcaster_module.reset( new Broadcaster(this->nh, this->storage) );
         //spawn a thread to handle the module spinning
         broadcaster_driver = boost::thread(&VisionNode::spin_broadcaster, this);
     }
-    else if (!this->en_broadcaster && this->broadcaster_module)
-    {
+    else if (!this->en_broadcaster && this->broadcaster_module){
         ROS_WARN("[PaCMaN Vision] Stopped Broadcaster module");
         //wait for the thread to stop, if not already,
         //if already stopped this results in a no_op
@@ -506,15 +443,13 @@ VisionNode::check_modules()
 
     //check if we want listener module and it is not started,
     //or if it is started but we want it disabled
-    if (this->en_listener && !this->listener_module && !master_disable)
-    {
+    if (this->en_listener && !this->listener_module && !master_disable){
         ROS_WARN("[PaCMaN Vision] Started Vito Listener module");
         this->listener_module.reset( new Listener(this->nh, this->storage) );
         //spawn a thread to handle the module spinning
         listener_driver = boost::thread(&VisionNode::spin_listener, this);
     }
-    else if (!this->en_listener && this->listener_module)
-    {
+    else if (!this->en_listener && this->listener_module){
         ROS_WARN("[PaCMaN Vision] Stopped Vito Listener module");
         //wait for the thread to stop, if not already,
         //if already stopped this results in a no_op
@@ -525,15 +460,13 @@ VisionNode::check_modules()
 
     //check if we want supervoxels module and it is not started,
     //or if it is started but we want it disabled
-    if (this->en_supervoxels && !this->supervoxels_module && !master_disable)
-    {
+    if (this->en_supervoxels && !this->supervoxels_module && !master_disable){
         ROS_WARN("[PaCMaN Vision] Started Supervoxels module");
         this->supervoxels_module.reset( new Supervoxels(this->nh, this->storage) );
         //spawn a thread to handle the module spinning
         supervoxels_driver = boost::thread(&VisionNode::spin_supervoxels, this);
     }
-    else if (!this->en_supervoxels && this->supervoxels_module)
-    {
+    else if (!this->en_supervoxels && this->supervoxels_module){
         ROS_WARN("[PaCMaN Vision] Stopped Supervoxels module");
         //wait for the thread to stop, if not already,
         //if already stopped this results in a no_op
@@ -543,15 +476,13 @@ VisionNode::check_modules()
     }
 
     //check if we want in hand modeler module and it is not started, or if it is started but we want it disabled
-    if (this->en_modeler && !this->modeler_module && !master_disable)
-    {
+    if (this->en_modeler && !this->modeler_module && !master_disable){
         ROS_WARN("[PaCMaN Vision] Started In Hand Modeler module");
-        this->modeler_module.reset( new InHandModeler(this->nh, this->storage) );
+        this->modeler_module.reset(new InHandModeler(this->nh, this->storage));
         //spawn a thread to handle the module spinning
         modeler_driver = boost::thread(&VisionNode::spin_modeler, this);
     }
-    else if (!this->en_modeler && this->modeler_module)
-    {
+    else if (!this->en_modeler && this->modeler_module){
         ROS_WARN("[PaCMaN Vision] Stopped In Hand Modeler module");
         //wait for the thread to stop, if not already, if already stopped this results in a no_op
         modeler_driver.join();
@@ -563,11 +494,9 @@ VisionNode::check_modules()
 void
 VisionNode::check_sensor()
 {
-    if (sensor.type == 1)
-    {
+    if (sensor.type == 1){
         //Use external kinect2 bridge
-        if (sensor.needs_update)
-        {
+        if (sensor.needs_update){
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
             std::string topic;
             if (sensor.resolution == 2)
@@ -581,8 +510,7 @@ VisionNode::check_sensor()
             sensor.ref_frame = "/kinect2_rgb_optical_frame";
             this->storage->write_sensor_ref_frame(sensor.ref_frame);
             sub_kinect = nh.subscribe(topic, 5, &VisionNode::cb_kinect, this);
-            if (this->kinect2->started || this->kinect2->initialized)
-            {
+            if (this->kinect2->started || this->kinect2->initialized){
                 kinect2->stop();
                 kinect2->close();
             }
@@ -590,11 +518,9 @@ VisionNode::check_sensor()
             sensor.needs_update = false;
         }
     }
-    else if (sensor.type == 2)
-    {
+    else if (sensor.type == 2){
         //use external openni2
-        if (sensor.needs_update)
-        {
+        if (sensor.needs_update){
             std::string topic;
             topic = nh.resolveName("/camera/depth_registered/points");
             sensor.ref_frame = "/camera_rgb_optical_frame";
@@ -602,19 +528,16 @@ VisionNode::check_sensor()
             sub_kinect = nh.subscribe(topic, 5, &VisionNode::cb_kinect, this);
             sensor.needs_update = false;
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
-            if (this->kinect2->started || this->kinect2->initialized)
-            {
+            if (this->kinect2->started || this->kinect2->initialized){
                 kinect2->stop();
                 kinect2->close();
             }
 #endif
         }
     }
-    else
-    {
+    else{
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
-        if (sensor.needs_update)
-        {
+        if (sensor.needs_update){
             sensor.ref_frame = "/kinect2_reference_frame";
             this->storage->write_sensor_ref_frame(sensor.ref_frame);
         }
@@ -627,8 +550,7 @@ VisionNode::check_sensor()
 void
 VisionNode::spin_once()
 {
-    if(master_disable)
-    {
+    if(master_disable){
         sub_kinect.shutdown();
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
         if (kinect2->started)
@@ -638,12 +560,10 @@ VisionNode::spin_once()
 #endif
         sensor.needs_update = true;
     }
-    else
-    {
+    else{
         this->check_sensor();
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
-        if (sensor.type == 0)
-        {
+        if (sensor.type == 0){
             if (!kinect2->initialized)
                 kinect2->initDevice();
             if (!kinect2->started)
@@ -656,9 +576,7 @@ VisionNode::spin_once()
             tf::Quaternion q_zero;
             q_zero.setRPY(0,0,0);
             tf::Transform t_zero(q_zero, v_t);
-            this->tf_sensor_ref_frame_brcaster.sendTransform(
-                                tf::StampedTransform(t_zero, ros::Time::now(),
-                                "/kinect2_anchor", sensor.ref_frame.c_str()));
+            this->tf_sensor_ref_frame_brcaster.sendTransform(tf::StampedTransform(t_zero, ros::Time::now(), "/kinect2_anchor", sensor.ref_frame.c_str()));
             pcl_conversions::toPCL(ros::Time::now(), this->scene->header.stamp);
             this->scene->header.frame_id = sensor.ref_frame;
             this->scene->header.seq = 0;
@@ -674,32 +592,26 @@ VisionNode::spin_once()
 
 //dynamic reconfigure callback
 void
-VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
-                                                                uint32_t level)
+VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t level)
 {
     //initial gui init based on params (just do it once)
-    if (rqt_init)
-    {
+    if (rqt_init){
 #ifdef PACMAN_VISION_WITH_PEL_SUPPORT
         config.enable_estimator = en_estimator;
         config.enable_tracker= en_tracker;
         //estimator
-        nh.getParam("object_calibration",
-                            config.groups.estimator_module.object_calibration);
+        nh.getParam("object_calibration", config.groups.estimator_module.object_calibration);
         nh.getParam("iterations", config.groups.estimator_module.iterations);
         nh.getParam("neighbors", config.groups.estimator_module.neighbors);
         nh.getParam("cluster_tol", config.groups.estimator_module.cluster_tol);
         //tracker
         config.groups.tracker_module.tracker_disturbance = false;
         nh.setParam("tracker_disturbance", false);
-        nh.getParam("estimation_type",
-                                config.groups.tracker_module.estimation_type);
+        nh.getParam("estimation_type", config.groups.tracker_module.estimation_type);
         //broadcaster specific
         nh.getParam("publish_tf", config.groups.broadcaster_module.publish_tf);
-        nh.getParam("estimated_objects",
-                            config.groups.broadcaster_module.estimated_objects);
-        nh.getParam("tracker_bounding_box",
-                        config.groups.broadcaster_module.tracker_bounding_box);
+        nh.getParam("estimated_objects", config.groups.broadcaster_module.estimated_objects);
+        nh.getParam("tracker_bounding_box", config.groups.broadcaster_module.tracker_bounding_box);
 #endif
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
         config.external_kinect2_resolution = sensor.resolution;
@@ -723,49 +635,30 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
         config.groups.base_node_filters.pass_zmax = limits->z2;
         config.groups.base_node_filters.pass_zmin = limits->z1;
         //listener
-        nh.getParam("crop_right_arm",
-                                config.groups.listener_module.crop_right_arm);
-        nh.getParam("crop_left_arm",
-                                config.groups.listener_module.crop_left_arm);
-        nh.getParam("crop_right_hand",
-                                config.groups.listener_module.crop_right_hand);
-        nh.getParam("crop_left_hand",
-                                config.groups.listener_module.crop_left_hand);
-        nh.getParam("detailed_hand_crop",
-                            config.groups.listener_module.detailed_hand_crop);
-        nh.getParam("use_table_transform",
-                            config.groups.listener_module.use_table_transform);
-        nh.getParam("geometry_scale",
-                                config.groups.listener_module.geometry_scale);
+        nh.getParam("crop_right_arm", config.groups.listener_module.crop_right_arm);
+        nh.getParam("crop_left_arm", config.groups.listener_module.crop_left_arm);
+        nh.getParam("crop_right_hand", config.groups.listener_module.crop_right_hand);
+        nh.getParam("crop_left_hand", config.groups.listener_module.crop_left_hand);
+        nh.getParam("detailed_hand_crop", config.groups.listener_module.detailed_hand_crop);
+        nh.getParam("use_table_transform", config.groups.listener_module.use_table_transform);
+        nh.getParam("geometry_scale", config.groups.listener_module.geometry_scale);
         //broadcaster
-        nh.getParam("passthrough_limits",
-                        config.groups.broadcaster_module.passthrough_limits);
+        nh.getParam("passthrough_limits", config.groups.broadcaster_module.passthrough_limits);
         nh.getParam("arm_boxes", config.groups.broadcaster_module.arm_boxes);
-        nh.getParam("sensor_fake_calibration",
-                    config.groups.broadcaster_module.sensor_fake_calibration);
+        nh.getParam("sensor_fake_calibration", config.groups.broadcaster_module.sensor_fake_calibration);
         nh.getParam("hand_boxes", config.groups.broadcaster_module.hand_boxes);
-        nh.getParam("detailed_hand_boxes", config.groups.broadcaster_module.
-                                                        detailed_hand_boxes);
+        nh.getParam("detailed_hand_boxes", config.groups.broadcaster_module.detailed_hand_boxes);
         //Supervoxels
-        nh.getParam("use_service",
-                                config.groups.supervoxels_module.use_service);
-        nh.getParam("voxel_resolution",
-                            config.groups.supervoxels_module.voxel_resolution);
-        nh.getParam("seed_resolution",
-                            config.groups.supervoxels_module.seed_resolution);
-        nh.getParam("color_importance",
-                            config.groups.supervoxels_module.color_importance);
-        nh.getParam("spatial_importance",
-                        config.groups.supervoxels_module.spatial_importance);
-        nh.getParam("normal_importance",
-                        config.groups.supervoxels_module.normal_importance);
-        nh.getParam("refinement_iterations",
-                    config.groups.supervoxels_module.refinement_iterations);
-        nh.getParam("normals_search_radius",
-                    config.groups.supervoxels_module.normals_search_radius);
+        nh.getParam("use_service", config.groups.supervoxels_module.use_service);
+        nh.getParam("voxel_resolution", config.groups.supervoxels_module.voxel_resolution);
+        nh.getParam("seed_resolution", config.groups.supervoxels_module.seed_resolution);
+        nh.getParam("color_importance", config.groups.supervoxels_module.color_importance);
+        nh.getParam("spatial_importance", config.groups.supervoxels_module.spatial_importance);
+        nh.getParam("normal_importance", config.groups.supervoxels_module.normal_importance);
+        nh.getParam("refinement_iterations", config.groups.supervoxels_module.refinement_iterations);
+        nh.getParam("normals_search_radius", config.groups.supervoxels_module.normals_search_radius);
         //In Hand Modeler
-        nh.getParam("ignore_clicked_point",
-                        config.groups.in_hand_modeler_module.ignore_clicked_point);
+        nh.getParam("ignore_clicked_point", config.groups.in_hand_modeler_module.ignore_clicked_point);
         nh.getParam("work_dir", config.groups.in_hand_modeler_module.work_dir);
         //Finish gui initialization
         this->rqt_init = false;
@@ -778,28 +671,18 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
     this->en_estimator    = config.enable_estimator;
     this->en_tracker      = config.enable_tracker;
     //Estimator Module
-    if (this->estimator_module && this->en_estimator)
-    {
-        this->estimator_module->calibration =
-                            config.groups.estimator_module.object_calibration;
-        this->estimator_module->iterations =
-                                    config.groups.estimator_module.iterations;
-        this->estimator_module->neighbors =
-                                    config.groups.estimator_module.neighbors;
-        this->estimator_module->clus_tol =
-                                    config.groups.estimator_module.cluster_tol;
-        this->estimator_module->pe.setParam("lists_size",
-                                                estimator_module->neighbors);
-        this->estimator_module->pe.setStepIterations(
-                                                estimator_module->iterations);
+    if (this->estimator_module && this->en_estimator){
+        this->estimator_module->calibration = config.groups.estimator_module.object_calibration;
+        this->estimator_module->iterations = config.groups.estimator_module.iterations;
+        this->estimator_module->neighbors = config.groups.estimator_module.neighbors;
+        this->estimator_module->clus_tol = config.groups.estimator_module.cluster_tol;
+        this->estimator_module->pe.setParam("lists_size", estimator_module->neighbors);
+        this->estimator_module->pe.setStepIterations(estimator_module->iterations);
     }
     //Tracker Module
-    if (this->tracker_module && this->en_tracker)
-    {
-        this->tracker_module->type =
-                                config.groups.tracker_module.estimation_type;
-        if (config.groups.tracker_module.tracker_disturbance)
-        {
+    if (this->tracker_module && this->en_tracker){
+        this->tracker_module->type = config.groups.tracker_module.estimation_type;
+        if (config.groups.tracker_module.tracker_disturbance){
             tracker_module->manual_disturbance = true;
             config.groups.tracker_module.tracker_disturbance = false;
         }
@@ -811,25 +694,21 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
     this->en_modeler      = config.enable_modeler;
     //Global Node Disable
     this->master_disable = config.Master_Disable;
-    if (this->master_disable)
-    {
+    if (this->master_disable){
         //Force disable of all modules
 #ifdef PACMAN_VISION_WITH_PEL_SUPPORT
         config.enable_estimator = config.enable_tracker = false;
         en_estimator = en_tracker = false;
 #endif
-        config.enable_listener = config.enable_broadcaster =
-                    config.enable_supervoxels = config.enable_modeler = false;
+        config.enable_listener = config.enable_broadcaster = config.enable_supervoxels = config.enable_modeler = false;
         en_broadcaster = en_listener = en_supervoxels = en_modeler = false;
     }
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
-    if (sensor.resolution != config.external_kinect2_resolution)
-    {
+    if (sensor.resolution != config.external_kinect2_resolution){
         sensor.resolution = config.external_kinect2_resolution;
         this->sensor.needs_update = true;
     }
-    if (sensor.type != config.sensor_type)
-    {
+    if (sensor.type != config.sensor_type){
         sensor.type = config.sensor_type;
         this->sensor.needs_update = true;
     }
@@ -848,16 +727,13 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
     this->limits->z2 = config.groups.base_node_filters.pass_zmax;
     this->limits->z1 = config.groups.base_node_filters.pass_zmin;
     //Listener Module
-    if (this->listener_module && this->en_listener)
-    {
+    if (this->listener_module && this->en_listener){
         this->crop_r_arm = config.groups.listener_module.crop_right_arm;
         this->crop_l_arm = config.groups.listener_module.crop_left_arm;
         this->crop_r_hand = config.groups.listener_module.crop_right_hand;
         this->crop_l_hand = config.groups.listener_module.crop_left_hand;
-        this->detailed_hand_crop =
-                            config.groups.listener_module.detailed_hand_crop;
-        this->box_scale = listener_module->box_scale =
-                                config.groups.listener_module.geometry_scale;
+        this->detailed_hand_crop = config.groups.listener_module.detailed_hand_crop;
+        this->box_scale = listener_module->box_scale = config.groups.listener_module.geometry_scale;
         this->use_table_trans = config.groups.listener_module.use_table_transform;
         this->listener_module->listen_left_arm = this->crop_l_arm;
         this->listener_module->listen_right_arm = this->crop_r_arm;
@@ -865,50 +741,31 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
         this->listener_module->listen_right_hand = this->crop_r_hand;
     }
     //Broadcaster Module
-    if (this->broadcaster_module && this->en_broadcaster)
-    {
+    if (this->broadcaster_module && this->en_broadcaster){
 #ifdef PACMAN_VISION_WITH_PEL_SUPPORT
-        this->broadcaster_module->obj_tf =
-                                config.groups.broadcaster_module.publish_tf;
-        this->broadcaster_module->obj_markers =
-                            config.groups.broadcaster_module.estimated_objects;
-        this->broadcaster_module->tracker_bb =
-                        config.groups.broadcaster_module.tracker_bounding_box;
+        this->broadcaster_module->obj_tf = config.groups.broadcaster_module.publish_tf;
+        this->broadcaster_module->obj_markers = config.groups.broadcaster_module.estimated_objects;
+        this->broadcaster_module->tracker_bb = config.groups.broadcaster_module.tracker_bounding_box;
 #endif
-        this->broadcaster_module->pass_limits =
-                            config.groups.broadcaster_module.passthrough_limits;
-        this->broadcaster_module->arm_boxes =
-                                    config.groups.broadcaster_module.arm_boxes;
-        this->broadcaster_module->sensor_fake_calibration =
-                    config.groups.broadcaster_module.sensor_fake_calibration;
-        this->broadcaster_module->hand_boxes =
-                                    config.groups.broadcaster_module.hand_boxes;
-        this->broadcaster_module->detailed_hand_boxes =
-                        config.groups.broadcaster_module.detailed_hand_boxes;
+        this->broadcaster_module->pass_limits = config.groups.broadcaster_module.passthrough_limits;
+        this->broadcaster_module->arm_boxes = config.groups.broadcaster_module.arm_boxes;
+        this->broadcaster_module->sensor_fake_calibration = config.groups.broadcaster_module.sensor_fake_calibration;
+        this->broadcaster_module->hand_boxes = config.groups.broadcaster_module.hand_boxes;
+        this->broadcaster_module->detailed_hand_boxes = config.groups.broadcaster_module.detailed_hand_boxes;
     }
     //Supervoxels Module
-    if (this->supervoxels_module && this->en_supervoxels)
-    {
-        this->supervoxels_module->serviced =
-                                config.groups.supervoxels_module.use_service;
-        this->supervoxels_module->voxel_res =
-                            config.groups.supervoxels_module.voxel_resolution;
-        this->supervoxels_module->seed_res =
-                            config.groups.supervoxels_module.seed_resolution;
-        this->supervoxels_module->color_imp =
-                            config.groups.supervoxels_module.color_importance;
-        this->supervoxels_module->spatial_imp =
-                        config.groups.supervoxels_module.spatial_importance;
-        this->supervoxels_module->normal_imp =
-                            config.groups.supervoxels_module.normal_importance;
-        this->supervoxels_module->num_iterations =
-                        config.groups.supervoxels_module.refinement_iterations;
-        this->supervoxels_module->normal_radius =
-                        config.groups.supervoxels_module.normals_search_radius;
+    if (this->supervoxels_module && this->en_supervoxels){
+        this->supervoxels_module->serviced = config.groups.supervoxels_module.use_service;
+        this->supervoxels_module->voxel_res = config.groups.supervoxels_module.voxel_resolution;
+        this->supervoxels_module->seed_res = config.groups.supervoxels_module.seed_resolution;
+        this->supervoxels_module->color_imp = config.groups.supervoxels_module.color_importance;
+        this->supervoxels_module->spatial_imp = config.groups.supervoxels_module.spatial_importance;
+        this->supervoxels_module->normal_imp = config.groups.supervoxels_module.normal_importance;
+        this->supervoxels_module->num_iterations = config.groups.supervoxels_module.refinement_iterations;
+        this->supervoxels_module->normal_radius = config.groups.supervoxels_module.normals_search_radius;
     }
     //In Hand Modeler Module
-    if (this->modeler_module && this->en_modeler)
-    {
+    if (this->modeler_module && this->en_modeler){
         this->modeler_module->work_dir  = config.groups.in_hand_modeler_module.work_dir;
         this->modeler_module->ignore_clicked_point = config.groups.in_hand_modeler_module.ignore_clicked_point;
     }
@@ -917,8 +774,8 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config,
 
 void VisionNode::shutdown()
 {
-    en_tracker = en_broadcaster = en_estimator = en_listener =
-                                        en_supervoxels = en_modeler = false;
+    en_tracker = en_broadcaster = en_estimator = en_listener = false;
+    en_supervoxels = en_modeler = false;
     this->check_modules();
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
     this->kinect2->close();
