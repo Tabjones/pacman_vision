@@ -50,13 +50,11 @@ class Estimator
         //Service Server
         ros::ServiceServer srv_estimate;
         //estimated transforms
-        boost::shared_ptr<std::vector<Eigen::Matrix4f,
-            Eigen::aligned_allocator<Eigen::Matrix4f> > > estimations;
+        boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> estimations;
         //object clusters found on scene
-        boost::shared_ptr<std::vector<PXC> > clusters;
+        boost::shared_ptr<std::vector<PXC>> clusters;
         //naming and id-ing of estimated objects
-        boost::shared_ptr<std::vector<std::pair<std::string,
-            std::string>>> names; //name/id pairs
+        boost::shared_ptr<std::vector<std::pair<std::string,std::string>>> names; //name/id pairs
         //actual scene
         PXC::Ptr scene;
         //path to pel database
@@ -81,8 +79,7 @@ class Estimator
         estimate();
         //estimate service callback
         bool
-        cb_estimate(pacman_vision_comm::estimate::Request& req,
-                                pacman_vision_comm::estimate::Response& res);
+        cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res);
 
         //custom spin method
         void

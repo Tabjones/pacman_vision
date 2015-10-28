@@ -61,7 +61,6 @@ class Supervoxels
 
     //clusterize service callback
     bool
-    cb_clusterize(pacman_vision_comm::clusterize::Request& req,
-                                pacman_vision_comm::clusterize::Response& res);
+    cb_clusterize(pacman_vision_comm::clusterize::Request& req, pacman_vision_comm::clusterize::Response& res);
 };
 #endif

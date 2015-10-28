@@ -38,41 +38,31 @@ class Storage
         bool
         write_obj_clusters (boost::shared_ptr<std::vector<PXC> > &objs);
         bool
-        read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f,
-                        Eigen::aligned_allocator<Eigen::Matrix4f>>> &trans);
+        read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> &trans);
         bool
-        write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f,
-                        Eigen::aligned_allocator<Eigen::Matrix4f>>> &trans);
+        write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> &trans);
         bool
-        read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string,
-                                                            std::string>>> &n);
+        read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string>>> &n);
         bool
-        write_obj_names (boost::shared_ptr<std::vector<std::pair<std::string,
-                                                            std::string>>> &n);
+        write_obj_names (boost::shared_ptr<std::vector<std::pair<std::string, std::string>>> &n);
         //Search for a specific object name and return its index
         bool
         search_obj_name (std::string n, int &idx);
         //Read and object transform by its index
         bool
-        read_obj_transform_by_index (int idx,
-                                    boost::shared_ptr<Eigen::Matrix4f> &trans);
+        read_obj_transform_by_index (int idx, boost::shared_ptr<Eigen::Matrix4f> &trans);
         //Write and object transform to the specified index
         bool
-        write_obj_transform_by_index (int idx,
-                                    boost::shared_ptr<Eigen::Matrix4f> &trans);
+        write_obj_transform_by_index (int idx, boost::shared_ptr<Eigen::Matrix4f> &trans);
         //Read and write arms/hands/table transforms
         bool
-        read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,
-                            Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm);
+        read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm);
         bool
-        write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,
-                            Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm);
+        write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm);
         bool
-        read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,
-                            Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm);
+        read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm);
         bool
-        write_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,
-                            Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm);
+        write_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm);
         void
         read_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand);
         bool
@@ -96,11 +86,9 @@ class Storage
         bool
         write_tracked_box(boost::shared_ptr<Box> &b);
         bool
-        read_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t,
-                                            pcl::Supervoxel<PT>::Ptr>>  &clus);
+        read_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr>>  &clus);
         bool
-        write_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t,
-                                            pcl::Supervoxel<PT>::Ptr>>  &clus);
+        write_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr>>  &clus);
     private:
         //untouched scene from kinect
         PC::Ptr scene;
@@ -118,8 +106,7 @@ class Storage
         std::vector<PXC> clusters;
         boost::mutex mtx_clusters;
         //Estimated transform from estimator
-        std::vector<Eigen::Matrix4f,
-                        Eigen::aligned_allocator<Eigen::Matrix4f>> estimations;
+        std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> estimations;
         boost::mutex mtx_estimations;
         //naming and id-ing of estimated objects from estimator
         std::vector<std::pair<std::string, std::string>> names; //name,ID
@@ -134,12 +121,10 @@ class Storage
         Box bbox;
         boost::mutex mtx_bbox;
         //Vito Left arm transforms
-        std::vector<Eigen::Matrix4f,
-                        Eigen::aligned_allocator<Eigen::Matrix4f>> left_arm;
+        std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> left_arm;
         boost::mutex mtx_left_arm;
         //Vito Right arm transforms
-        std::vector<Eigen::Matrix4f,
-                        Eigen::aligned_allocator<Eigen::Matrix4f>> right_arm;
+        std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> right_arm;
         boost::mutex mtx_right_arm;
         //Vito Left hand transform
         Eigen::Matrix4f left_hand;

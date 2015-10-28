@@ -163,8 +163,7 @@ class VisionNode
 
         //Service callback for srv_get_scene
         bool
-        cb_get_scene(pacman_vision_comm::get_scene::Request& req,
-                                pacman_vision_comm::get_scene::Response& res);
+        cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
         //Message callback, for sub_kinect
         void
         cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message);
@@ -179,8 +178,7 @@ class VisionNode
         dynamic_reconfigure::Server<pacman_vision::pacman_visionConfig> dyn_srv;
         //Callback
         void
-        cb_reconfigure(pacman_vision::pacman_visionConfig &config,
-                                                            uint32_t level);
+        cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t level);
 
         //method to enable/disable modules
         void
@@ -198,11 +196,9 @@ class VisionNode
         process_scene();
         //Create a box marker
         void
-        create_arm_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker
-                            &marker, const Box lim, int i, bool right=true);
+        create_arm_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, const Box lim, int i, bool right=true);
         void
-        create_hand_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker
-                            &marker, const Box lim, bool right=true);
+        create_hand_box_marker(Eigen::Matrix4f& t, visualization_msgs::Marker &marker, const Box lim, bool right=true);
         //Crop out a vito arm
         void
         crop_arm(PC::Ptr source, PC::Ptr& dest, bool right=true);

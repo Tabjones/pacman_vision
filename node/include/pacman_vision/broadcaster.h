@@ -26,20 +26,18 @@ class Broadcaster
         boost::shared_ptr<ros::CallbackQueue> queue_ptr;
         boost::shared_ptr<Storage> storage;
 
-        //bools to control what to broadcast
+        //Control what to broadcast
         bool obj_tf, obj_markers, pass_limits, tracker_bb, arm_boxes;
         bool sensor_fake_calibration, hand_boxes, detailed_hand_boxes;
 
         //what to broadcast from estimator results and/or tracker
         /////////////////////////////////////////////////////////
         //eigen transforms
-        boost::shared_ptr<std::vector<Eigen::Matrix4f,
-            Eigen::aligned_allocator<Eigen::Matrix4f> > > estimated;
+        boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> estimated;
         //tf transforms
         std::vector<tf::Transform> transforms;
         //naming and id-ing of estimator objects
-        boost::shared_ptr<std::vector<std::pair<std::string,
-            std::string>>> names; //names/id
+        boost::shared_ptr<std::vector<std::pair<std::string, std::string>>> names; //names/id
 
         // ALL rviz markers to publish
         visualization_msgs::MarkerArray markers;
