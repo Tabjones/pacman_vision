@@ -9,10 +9,8 @@ Supervoxels::Supervoxels(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
     this->scene.reset(new PC);
     this->clustered_scene.reset(new PC);
     this->clusters.reset(new std::map<uint32_t, pcl::Supervoxel<PT>::Ptr>);
-    this->pub_clusterized_scene = this->nh.advertise<PC>("supervoxelled_scene",
-                                                                            2);
-    srv_clusterize = nh.advertiseService("clusterize_scene",
-                                            &Supervoxels::cb_clusterize, this);
+    this->pub_clusterized_scene = this->nh.advertise<PC>("supervoxelled_scene", 2);
+    srv_clusterize = nh.advertiseService("clusterize_scene", &Supervoxels::cb_clusterize, this);
     //Params
     nh.param<bool>("/pacman_vision/use_service", serviced, false);
     nh.param<double>("/pacman_vision/voxel_resolution", voxel_res, 0.02);
@@ -20,8 +18,7 @@ Supervoxels::Supervoxels(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
     nh.param<double>("/pacman_vision/color_importance",color_imp, 0.3333);
     nh.param<double>("/pacman_vision/normal_importance", normal_imp, 0.3333);
     nh.param<double>("/pacman_vision/spatial_importance", spatial_imp ,0.3333);
-    nh.param<double>("/pacman_vision/normals_search_radius", normal_radius,
-                                                                        0.015);
+    nh.param<double>("/pacman_vision/normals_search_radius", normal_radius, 0.015);
     nh.param<int>("/pacman_vision/refinement_iterations", num_iterations ,2);
 }
 
@@ -57,8 +54,7 @@ Supervoxels::clustering()
     //get clusters
     svc.extract(*clusters);
     svc.refineSupervoxels(num_iterations, *clusters);
-    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr output_cloud
-                                    (new pcl::PointCloud<pcl::PointXYZRGBA>);
+    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZRGBA>);
     output_cloud = svc.getColoredCloud();
     /*
      * This outputs cloud with the voxelgrid of the method (voxel_res),
@@ -72,10 +68,9 @@ Supervoxels::clustering()
 }
 
 bool
-Supervoxels::cb_clusterize(pacman_vision_comm::clusterize::Request& req,
-                                pacman_vision_comm::clusterize::Response& res)
+Supervoxels::cb_clusterize(pacman_vision_comm::clusterize::Request& req,pacman_vision_comm::clusterize::Response& res)
 {
-    if ( clustering() )
+    if (clustering())
         return true;
     else
         return false;

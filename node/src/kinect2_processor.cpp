@@ -1,8 +1,6 @@
 #include <pacman_vision/kinect2_processor.h>
 
-Kinect2Processor::Kinect2Processor () : device(0), packetPipeline(0),
-        registration(0), listener_color(0), listener_depth(0), started(false),
-                                                            initialized(false)
+Kinect2Processor::Kinect2Processor () : device(0), packetPipeline(0), registration(0), listener_color(0), listener_depth(0), started(false), initialized(false)
 {
     undistorted = new libfreenect2::Frame(512, 424, 4);
     registered = new libfreenect2::Frame(512, 424, 4);
@@ -11,8 +9,7 @@ Kinect2Processor::Kinect2Processor () : device(0), packetPipeline(0),
 bool
 Kinect2Processor::initDevice ()
 {
-    if (freenect2.enumerateDevices() <= 0)
-    {
+    if (freenect2.enumerateDevices() <= 0){
         ROS_ERROR("[Kinect2] No Kinect2 devices found");
         return (false);
     }
@@ -30,18 +27,14 @@ Kinect2Processor::initDevice ()
 
     //Open kinect2
     device = freenect2.openDevice(serial, packetPipeline);
-    if (device == 0)
-    {
-        ROS_ERROR("[Kinect2] Failed to open Kinect2 with serial %s",
-                                                            serial.c_str());
+    if (device == 0){
+        ROS_ERROR("[Kinect2] Failed to open Kinect2 with serial %s", serial.c_str());
         return (false);
     }
 
     //create the listener
-    listener_depth = new libfreenect2::SyncMultiFrameListener(
-                        libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
-    listener_color = new libfreenect2::SyncMultiFrameListener(
-                                                libfreenect2::Frame::Color);
+    listener_depth = new libfreenect2::SyncMultiFrameListener(libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
+    listener_color = new libfreenect2::SyncMultiFrameListener(libfreenect2::Frame::Color);
     //and set them
     device->setColorFrameListener(listener_color);
     device->setIrAndDepthFrameListener(listener_depth);
@@ -84,7 +77,5 @@ Kinect2Processor::computePointCloud(PC::Ptr& out_cloud)
     out_cloud->points.resize(out_cloud->width * out_cloud->height);
     for (int r=0; r<out_cloud->height; ++r)
         for (int c=0; c<out_cloud->width; ++c)
-            registration->getPointXYZRGB(undistorted, registered, r,c,
-                    out_cloud->points[512*r+c].x, out_cloud->points[512*r+c].y,
-                out_cloud->points[512*r+c].z, out_cloud->points[512*r+c].rgb);
+            registration->getPointXYZRGB(undistorted, registered, r,c, out_cloud->points[512*r+c].x, out_cloud->points[512*r+c].y, out_cloud->points[512*r+c].z, out_cloud->points[512*r+c].rgb);
 }

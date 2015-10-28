@@ -16,10 +16,8 @@ Broadcaster::Broadcaster(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
     nh.param<bool>("/pacman_vision/arm_boxes", arm_boxes, false);
     nh.param<bool>("/pacman_vision/hand_boxes", hand_boxes, false);
     nh.param<bool>("/pacman_vision/detailed_hand_boxes", detailed_hand_boxes, false);
-    nh.param<bool>("/pacman_vision/sensor_fake_calibration",
-                                            sensor_fake_calibration, false);
-    rviz_markers_pub = nh.advertise<visualization_msgs::MarkerArray>
-                                                    ("broadcasted_markers", 1);
+    nh.param<bool>("/pacman_vision/sensor_fake_calibration", sensor_fake_calibration, false);
+    rviz_markers_pub = nh.advertise<visualization_msgs::MarkerArray>("broadcasted_markers", 1);
 }
 
 Broadcaster::~Broadcaster()
@@ -30,9 +28,7 @@ Broadcaster::~Broadcaster()
 void
 Broadcaster::elaborate_estimated_objects_markers()
 {
-    if (!this->storage->read_obj_transforms(estimated) ||
-                                        !this->storage->read_obj_names(names))
-    {
+    if (!this->storage->read_obj_transforms(estimated) || !this->storage->read_obj_names(names)){
         return;
     }
     int size = estimated->size();
@@ -50,35 +46,31 @@ Broadcaster::elaborate_estimated_objects_markers()
         marker.header.frame_id = sensor_ref_frame.c_str();
         marker.header.stamp = ros::Time();
         marker.ns=names->at(i).second.c_str();
-        if (names->at(i).second.compare(names->at(i).first) != 0)
-        {
+        if (names->at(i).second.compare(names->at(i).first) != 0){
             std::vector<std::string> vst;
-            boost::split(vst, names->at(i).first, boost::is_any_of("_"),
-                                                    boost::token_compress_on);
+            boost::split(vst, names->at(i).first, boost::is_any_of("_"), boost::token_compress_on);
             int id = std::stoi(vst.at(vst.size()-1));
             marker.id = id;
         }
-        else
+        else{
             marker.id = 1;
+        }
         marker.scale.x=1;
         marker.scale.y=1;
         marker.scale.z=1;
         marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-        std::string mesh_path ("package://asus_scanner_models/" +
-                    names->at(i).second + "/" + names->at(i).second + ".stl");
+        std::string mesh_path ("package://asus_scanner_models/" + names->at(i).second + "/" + names->at(i).second + ".stl");
         marker.mesh_resource = mesh_path.c_str();
         marker.action = visualization_msgs::Marker::ADD;
         marker.pose = pose;
         marker.lifetime = ros::Duration(1);
-        if (index >=0 && index == i)
-        {
+        if (index >=0 && index == i){
             //We are Tracking the i-th object, color it red
             marker.color.r = 1.0f;
             marker.color.g = 0.0f;
             marker.color.b = 0.3f;
             marker.color.a = 1.0f;
-            if(tracker_bb)
-            {
+            if(tracker_bb){
                 //publish also bounding box of tracked object
                 //We need to create it first
                 visualization_msgs::Marker box_marker;
@@ -94,8 +86,7 @@ Broadcaster::elaborate_estimated_objects_markers()
                 this->markers.markers.push_back(box_marker);
             }
         }
-        else
-        {
+        else{
             marker.color.r = 0.0f;
             marker.color.g = 1.0f;
             marker.color.b = 0.3f;
@@ -106,8 +97,7 @@ Broadcaster::elaborate_estimated_objects_markers()
 }
 
 bool
-Broadcaster::create_box_marker(visualization_msgs::Marker &box,
-                                                            const Box limits)
+Broadcaster::create_box_marker(visualization_msgs::Marker &box, const Box limits)
 {
     //Does not set time header, pose, namespace and id of marker
     std::string sensor_ref_frame;
@@ -216,8 +206,7 @@ Broadcaster::create_box_marker(visualization_msgs::Marker &box,
 void
 Broadcaster::broadcast_once()
 {
-    if (sensor_fake_calibration)
-    {
+    if (sensor_fake_calibration){
         std::string frame, anchor;
         tf::Transform t;
         t.setOrigin(tf::Vector3(0,0,1));
@@ -229,20 +218,15 @@ Broadcaster::broadcast_once()
             anchor = "/kinect2_link";
         else
             anchor = "/kinect2_anchor";
-        tf_broadcaster.sendTransform(tf::StampedTransform(t, ros::Time::now(),
-                                            "vito_anchor", anchor.c_str()));
+        tf_broadcaster.sendTransform(tf::StampedTransform(t, ros::Time::now(), "vito_anchor", anchor.c_str()));
     }
-    if (obj_tf)
-    {
+    if (obj_tf){
         std::string frame;
         this->storage->read_sensor_ref_frame(frame);
         for (int i = 0; i < transforms.size(); ++i)
-            tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i],
-                ros::Time::now(), frame.c_str(), names->at(i).first.c_str()));
+            tf_broadcaster.sendTransform(tf::StampedTransform(transforms[i], ros::Time::now(), frame.c_str(), names->at(i).first.c_str()));
     }
-    if (obj_markers || pass_limits || tracker_bb || arm_boxes || hand_boxes ||
-            detailed_hand_boxes)
-    {
+    if (obj_markers || pass_limits || tracker_bb || arm_boxes || hand_boxes || detailed_hand_boxes){
         for (int i = 0; i< markers.markers.size(); ++i)
             markers.markers[i].header.stamp = ros::Time();
         rviz_markers_pub.publish(markers);

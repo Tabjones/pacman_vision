@@ -10,12 +10,9 @@ Tracker::Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
     this->queue_ptr.reset(new ros::CallbackQueue);
     this->nh.setCallbackQueue(&(*this->queue_ptr));
     this->storage = stor;
-    this->srv_track_object = nh.advertiseService("track_object",
-                                            &Tracker::cb_track_object, this);
-    this->srv_stop = nh.advertiseService("stop_track",
-                                            &Tracker::cb_stop_tracker, this);
-    this->srv_grasp = nh.advertiseService("grasp_verification",
-                                                    &Tracker::cb_grasp, this);
+    this->srv_track_object = nh.advertiseService("track_object", &Tracker::cb_track_object, this);
+    this->srv_stop = nh.advertiseService("stop_track", &Tracker::cb_stop_tracker, this);
+    this->srv_grasp = nh.advertiseService("grasp_verification", &Tracker::cb_grasp, this);
     this->bounding_box.reset(new Box);
     this->bounding_box_original.reset(new Box);
 
@@ -24,8 +21,7 @@ Tracker::Tracker(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
     crd.reset( new pcl::registration::CorrespondenceRejectorDistance);
     crt.reset( new pcl::registration::CorrespondenceRejectorTrimmed);
     cro2o.reset( new pcl::registration::CorrespondenceRejectorOneToOne);
-    teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion
-                                                                <PX,PX,float>);
+    teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PX,PX,float>);
     // crsc.reset( new pcl::registration::CorrespondenceRejectorSampleConsensus<PX>);
 
     started = lost_it = false;
@@ -123,8 +119,7 @@ Tracker::track()
         for (int i=0; i<target->points.size(); ++i)
             tc.add(target->points[i]);
         PX target_centroid, mc_transformed;
-        mc_transformed = pcl::transformPoint(model_centroid,
-                                                Eigen::Affine3f(*transform));
+        mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(*transform));
         tc.get(target_centroid);
         Eigen::Matrix4f Tcen, guess;
         Tcen <<  1, 0, 0,  (target_centroid.x - mc_transformed.x),
