@@ -13,6 +13,7 @@ Panels:
         - /Markers1/Namespaces1
         - /Transformations1
         - /Transformations1/Frames1
+        - /PointCloud21
       Splitter Ratio: 0.5
     Tree Height: 667
   - Class: rviz/Selection
@@ -147,6 +148,8 @@ Visualization Manager:
           Value: true
         camera_rgb_optical_frame:
           Value: true
+        in_hand_model_frame:
+          Value: true
       Marker Scale: 0.5
       Name: Transformations
       Show Arrows: false
@@ -159,8 +162,38 @@ Visualization Manager:
               {}
           camera_rgb_frame:
             camera_rgb_optical_frame:
-              {}
+              in_hand_model_frame:
+                {}
       Update Interval: 0
+      Value: true
+    - Alpha: 0.7
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 0; 0; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.01
+      Style: Points
+      Topic: /pacman_vision/in_hand_modeler/in_hand_model
+      Use Fixed Frame: true
+      Use rainbow: true
       Value: true
   Enabled: true
   Global Options:
@@ -186,22 +219,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.898625
+      Distance: 1.24365
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.00558233
-        Y: -0.0021866
-        Z: 0.0534248
+        X: 0.0448089
+        Y: -0.01465
+        Z: 0.0197674
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -1.10325
+      Pitch: -0.974209
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.69709
+      Yaw: 4.77146
     Saved: ~
 Window Geometry:
   Displays:

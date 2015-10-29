@@ -12,6 +12,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud_conversion.h>
 //PCL
+#include <pcl/common/centroid.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/eigen.h>
@@ -68,6 +69,8 @@ class InHandModeler
 
         //model transforms
         Eigen::Matrix4f T_km, T_mk;
+        //intermediate guess
+        Eigen::Matrix4f guess;
         //has a model trasform ?
         bool has_transform;
         //needs to iterate ?
@@ -76,10 +79,12 @@ class InHandModeler
         //pointclouds
         //actual scene in kinect and model reference frame
         PC::Ptr actual_k, actual_m;
-        //previous scene in kinect and model reference frame
-        PC::Ptr previous_k, previous_m;
+        //previous scene in model reference frame
+        PC::Ptr previous_m;
         //model and downsampled model
         PC::Ptr model, model_ds;
+        //first scene added to model
+        PC::Ptr first_m;
 
         //Voxelgrid downsampling
         pcl::VoxelGrid<PT> vg;
@@ -88,6 +93,10 @@ class InHandModeler
         pcl::IterativeClosestPoint<PT, PT, float> icp;
         pcl::registration::CorrespondenceRejectorDistance::Ptr crd;
         pcl::registration::TransformationEstimationDualQuaternion<PT, PT, float>::Ptr teDQ;
+
+        //Octrees
+        pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
+        pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
 
         //Dynamic reconfigurable parameters
         //ignore accidentally clicked points
