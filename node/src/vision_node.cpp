@@ -660,6 +660,7 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t 
         //In Hand Modeler
         nh.getParam("ignore_clicked_point", config.groups.in_hand_modeler_module.ignore_clicked_point);
         nh.getParam("work_dir", config.groups.in_hand_modeler_module.work_dir);
+        nh.getParam("model_leaf_size", config.groups.in_hand_modeler_module.model_leaf_size);
         //Finish gui initialization
         this->rqt_init = false;
         this->sensor.needs_update = true;
@@ -768,6 +769,7 @@ VisionNode::cb_reconfigure(pacman_vision::pacman_visionConfig &config, uint32_t 
     if (this->modeler_module && this->en_modeler){
         this->modeler_module->work_dir  = config.groups.in_hand_modeler_module.work_dir;
         this->modeler_module->ignore_clicked_point = config.groups.in_hand_modeler_module.ignore_clicked_point;
+        this->modeler_module->model_ls = config.groups.in_hand_modeler_module.model_leaf_size;
     }
     ROS_INFO("[PaCMaN Vision] Reconfigure request executed");
 }
