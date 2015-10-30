@@ -31,6 +31,7 @@
 #include <pacman_vision_comm/stop_modeler.h>
 //general utilities
 #include <ctime>
+#include <list>
 #include <algorithm>
 #include <boost/filesystem/path.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
@@ -76,15 +77,12 @@ class InHandModeler
         //needs to iterate ?
         bool do_iterations;
 
-        //pointclouds
-        //actual scene in kinect and model reference frame
-        PC::Ptr actual_k, actual_m;
-        //previous scene in model reference frame
-        PC::Ptr previous_m;
+        //pointclouds objects
+        size_t window;
+        //actual scenes in kinect reference frame, pushed back in order of arrival
+        std::list<PC::Ptr> frames;
         //model and downsampled model
         PC::Ptr model, model_ds;
-        //first scene added to model
-        PC::Ptr first_m;
 
         //Voxelgrid downsampling
         pcl::VoxelGrid<PT> vg;

@@ -1,8 +1,7 @@
 #include <pacman_vision/in_hand_modeler.h>
-#include <pcl/common/time.h>
 
 InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_iterations(false),
-            oct_adj(0.003), oct_cd(0.003)
+    window(10)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
@@ -20,7 +19,6 @@ InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &sto
     pub_model = nh.advertise<PC> ("in_hand_model",1);
     crd.reset(new pcl::registration::CorrespondenceRejectorDistance);
     teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PT, PT, float>);
-    guess.setIdentity();
 }
 
 bool
@@ -117,11 +115,11 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
         return (false);
     }
     //Init ICP
-    icp.setUseReciprocalCorrespondences(false);
-    icp.setMaximumIterations(10);
-    icp.setTransformationEpsilon(1e-6);
-    icp.setEuclideanFitnessEpsilon(1e-9);
-    crd->setMaximumDistance(0.03); //3cm
+    icp.setUseReciprocalCorrespondences(true);
+    icp.setMaximumIterations(50);
+    icp.setTransformationEpsilon(1e-4);
+    icp.setEuclideanFitnessEpsilon(1e-4);
+    crd->setMaximumDistance(0.02); //2cm
     icp.addCorrespondenceRejector(crd);
     icp.setTransformationEstimation(teDQ);
     //transform actual scene in model ref frame
@@ -138,14 +136,6 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
     vg.setInputCloud(model);
     vg.setLeafSize(model_ls, model_ls, model_ls);
     vg.filter(*model_ds);
-    //save actual into previous
-    if(!previous_m)
-        previous_m.reset(new PC);
-    pcl::copyPointCloud(*actual_m, *previous_m);
-    //save actual into first
-    if(!first_m)
-        first_m.reset(new PC);
-    pcl::copyPointCloud(*actual_m, *first_m);
     //start iterations
     do_iterations = true;
     return (true);
@@ -156,58 +146,13 @@ InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vi
 {
     do_iterations = false;
     //TODO add save model to disk
-    actual_k.reset();
-    actual_m.reset();
-    previous_m.reset();
-    model.reset();
-    model_ds.reset();
     return (true);
 }
 
 void
 InHandModeler::iterate_once()
 {
-    //stopwatch to approximate exec time TODO remove
-    pcl::StopWatch timer;
-    timer.reset();
-    //TODO add a window to store n clouds, not just 2
-    //prepare ICP source and target
-    float alignment_leaf_size (0.003f);
-    PC::Ptr source (new PC);
-    PC::Ptr target (new PC);
-    storage->read_scene_processed(actual_k);
-    if (!actual_m)
-        actual_m.reset(new PC);
-    pcl::transformPointCloud(*actual_k, *actual_m, T_mk);
-    //source is actual scene, properly downsampled for speed
-    //TODO align always on top of first frame or model ... not working
-    vg.setInputCloud(actual_m);
-    vg.setLeafSize(alignment_leaf_size,alignment_leaf_size, alignment_leaf_size);
-    vg.filter(*source);
-    //target is previous in model ref. frame, also properly downsampled
-    vg.setInputCloud(previous_m);
-    vg.setLeafSize(alignment_leaf_size,alignment_leaf_size, alignment_leaf_size);
-    vg.filter(*target);
-    //initial guess is the transform found at previous step, result is tmp and not needed
-    PC tmp;
-    icp.setInputSource(source);
-    icp.setInputTarget(target);
-    icp.align(tmp, guess);
-    //Update new transform
-    guess = icp.getFinalTransformation();
-    //transform actual scene in model ref. frame
-    pcl::transformPointCloud(*actual_m, tmp, guess);
-    //concatenate model and previous scene
-    *model += *previous_m;
-    //downsample model with requested leaf size
-    vg.setInputCloud(model);
-    vg.setLeafSize(model_ls, model_ls, model_ls);
-    vg.filter(*model_ds);
-    //TODO octrees
-    //copy actual scene into previous
-    pcl::copyPointCloud(tmp, *previous_m);
-
-    ROS_WARN("[InHandModeler][%s] time: %g ms",__func__,timer.getTime()); //TODO remove
+    //TODO
 }
 
 void
@@ -221,12 +166,13 @@ InHandModeler::spin_once()
         this->storage->read_sensor_ref_frame(sensor_ref_frame);
         tf_broadcaster.sendTransform(tf::StampedTransform(t_km, ros::Time::now(), sensor_ref_frame.c_str(), "in_hand_model_frame"));
     }
+    PC::Ptr scene;
+    this->storage->read_scene_processed(scene);
+    frames.push_back(scene);
+    if (frames.size() > window)
+        frames.pop_front();
     if (do_iterations)
         iterate_once();
-    if (model_ds)
-        if(!model_ds->empty() && pub_model.getNumSubscribers()>0)
-            pub_model.publish(*model_ds);
-            //pub_model.publish(*model_ds);
     //process this module callbacks
     this->queue_ptr->callAvailable(ros::WallDuration(0));
 }
