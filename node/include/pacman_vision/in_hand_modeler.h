@@ -21,9 +21,10 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_ros/transforms.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/registration/correspondence_rejection_distance.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/fpfh_omp.h>
 #include <pcl/registration/icp.h>
+#include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
 #include <pcl/visualization/pcl_visualizer.h>
 // ROS generated headers
@@ -57,6 +58,11 @@ class InHandModeler
         ros::ServiceServer srv_start;
         ros::ServiceServer srv_stop;
 
+        //thread to do processing
+        boost::thread processing_driver;
+        //mutex to protect point clouds and model
+        boost::mutex mtx_sequence, mtx_model;
+
         //subscriber to clickedpoints
         ros::Subscriber sub_clicked;
 
@@ -70,27 +76,27 @@ class InHandModeler
 
         //model transforms
         Eigen::Matrix4f T_km, T_mk;
-        //intermediate guess
-        Eigen::Matrix4f guess;
         //has a model trasform ?
         bool has_transform;
-        //needs to iterate ?
-        bool do_iterations;
+        //needs to acquire clouds ?
+        bool do_acquisition;
+        //needs to process acquired clouds?
+        bool do_processing;
 
-        //pointclouds objects
-        size_t window;
-        //actual scenes in kinect reference frame, pushed back in order of arrival
-        std::list<PC::Ptr> frames;
-        //model and downsampled model
+        //pointclouds sequence
+        //in kinect reference frame
+        std::list<PC::Ptr> cloud_sequence;
+        //model and downsampled model in model reference frame
         PC::Ptr model, model_ds;
 
         //Voxelgrid downsampling
         pcl::VoxelGrid<PT> vg;
 
-        //ICP object
-        pcl::IterativeClosestPoint<PT, PT, float> icp;
-        pcl::registration::CorrespondenceRejectorDistance::Ptr crd;
-        pcl::registration::TransformationEstimationDualQuaternion<PT, PT, float>::Ptr teDQ;
+        //Registration
+        pcl::SampleConsensusPrerejective<PT, PT, pcl::FPFHSignature33> alignment;
+        pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
+        pcl::NormalEstimationOMP<PT, NT> ne;
+        pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33> fpfh;
 
         //Octrees
         pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
@@ -119,9 +125,9 @@ class InHandModeler
         //Callback from clicked_point
         void
         cb_clicked(const geometry_msgs::PointStamped::ConstPtr& msg);
-        //Do one step of iterations
+        //Perform processing of sequence clouds
         void
-        iterate_once();
+        processSequence();
 
         //custom spin method
         void

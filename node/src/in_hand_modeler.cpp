@@ -1,7 +1,8 @@
 #include <pacman_vision/in_hand_modeler.h>
+#include <pcl/common/time.h>
 
-InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_iterations(false),
-    window(10)
+InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_acquisition(false),
+            oct_adj(0.003), oct_cd(0.003), do_processing(false)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
@@ -17,8 +18,7 @@ InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &sto
     work_dir = work_dir_s;
     sub_clicked = nh.subscribe(nh.resolveName("/clicked_point"), 1, &InHandModeler::cb_clicked, this);
     pub_model = nh.advertise<PC> ("in_hand_model",1);
-    crd.reset(new pcl::registration::CorrespondenceRejectorDistance);
-    teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PT, PT, float>);
+    teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>);
 }
 
 bool
@@ -65,7 +65,7 @@ bool InHandModeler::saveModel()
 
 void InHandModeler::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg)
 {
-    if(!ignore_clicked_point){
+    if(!ignore_clicked_point && !do_acquisition){
         float nx,ny,nz;
         PT pt;
         //Get clicked point
@@ -73,9 +73,11 @@ void InHandModeler::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg
         pt.y = msg->point.y;
         pt.z = msg->point.z;
         std::string sensor;
-        this->storage->read_scene_processed(actual_k);
+        PC::Ptr scene;
+        this->storage->read_scene_processed(scene);
         this->storage->read_sensor_ref_frame(sensor);
         if (msg->header.frame_id.compare(sensor) != 0){
+            //Put the point read from rviz into kinect reference frame (if needed)
             tf_listener.waitForTransform(sensor.c_str(), msg->header.frame_id.c_str(), ros::Time(0), ros::Duration(1.0));
             tf::StampedTransform t_msg;
             tf_listener.lookupTransform(sensor.c_str(), msg->header.frame_id.c_str(), ros::Time(0), t_msg);
@@ -84,26 +86,34 @@ void InHandModeler::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg
             fromTF(t_msg, T, pose);
             PT pt_t;
             pt_t = pcl::transformPoint<PT>(pt, Eigen::Affine3f(T));
+            //now the point is in kinect ref. frame.
             pt.x = pt_t.x;
             pt.y = pt_t.y;
             pt.z = pt_t.z;
         }
-        //compute a normal around its neighborhood (3cm)
+        //compute a normal around the point neighborhood (2cm)
         pcl::search::KdTree<PT> kdtree;
-        std::vector<int> idx(actual_k->points.size());
-        std::vector<float> dist(actual_k->points.size());
-        kdtree.setInputCloud(actual_k);
-        kdtree.radiusSearch(pt, 0.03, idx, dist);
-        pcl::NormalEstimation<PT, pcl::Normal> ne;
-        ne.setInputCloud(actual_k);
-        ne.useSensorOriginAsViewPoint();
+        std::vector<int> idx(scene->points.size());
+        std::vector<float> dist(scene->points.size());
+        kdtree.setInputCloud(scene);
+        kdtree.radiusSearch(pt, 0.02, idx, dist);
+        pcl::NormalEstimationOMP<PT, pcl::Normal> ne_point;
+        ne_point.setInputCloud(scene);
+        ne_point.useSensorOriginAsViewPoint();
         float curv;
-        ne.computePointNormal (*actual_k, idx, nx,ny,nz, curv);
+        ne_point.computePointNormal (*scene, idx, nx,ny,nz, curv);
         //Compute model transform
         if (!computeModelTransform(pt,nx,ny,nz)){
             ROS_WARN("[InHandModeler][%s]\tFailed to compute Model Transform, please click again!", __func__);
             return;
         }
+        //save this scene into the sequence, so that we can use it as a start.
+        if (!cloud_sequence.empty())
+            cloud_sequence.clear();
+        cloud_sequence.push_back(scene);
+    }
+    else{
+        ROS_INFO("[InHandModeler][%s]Ignoring clicked point as requested or because already started processing...", __func__);
     }
 }
 
@@ -114,45 +124,153 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
         ROS_ERROR("[InHandModeler][%s]\tNo model transform defined, please click and publish a point in rviz", __func__);
         return (false);
     }
-    //Init ICP
-    icp.setUseReciprocalCorrespondences(true);
-    icp.setMaximumIterations(50);
-    icp.setTransformationEpsilon(1e-4);
-    icp.setEuclideanFitnessEpsilon(1e-4);
-    crd->setMaximumDistance(0.02); //2cm
-    icp.addCorrespondenceRejector(crd);
-    icp.setTransformationEstimation(teDQ);
-    //transform actual scene in model ref frame
-    storage->read_scene_processed(actual_k);
-    if (!actual_m)
-        actual_m.reset(new PC);
-    pcl::transformPointCloud(*actual_k, *actual_m, T_mk);
-    //initialize the model with actual scene
-    if (!model)
-        model.reset(new PC);
-    if (!model_ds)
-        model_ds.reset(new PC);
-    pcl::copyPointCloud(*actual_m, *model);
+    if (do_processing || do_acquisition){
+        ROS_ERROR("[InHandModeler][%s]\tProcessing is already started!", __func__);
+        return (false);
+    }
+    ///////////////////////Init Registration////////////////////////////////////
+    //RANSAC maximum iterations
+    alignment.setMaximumIterations(5000);
+    /*
+     * The number of point correspondences  to sample between source and target.
+     * At minimum, 3 points are required to calculate a pose.
+     */
+    alignment.setNumberOfSamples(5);
+    /*
+     * Instead of matching  each source FPFH descriptor to  its nearest matching
+     * feature  in the  target, we  can  choose between  the N  best matches  at
+     * random.  This increases  the  iterations necessary,  but  also makes  the
+     * algorithm robust towards outlier matches.
+     */
+    alignment.setCorrespondenceRandomness(6);
+    //Use  dual quaternion  method to  estimate a  rigid transformation  between
+    //correspondences.
+    alignment.setTransformationEstimation(teDQ);
+    /*
+     * The alignment  class uses the CorrespondenceRejectorPoly  class for early
+     * elimination of bad poses  based on pose-invariant geometric consistencies
+     * of  the inter-distances  between sampled  points  on the  source and  the
+     * target. The closer  this value is set  to 1, the more  greedy and thereby
+     * fast  the algorithm  becomes. However,  this also  increases the  risk of
+     * eliminating good poses when noise is present.
+     */
+    alignment.setSimilarityThreshold(0.6f);
+    // Reject correspondences more distant than this value.
+    // This is heuristically set to 3 times point density
+    alignment.setMaxCorrespondenceDistance(3.0f * 0.003);
+    /*
+     * In many  practical scenarios,  large parts  of the  source in  the target
+     * scene are not visible, either due to clutter, occlusions or both. In such
+     * cases, we  need to allow  for pose hypotheses that  do not align  all the
+     * source  points to  the target  scene.  The absolute  number of  correctly
+     * aligned points is determined using the inlier threshold, and if the ratio
+     * of this number to the total number of points in the source is higher than
+     * the specified inlier fraction, we accept a pose hypothesis as valid.
+     */
+    alignment.setInlierFraction(0.5f);
+
+    //initialize the model with first cloud from sequence
+    model.reset(new PC);
+    model_ds.reset(new PC);
+    pcl::copyPointCloud(*cloud_sequence.front(), *model);
     vg.setInputCloud(model);
     vg.setLeafSize(model_ls, model_ls, model_ls);
     vg.filter(*model_ds);
-    //start iterations
-    do_iterations = true;
+    //start registering
+    do_acquisition = true;
     return (true);
 }
 
 bool
 InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vision_comm::stop_modeler::Response& res)
 {
-    do_iterations = false;
+    if(!do_processing || !do_acquisition){
+        ROS_ERROR("[InHandModeler][%s]\tProcessing is already stopped!", __func__);
+        return (false);
+    }
+    do_acquisition = false;
+    //wait for processing to end
+    //processing_driver.join();
     //TODO add save model to disk
+    //model.reset();
+    //model_ds.reset();
+    //cloud_sequence.clear();
     return (true);
 }
 
 void
-InHandModeler::iterate_once()
+InHandModeler::processSequence()
 {
-    //TODO
+    mtx_sequence.lock();
+    size_t size = cloud_sequence.size();
+    mtx_sequence.unlock();
+    while (size > 1)
+    {
+        PC::Ptr target, source;
+        //source  and target normals
+        NC::Ptr source_n(new NC), target_n(new NC);
+        // source and target features
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr source_f(new pcl::PointCloud<pcl::FPFHSignature33>);
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr target_f(new pcl::PointCloud<pcl::FPFHSignature33>);
+        //get source and target
+        mtx_sequence.lock();
+        target = cloud_sequence.front();
+        cloud_sequence.pop_front();
+        source = cloud_sequence.front();
+        mtx_sequence.unlock();
+        //estimate normals
+        ne.setRadiusSearch(0.01);
+        ne.setInputCloud(source);
+        ne.compute(*source_n);
+        ne.setInputCloud(target);
+        ne.compute(*target_n);
+        //estimate features
+        fpfh.setRadiusSearch(0.025);
+        fpfh.setInputCloud(source);
+        fpfh.setInputNormals(source_n);
+        fpfh.compute(*source_f);
+        fpfh.setInputCloud(target);
+        fpfh.setInputNormals(target_n);
+        fpfh.compute(*target_f);
+        //do the alignment
+        alignment.setInputSource(source);
+        alignment.setSourceFeatures(source_f);
+        alignment.setInputTarget(target);
+        alignment.setTargetFeatures(target_f);
+        PC::Ptr source_aligned(new PC);
+        pcl::ScopeTime t("alignment");
+        alignment.align(*source_aligned);
+        //TODO play with octomaps
+        if (alignment.hasConverged()){
+            //save result into sequence to be used as next target
+            mtx_sequence.lock();
+            cloud_sequence.front() = source_aligned;
+            mtx_sequence.unlock();
+            //update model
+            PC::Ptr tmp (new PC);
+            mtx_model.lock();
+            *model += *source_aligned;
+            if(model->points.size() > 1e4){
+                vg.setInputCloud(model);
+                vg.setLeafSize(0.001, 0.001, 0.001);
+                vg.filter(*tmp);
+                pcl::copyPointCloud(*tmp, *model);
+            }
+            vg.setInputCloud(model);
+            vg.setLeafSize(model_ls, model_ls, model_ls);
+            vg.filter(*tmp);
+            pcl::transformPointCloud(*tmp, *model_ds, T_mk);
+            mtx_model.unlock();
+        }
+        else{
+            ROS_WARN("[InHandModeler][%s]Alignment FAILED!",__func__);
+            //TODO add error handling and termination
+        }
+        mtx_sequence.lock();
+        size = cloud_sequence.size();
+        mtx_sequence.unlock();
+        boost::this_thread::sleep(boost::posix_time::milliseconds(5));
+    }//endwhile
 }
 
 void
@@ -166,13 +284,27 @@ InHandModeler::spin_once()
         this->storage->read_sensor_ref_frame(sensor_ref_frame);
         tf_broadcaster.sendTransform(tf::StampedTransform(t_km, ros::Time::now(), sensor_ref_frame.c_str(), "in_hand_model_frame"));
     }
-    PC::Ptr scene;
-    this->storage->read_scene_processed(scene);
-    frames.push_back(scene);
-    if (frames.size() > window)
-        frames.pop_front();
-    if (do_iterations)
-        iterate_once();
+    if (do_acquisition){  // && cloud_sequence.size()<1000){
+        PC::Ptr scene (new PC);
+        this->storage->read_scene_processed(scene);
+        //TODO add change detector to store only "changed point clouds"
+        mtx_sequence.lock();
+        cloud_sequence.push_back(scene);
+        mtx_sequence.unlock();
+    }
+    if (!do_processing){
+        if (cloud_sequence.size()>4){
+            //time to start the processing thread
+            do_processing = true;
+            processing_driver = boost::thread(&InHandModeler::processSequence, this);
+        }
+    }
+    mtx_model.lock();
+    if (model_ds)
+        if(!model_ds->empty() && pub_model.getNumSubscribers()>0)
+            pub_model.publish(*model_ds);
+    mtx_model.unlock();
     //process this module callbacks
     this->queue_ptr->callAvailable(ros::WallDuration(0));
+    ROS_WARN("sequence size: %d/%d", (int)cloud_sequence.size(), (int)cloud_sequence.max_size()); //TODO remove
 }
