@@ -2,7 +2,7 @@
 #include <pcl/common/time.h>
 
 InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_acquisition(false),
-            oct_adj(0.003), oct_cd(0.003), do_processing(false)
+            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_adj_frames(0.01), do_removal(false)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
@@ -124,8 +124,8 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
         ROS_ERROR("[InHandModeler][%s]\tNo model transform defined, please click and publish a point in rviz", __func__);
         return (false);
     }
-    if (do_processing || do_acquisition){
-        ROS_ERROR("[InHandModeler][%s]\tProcessing is already started!", __func__);
+    if (do_alignment || do_acquisition || do_removal){
+        ROS_ERROR("[InHandModeler][%s]\talignment is already started!", __func__);
         return (false);
     }
     ///////////////////////Init Registration////////////////////////////////////
@@ -142,7 +142,7 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
      * random.  This increases  the  iterations necessary,  but  also makes  the
      * algorithm robust towards outlier matches.
      */
-    alignment.setCorrespondenceRandomness(6);
+    alignment.setCorrespondenceRandomness(10);
     //Use  dual quaternion  method to  estimate a  rigid transformation  between
     //correspondences.
     alignment.setTransformationEstimation(teDQ);
@@ -156,8 +156,8 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
      */
     alignment.setSimilarityThreshold(0.6f);
     // Reject correspondences more distant than this value.
-    // This is heuristically set to 3 times point density
-    alignment.setMaxCorrespondenceDistance(3.0f * 0.003);
+    // This is heuristically set to 10 times point density
+    alignment.setMaxCorrespondenceDistance(10 * 0.003);
     /*
      * In many  practical scenarios,  large parts  of the  source in  the target
      * scene are not visible, either due to clutter, occlusions or both. In such
@@ -167,7 +167,7 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
      * of this number to the total number of points in the source is higher than
      * the specified inlier fraction, we accept a pose hypothesis as valid.
      */
-    alignment.setInlierFraction(0.5f);
+    alignment.setInlierFraction(0.7f);
 
     //initialize the model with first cloud from sequence
     model.reset(new PC);
@@ -176,6 +176,9 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
     vg.setInputCloud(model);
     vg.setLeafSize(model_ls, model_ls, model_ls);
     vg.filter(*model_ds);
+    //initialize the iterator pointers
+    align_it = cloud_sequence.begin();
+    remove_it = cloud_sequence.begin();
     //start registering
     do_acquisition = true;
     return (true);
@@ -184,13 +187,13 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
 bool
 InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vision_comm::stop_modeler::Response& res)
 {
-    if(!do_processing || !do_acquisition){
-        ROS_ERROR("[InHandModeler][%s]\tProcessing is already stopped!", __func__);
+    if(!do_acquisition){
+        ROS_ERROR("[InHandModeler][%s]\tAcquisition is already stopped!", __func__);
         return (false);
     }
     do_acquisition = false;
-    //wait for processing to end
-    //processing_driver.join();
+    //wait for alignment to end
+    //alignment_driver.join();
     //TODO add save model to disk
     //model.reset();
     //model_ds.reset();
@@ -199,33 +202,41 @@ InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vi
 }
 
 void
-InHandModeler::processSequence()
+InHandModeler::alignSequence()
 {
-    mtx_sequence.lock();
-    size_t size = cloud_sequence.size();
-    mtx_sequence.unlock();
-    while (size > 1)
+    //we use two elements at a time, so point to last one used
+    ++align_it;
+    while (do_alignment)
     {
+        //determine if we have to wait for do_removal thread
+        if (align_it == remove_it)
+        {
+            boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+            continue;
+        }
         PC::Ptr target, source;
-        //source  and target normals
+        //source and target normals
         NC::Ptr source_n(new NC), target_n(new NC);
-        // source and target features
+        //source and target features
         pcl::PointCloud<pcl::FPFHSignature33>::Ptr source_f(new pcl::PointCloud<pcl::FPFHSignature33>);
         pcl::PointCloud<pcl::FPFHSignature33>::Ptr target_f(new pcl::PointCloud<pcl::FPFHSignature33>);
         //get source and target
-        mtx_sequence.lock();
-        target = cloud_sequence.front();
-        cloud_sequence.pop_front();
-        source = cloud_sequence.front();
-        mtx_sequence.unlock();
+        {
+            LOCK guard(mtx_sequence);
+            target = cloud_sequence.front();
+            cloud_sequence.pop_front();
+            source = cloud_sequence.front();
+            ++align_it;
+        }
         //estimate normals
-        ne.setRadiusSearch(0.01);
+        ne.setRadiusSearch(1.5 * 0.003);
+        ne.useSensorOriginAsViewPoint();
         ne.setInputCloud(source);
         ne.compute(*source_n);
         ne.setInputCloud(target);
         ne.compute(*target_n);
         //estimate features
-        fpfh.setRadiusSearch(0.025);
+        fpfh.setRadiusSearch(2.5 * 0.003);
         fpfh.setInputCloud(source);
         fpfh.setInputNormals(source_n);
         fpfh.compute(*source_f);
@@ -240,37 +251,56 @@ InHandModeler::processSequence()
         PC::Ptr source_aligned(new PC);
         pcl::ScopeTime t("alignment");
         alignment.align(*source_aligned);
-        //TODO play with octomaps
         if (alignment.hasConverged()){
             //save result into sequence to be used as next target
-            mtx_sequence.lock();
-            cloud_sequence.front() = source_aligned;
-            mtx_sequence.unlock();
+            {
+                LOCK guard(mtx_sequence);
+                cloud_sequence.front() = source_aligned;
+            }
             //update model
             PC::Ptr tmp (new PC);
-            mtx_model.lock();
-            *model += *source_aligned;
-            if(model->points.size() > 1e4){
+            {
+                LOCK guard(mtx_model);
+                *model += *source_aligned;
+                if(model->points.size() > 1e4){
+                    vg.setInputCloud(model);
+                    vg.setLeafSize(0.001, 0.001, 0.001);
+                    vg.filter(*tmp);
+                    pcl::copyPointCloud(*tmp, *model);
+                }
                 vg.setInputCloud(model);
-                vg.setLeafSize(0.001, 0.001, 0.001);
+                vg.setLeafSize(model_ls, model_ls, model_ls);
                 vg.filter(*tmp);
-                pcl::copyPointCloud(*tmp, *model);
+                pcl::transformPointCloud(*tmp, *model_ds, T_mk);
             }
-            vg.setInputCloud(model);
-            vg.setLeafSize(model_ls, model_ls, model_ls);
-            vg.filter(*tmp);
-            pcl::transformPointCloud(*tmp, *model_ds, T_mk);
-            mtx_model.unlock();
         }
+        //TODO add octomap hand removal
         else{
-            ROS_WARN("[InHandModeler][%s]Alignment FAILED!",__func__);
+            ROS_ERROR("[InHandModeler][%s]Alignment FAILED!",__func__);
             //TODO add error handling and termination
         }
-        mtx_sequence.lock();
-        size = cloud_sequence.size();
-        mtx_sequence.unlock();
+        {
+            LOCK guard(mtx_sequence);
+            if(cloud_sequence.size() < 2)
+            {
+                ROS_INFO("[InHandModeler][%s]Finished alignment!", __func__);
+                break;
+            }
+        }
         boost::this_thread::sleep(boost::posix_time::milliseconds(5));
     }//endwhile
+    do_alignment = false;
+}
+
+void
+InHandModeler::removeSimilarFramesFromSequence()
+{
+    while (do_removal)
+    {
+        //TODO
+        break;
+    }//endwhile
+    do_removal = false;
 }
 
 void
@@ -284,27 +314,35 @@ InHandModeler::spin_once()
         this->storage->read_sensor_ref_frame(sensor_ref_frame);
         tf_broadcaster.sendTransform(tf::StampedTransform(t_km, ros::Time::now(), sensor_ref_frame.c_str(), "in_hand_model_frame"));
     }
-    if (do_acquisition){  // && cloud_sequence.size()<1000){
+    if (do_acquisition){
         PC::Ptr scene (new PC);
         this->storage->read_scene_processed(scene);
-        //TODO add change detector to store only "changed point clouds"
-        mtx_sequence.lock();
-        cloud_sequence.push_back(scene);
-        mtx_sequence.unlock();
-    }
-    if (!do_processing){
-        if (cloud_sequence.size()>4){
-            //time to start the processing thread
-            do_processing = true;
-            processing_driver = boost::thread(&InHandModeler::processSequence, this);
+        {
+            LOCK guard(mtx_sequence);
+            cloud_sequence.push_back(scene);
         }
     }
-    mtx_model.lock();
-    if (model_ds)
-        if(!model_ds->empty() && pub_model.getNumSubscribers()>0)
-            pub_model.publish(*model_ds);
-    mtx_model.unlock();
+    if (!do_removal){
+        if (cloud_sequence.size()>10){
+            //time to start the removal thread
+            do_removal = true;
+            remove_driver = boost::thread(&InHandModeler::removeSimilarFramesFromSequence, this);
+        }
+    }
+    if (!do_alignment){
+        if (cloud_sequence.size()>20){
+            //time to start the alignment thread
+            do_alignment = true;
+            alignment_driver = boost::thread(&InHandModeler::alignSequence, this);
+        }
+    }
+    {
+        LOCK guard(mtx_model);
+        if (model_ds)
+            if(!model_ds->empty() && pub_model.getNumSubscribers()>0)
+                pub_model.publish(*model_ds);
+    }
     //process this module callbacks
     this->queue_ptr->callAvailable(ros::WallDuration(0));
-    ROS_WARN("sequence size: %d/%d", (int)cloud_sequence.size(), (int)cloud_sequence.max_size()); //TODO remove
+    ROS_WARN("Sequence size: %d", (int)cloud_sequence.size()); //TODO remove
 }

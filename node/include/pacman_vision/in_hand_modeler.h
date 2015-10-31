@@ -58,10 +58,13 @@ class InHandModeler
         ros::ServiceServer srv_start;
         ros::ServiceServer srv_stop;
 
-        //thread to do processing
-        boost::thread processing_driver;
+        //threads
+        boost::thread alignment_driver;
+        boost::thread remove_driver;
         //mutex to protect point clouds and model
         boost::mutex mtx_sequence, mtx_model;
+        //pointers to queue
+        std::list<PC::Ptr>::const_iterator align_it, remove_it;
 
         //subscriber to clickedpoints
         ros::Subscriber sub_clicked;
@@ -81,7 +84,9 @@ class InHandModeler
         //needs to acquire clouds ?
         bool do_acquisition;
         //needs to process acquired clouds?
-        bool do_processing;
+        bool do_alignment;
+        //needs to remove similar frames from cloud sequence ?
+        bool do_removal;
 
         //pointclouds sequence
         //in kinect reference frame
@@ -100,6 +105,7 @@ class InHandModeler
 
         //Octrees
         pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
+        pcl::octree::OctreePointCloudAdjacency<PT> oct_adj_frames;
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
 
         //Dynamic reconfigurable parameters
@@ -125,9 +131,12 @@ class InHandModeler
         //Callback from clicked_point
         void
         cb_clicked(const geometry_msgs::PointStamped::ConstPtr& msg);
-        //Perform processing of sequence clouds
+        //Perform alignment of sequence clouds
         void
-        processSequence();
+        alignSequence();
+        //discard too similar frames
+        void
+        removeSimilarFramesFromSequence();
 
         //custom spin method
         void
