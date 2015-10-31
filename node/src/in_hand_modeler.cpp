@@ -130,22 +130,22 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
     }
     ///////////////////////Init Registration////////////////////////////////////
     //RANSAC maximum iterations
-    alignment.setMaximumIterations(5000);
+    alignment.setMaximumIterations(50000);
     /*
      * The number of point correspondences  to sample between source and target.
      * At minimum, 3 points are required to calculate a pose.
      */
-    alignment.setNumberOfSamples(5);
+    alignment.setNumberOfSamples(3);
     /*
      * Instead of matching  each source FPFH descriptor to  its nearest matching
      * feature  in the  target, we  can  choose between  the N  best matches  at
      * random.  This increases  the  iterations necessary,  but  also makes  the
      * algorithm robust towards outlier matches.
      */
-    alignment.setCorrespondenceRandomness(10);
+    alignment.setCorrespondenceRandomness(5);
     //Use  dual quaternion  method to  estimate a  rigid transformation  between
     //correspondences.
-    alignment.setTransformationEstimation(teDQ);
+    //alignment.setTransformationEstimation(teDQ);
     /*
      * The alignment  class uses the CorrespondenceRejectorPoly  class for early
      * elimination of bad poses  based on pose-invariant geometric consistencies
@@ -154,10 +154,10 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
      * fast  the algorithm  becomes. However,  this also  increases the  risk of
      * eliminating good poses when noise is present.
      */
-    alignment.setSimilarityThreshold(0.6f);
+    alignment.setSimilarityThreshold(0.9f);
     // Reject correspondences more distant than this value.
     // This is heuristically set to 10 times point density
-    alignment.setMaxCorrespondenceDistance(10 * 0.003);
+    alignment.setMaxCorrespondenceDistance(2.5f * 0.005f);
     /*
      * In many  practical scenarios,  large parts  of the  source in  the target
      * scene are not visible, either due to clutter, occlusions or both. In such
@@ -167,7 +167,7 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
      * of this number to the total number of points in the source is higher than
      * the specified inlier fraction, we accept a pose hypothesis as valid.
      */
-    alignment.setInlierFraction(0.7f);
+    alignment.setInlierFraction(0.25f);
 
     //initialize the model with first cloud from sequence
     model.reset(new PC);
@@ -228,15 +228,22 @@ InHandModeler::alignSequence()
             source = cloud_sequence.front();
             ++align_it;
         }
+        //downsample
+        const float leaf = 0.005f;
+        vg.setLeafSize(leaf, leaf, leaf);
+        vg.setInputCloud(target);
+        vg.filter(*target);
+        vg.setInputCloud(source);
+        vg.filter(*source);
         //estimate normals
-        ne.setRadiusSearch(1.5 * 0.003);
+        ne.setRadiusSearch(2.5f*leaf);
         ne.useSensorOriginAsViewPoint();
         ne.setInputCloud(source);
         ne.compute(*source_n);
         ne.setInputCloud(target);
         ne.compute(*target_n);
         //estimate features
-        fpfh.setRadiusSearch(2.5 * 0.003);
+        fpfh.setRadiusSearch(5.0f*leaf);
         fpfh.setInputCloud(source);
         fpfh.setInputNormals(source_n);
         fpfh.compute(*source_f);
@@ -244,6 +251,7 @@ InHandModeler::alignSequence()
         fpfh.setInputNormals(target_n);
         fpfh.compute(*target_f);
         //do the alignment
+        alignment.setMaxCorrespondenceDistance(2.5f*leaf);
         alignment.setInputSource(source);
         alignment.setSourceFeatures(source_f);
         alignment.setInputTarget(target);
