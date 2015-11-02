@@ -305,8 +305,40 @@ InHandModeler::removeSimilarFramesFromSequence()
 {
     while (do_removal)
     {
-        //TODO
-        break;
+        if (remove_it + 1 == cloud_sequence.end()){
+            if(do_acquisition){
+                boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+                continue;
+            }
+            else{
+                break;
+            }
+        }
+        PC::Ptr current(new PC);
+        PC::Ptr next_c(new PC);
+        {
+            LOCK guard(mtx_sequence);
+            current = *remove_it;
+            next_c = *remove_it+1;
+        }
+        oct_adj_frames.setInputCloud(current);
+        oct_adj_frames.addPointsFromInputCloud();
+        oct_adj_frames.switchBuffers();
+        oct_adj_frames.setInputCloud(next_C);
+        oct_adj_frames.addPointsFromInputCloud();
+        std::vector<int> changes;
+        oct_adj_frames.getPointIndicesFromNewVoxels(changes);
+        oct_adj_frames.deleteCurrentBuffer();
+        oct_adj_frames.deletePreviousBuffer();
+        if (changes.size() > next_c->size() * 0.1){
+            //more than 10% of points have changed, we keep it
+            ++remove_it;
+        }
+        else{
+            //frames are almost equal we remove one
+            LOCK guard(mtx_sequence);
+            cloud_sequence.erase(remove_it+1);
+        }
     }//endwhile
     do_removal = false;
 }
