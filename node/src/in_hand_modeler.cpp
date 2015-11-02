@@ -2,7 +2,7 @@
 #include <pcl/common/time.h>
 
 InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_acquisition(false),
-            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_adj_frames(0.01), do_removal(false)
+            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_removal(false)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
@@ -229,30 +229,58 @@ InHandModeler::alignSequence()
             ++align_it;
         }
         //downsample
-        const float leaf = 0.005f;
+        const float leaf = 0.01f;
         vg.setLeafSize(leaf, leaf, leaf);
         vg.setInputCloud(target);
         vg.filter(*target);
         vg.setInputCloud(source);
         vg.filter(*source);
+        /*
+         * //remove differences
+         * pcl::octree::OctreePointCloudChangeDetector<PT> oct(leaf*2.0f);
+         * oct.setInputCloud(target);
+         * oct.addPointsFromInputCloud();
+         * oct.switchBuffers();
+         * oct.setInputCloud(source);
+         * oct.addPointsFromInputCloud();
+         * std::vector<int> changes;
+         * oct_cd_frames.getPointIndicesFromNewVoxels(changes);
+         * pcl::IndicesPtr same(new std::vector<int>);
+         * for(size_t i=0; i<source->size(); ++i)
+         * {
+         *     bool found(false);
+         *     for(size_t j=0; j<changes.size(); ++i)
+         *     {
+         *         if(changes[j] == i){
+         *             found=true;
+         *             break;
+         *         }
+         *     }
+         *     if(!found)
+         *         same->push_back(i);
+         * }
+         */
         //estimate normals
-        ne.setRadiusSearch(2.5f*leaf);
+        ne.setRadiusSearch(2.0f*leaf);
         ne.useSensorOriginAsViewPoint();
-        ne.setInputCloud(source);
-        ne.compute(*source_n);
         ne.setInputCloud(target);
         ne.compute(*target_n);
+        ne.setInputCloud(source);
+        // ne.setIndices(same);
+        ne.compute(*source_n);
         //estimate features
-        fpfh.setRadiusSearch(5.0f*leaf);
-        fpfh.setInputCloud(source);
-        fpfh.setInputNormals(source_n);
-        fpfh.compute(*source_f);
+        fpfh.setRadiusSearch(4.0f*leaf);
         fpfh.setInputCloud(target);
         fpfh.setInputNormals(target_n);
         fpfh.compute(*target_f);
+        fpfh.setInputCloud(source);
+        // fpfh.setIndices(same);
+        fpfh.setInputNormals(source_n);
+        fpfh.compute(*source_f);
         //do the alignment
-        alignment.setMaxCorrespondenceDistance(2.5f*leaf);
+        alignment.setMaxCorrespondenceDistance(8.0f*leaf);
         alignment.setInputSource(source);
+        // alignment.setIndices(same);
         alignment.setSourceFeatures(source_f);
         alignment.setInputTarget(target);
         alignment.setTargetFeatures(target_f);
@@ -262,7 +290,9 @@ InHandModeler::alignSequence()
         if (alignment.hasConverged()){
             //save result into sequence to be used as next target
             {
+                Eigen::Matrix4f T = alignment.getFinalTransformation();
                 LOCK guard(mtx_sequence);
+                pcl::transformPointCloud(*cloud_sequence.front(),*source_aligned, T);
                 cloud_sequence.front() = source_aligned;
             }
             //update model
@@ -305,7 +335,9 @@ InHandModeler::removeSimilarFramesFromSequence()
 {
     while (do_removal)
     {
-        if (remove_it + 1 == cloud_sequence.end()){
+        std::list<PC::Ptr>::iterator rem_it_next = ++remove_it;
+        --remove_it;
+        if (rem_it_next == cloud_sequence.end()){
             if(do_acquisition){
                 boost::this_thread::sleep(boost::posix_time::milliseconds(200));
                 continue;
@@ -319,17 +351,17 @@ InHandModeler::removeSimilarFramesFromSequence()
         {
             LOCK guard(mtx_sequence);
             current = *remove_it;
-            next_c = *remove_it+1;
+            next_c = *rem_it_next;
         }
-        oct_adj_frames.setInputCloud(current);
-        oct_adj_frames.addPointsFromInputCloud();
-        oct_adj_frames.switchBuffers();
-        oct_adj_frames.setInputCloud(next_C);
-        oct_adj_frames.addPointsFromInputCloud();
+        oct_cd_frames.setInputCloud(current);
+        oct_cd_frames.addPointsFromInputCloud();
+        oct_cd_frames.switchBuffers();
+        oct_cd_frames.setInputCloud(next_c);
+        oct_cd_frames.addPointsFromInputCloud();
         std::vector<int> changes;
-        oct_adj_frames.getPointIndicesFromNewVoxels(changes);
-        oct_adj_frames.deleteCurrentBuffer();
-        oct_adj_frames.deletePreviousBuffer();
+        oct_cd_frames.getPointIndicesFromNewVoxels(changes);
+        oct_cd_frames.deleteCurrentBuffer();
+        oct_cd_frames.deletePreviousBuffer();
         if (changes.size() > next_c->size() * 0.1){
             //more than 10% of points have changed, we keep it
             ++remove_it;
@@ -337,7 +369,7 @@ InHandModeler::removeSimilarFramesFromSequence()
         else{
             //frames are almost equal we remove one
             LOCK guard(mtx_sequence);
-            cloud_sequence.erase(remove_it+1);
+            cloud_sequence.erase(rem_it_next);
         }
     }//endwhile
     do_removal = false;

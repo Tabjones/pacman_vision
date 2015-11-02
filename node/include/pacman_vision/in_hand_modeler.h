@@ -64,7 +64,7 @@ class InHandModeler
         //mutex to protect point clouds and model
         boost::mutex mtx_sequence, mtx_model;
         //pointers to queue
-        std::list<PC::Ptr>::const_iterator align_it, remove_it;
+        std::list<PC::Ptr>::iterator align_it, remove_it;
 
         //subscriber to clickedpoints
         ros::Subscriber sub_clicked;
@@ -105,7 +105,7 @@ class InHandModeler
 
         //Octrees
         pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
-        pcl::octree::OctreePointCloudAdjacency<PT> oct_adj_frames;
+        pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd_frames;
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
 
         //Dynamic reconfigurable parameters
