@@ -22,13 +22,12 @@ class VisionNode;
 
 class Supervoxels
 {
+    friend class VisionNode;
 
-  friend class VisionNode;
-
-  public:
+    public:
     Supervoxels(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~Supervoxels();
-  private:
+    private:
     ros::NodeHandle nh;
     boost::shared_ptr<ros::CallbackQueue> queue_ptr;
     boost::shared_ptr<Storage> storage;
@@ -40,10 +39,11 @@ class Supervoxels
 
     //class behaviour
     bool serviced;
-    double voxel_res, seed_res, color_imp, normal_imp, spatial_imp, normal_radius;
+    double voxel_res, seed_res, color_imp, normal_imp, spatial_imp;
+    double normal_radius;
     int num_iterations;
 
-    boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr > > clusters;
+    boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr>> clusters;
 
     //Service Server
     ros::ServiceServer srv_clusterize;
@@ -52,14 +52,15 @@ class Supervoxels
     ros::Publisher pub_clusterized_scene;
 
     //custom spinner
-    void spin_once();
+    void
+    spin_once();
 
     //method to perform clustering
-    bool clustering();
+    bool
+    clustering();
 
     //clusterize service callback
-    bool cb_clusterize(pacman_vision_comm::clusterize::Request& req, pacman_vision_comm::clusterize::Response& res);
-
-
+    bool
+    cb_clusterize(pacman_vision_comm::clusterize::Request& req, pacman_vision_comm::clusterize::Response& res);
 };
 #endif

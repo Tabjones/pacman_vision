@@ -36,46 +36,53 @@ class VisionNode;
 class Estimator
 {
 
-  friend class VisionNode;
+    friend class VisionNode;
 
-  public:
+    public:
     Estimator(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor);
     ~Estimator();
     //Eigen alignment
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  private:
-    ros::NodeHandle nh;
-    boost::shared_ptr<ros::CallbackQueue> queue_ptr;
-    boost::shared_ptr<Storage> storage;
-    //Service Server
-    ros::ServiceServer srv_estimate;
-    //estimated transforms
-    boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > > estimations;
-    //object clusters found on scene
-    boost::shared_ptr<std::vector<PXC> > clusters;
-    //naming and id-ing of estimated objects
-    boost::shared_ptr<std::vector<std::pair<std::string, std::string> > > names; //name/id pairs
-    //actual scene
-    PXC::Ptr scene;
-    //path to pel database
-    boost::filesystem::path db_path;
+    private:
+        ros::NodeHandle nh;
+        boost::shared_ptr<ros::CallbackQueue> queue_ptr;
+        boost::shared_ptr<Storage> storage;
+        //Service Server
+        ros::ServiceServer srv_estimate;
+        //estimated transforms
+        boost::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> estimations;
+        //object clusters found on scene
+        boost::shared_ptr<std::vector<PXC>> clusters;
+        //naming and id-ing of estimated objects
+        boost::shared_ptr<std::vector<std::pair<std::string,std::string>>> names; //name/id pairs
+        //actual scene
+        PXC::Ptr scene;
+        //path to pel database
+        boost::filesystem::path db_path;
 
-    //class behaviour
-    bool calibration, disabled;
-    int iterations, neighbors;
-    double clus_tol;
+        //class behaviour
+        bool calibration, disabled;
+        int iterations, neighbors;
+        double clus_tol;
 
-    //PEL object
-    pel::interface::PEProgressiveBisection pe;
+        //PEL object
+        pel::interface::PEProgressiveBisection pe;
 
-    //method to extract clusters of objects in a table top scenario with table already removed
-    int extract_clusters();
-    //perform estimation
-    bool estimate();
-    //estimate service callback
-    bool cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res);
+        /*
+         * method to extract clusters of objects in a table top scenario with
+         * table already removed
+         */
+        int
+        extract_clusters();
+        //perform estimation
+        bool
+        estimate();
+        //estimate service callback
+        bool
+        cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res);
 
-    //custom spin method
-    void spin_once();
+        //custom spin method
+        void
+        spin_once();
 };
 #endif

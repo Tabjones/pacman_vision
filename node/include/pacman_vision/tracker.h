@@ -62,6 +62,8 @@ class Tracker
     //tracker transforms
     boost::shared_ptr<Eigen::Matrix4f> transform;
     Eigen::Matrix4f T_rotx, T_rotz, T_roty;
+    //hand-object relative pose
+    boost::shared_ptr<Eigen::Matrix4f> hand_obj_trans;
 
     //name and id of object to be tracked
     std::string name;
@@ -113,19 +115,25 @@ class Tracker
     pcl::VoxelGrid<PX> vg;
 
     //track_object service callback
-    bool cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res);
-
+    bool
+    cb_track_object(pacman_vision_comm::track_object::Request& req,
+                            pacman_vision_comm::track_object::Response& res);
     //stop tracker service callback
-    bool cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacman_vision_comm::stop_track::Response& res);
-
+    bool
+    cb_stop_tracker(pacman_vision_comm::stop_track::Request& req,
+                                pacman_vision_comm::stop_track::Response& res);
     //grasp_verification service callback
-    bool cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pacman_vision_comm::grasp_verification::Response& res);
-
+    bool
+    cb_grasp(pacman_vision_comm::grasp_verification::Request& req,
+                        pacman_vision_comm::grasp_verification::Response& res);
     //tracker methods
-    void track();
-    void find_object_in_scene();
+    void
+    track();
+    void
+    find_object_in_scene();
 
     //custom spin method
-    void spin_once();
+    void
+    spin_once();
 };
 #endif

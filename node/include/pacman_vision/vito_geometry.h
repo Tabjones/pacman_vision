@@ -6,109 +6,172 @@
 
 //Globally define Vito Robot Geometry (Taken from meshes)
 const static std::array<Box,7> lwr_arm{ {
-  Box(-0.06, -0.094, 0,
-       0.06,  0.06,  0.269), //Link1
-  Box(-0.06, -0.06,  -0.06,
-       0.06,  0.094, 0.192), //Link2
-  Box(-0.06, -0.06,  0,
-       0.06,  0.094, 0.269), //Link3
-  Box(-0.06, -0.094, -0.06,
-       0.06,  0.06,  0.269), //Link4
-  Box(-0.06, -0.056, 0,
-       0.06,  0.06,  0.269), //Link5
-  Box(-0.071, -0.056, -0.071,
-       0.071, 0.08,  0.057), //Link6
+  Box(-0.06, -0.06, -0.008,
+       0.06,  0.094,  0.261), //Link1
+  Box(-0.06, -0.094,  -0.06,
+       0.06,  0.060, 0.192), //Link2
+  Box(-0.06, -0.094, -0.008,
+       0.06,  0.060, 0.261), //Link3
+  Box(-0.06, -0.06, -0.06,
+       0.06,  0.094, 0.192), //Link4
+  Box(-0.06, -0.06, -0.008,
+       0.06,  0.094, 0.251), //Link5
+  Box(-0.071, -0.08, -0.071,
+       0.071, 0.056,  0.057), //Link6
   Box(-0.04,  -0.04, -0.031,
-       0.04,  0.04,  0)} };
-//And soft hands
+       0.04,  0.04,  0)} };  //Link7
+
+//Soft hands
 const static std::array<Box,21> soft_hand_right{ {
-  Box(-0.038, -0.038, 0,
-       0.038,  0.038, 0.068), //Base
-  Box(-0.032, -0.054, -0.017,
-       0.017,  0.045, 0.119), //palm_link
-  Box(-0.022, -0.012, - 0.015,
-       0.023,  0.012, 0.018), //kukle
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //proximal
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //middle
-  Box(-0.013, -0.012, -0.014,
-       0.03,   0.012,  0.016), //distal
-  Box(-0.022, -0.012, - 0.015,
-       0.023,  0.012, 0.018), //kukle
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //proximal
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //middle
-  Box(-0.013, -0.012, -0.014,
-       0.03,   0.012,  0.016), //distal
-  Box(-0.022, -0.012, - 0.015,
-       0.023,  0.012, 0.018), //kukle
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //proximal
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //middle
-  Box(-0.013, -0.012, -0.014,
-       0.03,   0.012,  0.016), //distal
-  Box(-0.022, -0.012, - 0.015,
-       0.023,  0.012, 0.018), //kukle
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //proximal
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //middle
-  Box(-0.013, -0.012, -0.014,
-       0.03,   0.012,  0.016), //distal
-  Box(-0.011, -0.019, -0.016,
-       0.036,  0.011,  0.017),  //Thumb
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //middle
-  Box(-0.013, -0.012, -0.014,
-       0.03,   0.012,  0.016) //distal
-} };
-const static std::array<Box,21> soft_hand_left{ {
-  Box(-0.038, -0.038, 0,
-       0.038,  0.038, 0.068), //Base
-  Box(-0.032, -0.045, -0.017,
-       0.017,  0.054, 0.119), //palm_link
-  Box(-0.022, -0.012, - 0.015,
-       0.023,  0.012, 0.018), //kukle
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //proximal
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //middle
-  Box(-0.013, -0.012, -0.014,
-       0.03,   0.012,  0.016), //distal
-  Box(-0.022, -0.012, - 0.015,
-       0.023,  0.012, 0.018), //kukle
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //proximal
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //middle
-  Box(-0.013, -0.012, -0.014,
-       0.03,   0.012,  0.016), //distal
-  Box(-0.022, -0.012, - 0.015,
-       0.023,  0.012, 0.018), //kukle
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //proximal
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //middle
-  Box(-0.013, -0.012, -0.014,
-       0.03,   0.012,  0.016), //distal
-  Box(-0.022, -0.012, - 0.015,
-       0.023,  0.012, 0.018), //kukle
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //proximal
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //middle
-  Box(-0.013, -0.012, -0.014,
-       0.03,   0.012,  0.016), //distal
-  Box(-0.011, -0.011, -0.016,
-       0.036,  0.019,  0.017),  //Thumb
-  Box(-0.013, -0.012, -0.014,
-       0.023,  0.012,  0.015), //middle
-  Box(-0.013, -0.012, -0.014,
-       0.03,   0.012,  0.016) //distal
+//base - coupler - clamps. in base ref system. take y of clamps, since biggest
+  Box(-0.033, -0.037, 0.004 -0.035 -0.014,
+       0.033,  0.037, 0.066),
+//Right Palm + glove tolerance + board TODO
+  Box(-0.027, -0.049, -0.012,
+       0.012,  0.04, 0.113),
+//Soft Fingers: 4 equal + 1 thumb
+//index finger
+//Knuckle + glove tolerance + imu TODO
+  Box(-0.017, -0.007, -0.012,
+       0.018,  0.007, 0.013),
+//Proximal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Middle + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Distal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.025,  0.007,  0.011),
+//little finger
+//Knuckle + glove tolerance + imu TODO
+  Box(-0.017, -0.007, -0.012,
+       0.018,  0.007, 0.013),
+//Proximal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Middle + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Distal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.025,  0.007,  0.011),
+//middle finger
+//Knuckle + glove tolerance + imu TODO
+  Box(-0.017, -0.007, -0.012,
+       0.018,  0.007, 0.013),
+//Proximal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Middle + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Distal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.025,  0.007,  0.011),
+//ring finger
+//Knuckle + glove tolerance + imu TODO
+  Box(-0.017, -0.007, -0.012,
+       0.018,  0.007, 0.013),
+//Proximal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Middle + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Distal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.025,  0.007,  0.011),
+//thumb finger
+//knuckle + glove tolerance + imu TODO
+  Box(-0.006, -0.013, -0.011,
+       0.031,  0.006,  0.011),
+//proximal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//distal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.025,  0.007,  0.011)
 } };
 
-const static Box hand(-0.032, -0.012, -0.017, 0.017, 0.054, 0.3); //TODO check dimensions
+//left hand
+const static std::array<Box,21> soft_hand_left{ {
+//base - coupler - clamps. in base ref system. take y of clamps, since biggest
+  Box(-0.033, -0.037, 0.004 -0.035 -0.014,
+       0.033,  0.037, 0.066),
+//Left Palm + glove tolerance + board TODO
+  Box(-0.027, -0.039, -0.011,
+       0.012,  0.049, 0.113),
+//Soft Fingers: 4 equal + 1 thumb
+//index finger
+//Knuckle + glove tolerance + imu TODO
+  Box(-0.017, -0.007, -0.012,
+       0.018,  0.007, 0.013),
+//Proximal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Middle + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Distal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.025,  0.007,  0.011),
+//little finger
+//Knuckle + glove tolerance + imu TODO
+  Box(-0.017, -0.007, -0.012,
+       0.018,  0.007, 0.013),
+//Proximal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Middle + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Distal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.025,  0.007,  0.011),
+//middle finger
+//Knuckle + glove tolerance + imu TODO
+  Box(-0.017, -0.007, -0.012,
+       0.018,  0.007, 0.013),
+//Proximal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Middle + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Distal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.025,  0.007,  0.011),
+//ring finger
+//Knuckle + glove tolerance + imu TODO
+  Box(-0.017, -0.007, -0.012,
+       0.018,  0.007, 0.013),
+//Proximal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Middle + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//Distal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.025,  0.007,  0.011),
+//thumb finger
+//knuckle + glove tolerance + imu TODO
+  Box(-0.006, -0.006, -0.011,
+       0.031,  0.013,  0.011),
+//proximal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.018,  0.007,  0.01),
+//distal + glove tolerance + imu TODO
+  Box(-0.007, -0.007, -0.009,
+       0.025,  0.007,  0.011)
+} };
+
+
+//approximate hand global dimensions
+const static Box hand_right(-0.07, -0.06, -0.1,
+                        0.025, 0.125, 0.21);
+const static Box hand_left(-0.07, -0.125, -0.1,
+                        0.025, 0.06, 0.21);
+
 #endif
