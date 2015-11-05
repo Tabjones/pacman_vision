@@ -2,7 +2,7 @@
 #include <pcl/common/time.h>
 
 InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_acquisition(false),
-            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false)
+            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false), leaf(0.001f)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
@@ -183,6 +183,7 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
     // vg.filter(*model_ds);
     //start acquiring sequence
     do_acquisition = true;
+    do_alignment = do_frame_fusion = false;
     return (true);
 }
 
@@ -200,14 +201,18 @@ InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vi
     //model.reset();
     //model_ds.reset();
     //cloud_sequence.clear();
+    ROS_INFO("[InHandModeler]\tPlease wait for processing to end...");
     return (true);
 }
 
 void
 InHandModeler::alignSequence()
 {
-    //initialize the iterator pointers
-    align_it = cloud_sequence.begin();
+    {
+        LOCK guard(mtx_sequence);
+        //initialize the iterator pointers
+        align_it = cloud_sequence.begin();
+    }
     //we use two elements at a time, so point to last one used
     ++align_it;
     while (do_alignment)
@@ -227,108 +232,108 @@ InHandModeler::alignSequence()
         //get source and target
         {
             LOCK guard(mtx_sequence);
-            target = cloud_sequence.front();
+            target = cloud_sequence.front().makeShared();
             cloud_sequence.pop_front();
-            source = cloud_sequence.front();
+            source = cloud_sequence.front().makeShared();
             ++align_it;
         }
-        //downsample
-        const float leaf = 0.01f;
-        vg.setLeafSize(leaf, leaf, leaf);
-        vg.setInputCloud(target);
-        vg.filter(*target);
-        vg.setInputCloud(source);
-        vg.filter(*source);
-        /*
-         * //remove differences
-         * pcl::octree::OctreePointCloudChangeDetector<PT> oct(leaf*2.0f);
-         * oct.setInputCloud(target);
-         * oct.addPointsFromInputCloud();
-         * oct.switchBuffers();
-         * oct.setInputCloud(source);
-         * oct.addPointsFromInputCloud();
-         * std::vector<int> changes;
-         * oct_cd_frames.getPointIndicesFromNewVoxels(changes);
-         * pcl::IndicesPtr same(new std::vector<int>);
-         * for(size_t i=0; i<source->size(); ++i)
-         * {
-         *     bool found(false);
-         *     for(size_t j=0; j<changes.size(); ++i)
-         *     {
-         *         if(changes[j] == i){
-         *             found=true;
-         *             break;
-         *         }
-         *     }
-         *     if(!found)
-         *         same->push_back(i);
-         * }
-         */
-        //estimate normals
-        ne.setRadiusSearch(2.0f*leaf);
-        ne.useSensorOriginAsViewPoint();
-        ne.setInputCloud(target);
-        ne.compute(*target_n);
-        ne.setInputCloud(source);
-        // ne.setIndices(same);
-        ne.compute(*source_n);
-        //estimate features
-        fpfh.setRadiusSearch(4.0f*leaf);
-        fpfh.setInputCloud(target);
-        fpfh.setInputNormals(target_n);
-        fpfh.compute(*target_f);
-        fpfh.setInputCloud(source);
-        // fpfh.setIndices(same);
-        fpfh.setInputNormals(source_n);
-        fpfh.compute(*source_f);
-        //do the alignment
-        alignment.setMaxCorrespondenceDistance(8.0f*leaf);
-        alignment.setInputSource(source);
-        // alignment.setIndices(same);
-        alignment.setSourceFeatures(source_f);
-        alignment.setInputTarget(target);
-        alignment.setTargetFeatures(target_f);
-        PC::Ptr source_aligned(new PC);
-        pcl::ScopeTime t("alignment");
-        alignment.align(*source_aligned);
-        if (alignment.hasConverged()){
-            //save result into sequence to be used as next target
-            {
-                Eigen::Matrix4f T = alignment.getFinalTransformation();
-                LOCK guard(mtx_sequence);
-                pcl::transformPointCloud(*cloud_sequence.front(),*source_aligned, T);
-                cloud_sequence.front() = source_aligned;
-            }
-            //update model
-            PC::Ptr tmp (new PC);
-            {
-                LOCK guard(mtx_model);
-                *model += *source_aligned;
-                if(model->points.size() > 1e4){
-                    vg.setInputCloud(model);
-                    vg.setLeafSize(0.001, 0.001, 0.001);
-                    vg.filter(*tmp);
-                    pcl::copyPointCloud(*tmp, *model);
-                }
-                vg.setInputCloud(model);
-                vg.setLeafSize(model_ls, model_ls, model_ls);
-                vg.filter(*tmp);
-                pcl::transformPointCloud(*tmp, *model_ds, T_mk);
-            }
-        }
-        //TODO add octomap hand removal
-        else{
-            ROS_ERROR("[InHandModeler][%s]Alignment FAILED!",__func__);
-            //TODO add error handling and termination
-        }
-        {
-            LOCK guard(mtx_sequence);
-            if(cloud_sequence.size() < 2)
-            {
-                ROS_INFO("[InHandModeler][%s]Finished alignment!", __func__);
-                break;
-            }
-        }
+//         //downsample
+//         vg.setLeafSize(leaf, leaf, leaf);
+//         vg.setInputCloud(target);
+//         vg.filter(*target);
+//         vg.setInputCloud(source);
+//         vg.filter(*source);
+//         *
+//         //remove differences
+//         pcl::octree::OctreePointCloudChangeDetector<PT> oct(leaf*2.0f);
+//         oct.setInputCloud(target);
+//         oct.addPointsFromInputCloud();
+//         oct.switchBuffers();
+//         oct.setInputCloud(source);
+//         oct.addPointsFromInputCloud();
+//         std::vector<int> changes;
+//         oct_cd_frames.getPointIndicesFromNewVoxels(changes);
+//         pcl::IndicesPtr same(new std::vector<int>);
+//         for(size_t i=0; i<source->size(); ++i)
+//         {
+//             bool found(false);
+//             for(size_t j=0; j<changes.size(); ++i)
+//             {
+//                 if(changes[j] == i){
+//                     found=true;
+//                     break;
+//                 }
+//             }
+//             if(!found)
+//                 same->push_back(i);
+//         }
+//          *
+//         //estimate normals
+//         ne.setRadiusSearch(2.0f*leaf);
+//         ne.useSensorOriginAsViewPoint();
+//         ne.setInputCloud(target);
+//         ne.compute(*target_n);
+//         ne.setInputCloud(source);
+//         // ne.setIndices(same);
+//         ne.compute(*source_n);
+//         //estimate features
+//         fpfh.setRadiusSearch(4.0f*leaf);
+//         fpfh.setInputCloud(target);
+//         fpfh.setInputNormals(target_n);
+//         fpfh.compute(*target_f);
+//         fpfh.setInputCloud(source);
+//         // fpfh.setIndices(same);
+//         fpfh.setInputNormals(source_n);
+//         fpfh.compute(*source_f);
+//         //do the alignment
+//
+//         alignment.setMaxCorrespondenceDistance(8.0f*leaf);
+//         alignment.setInputSource(source);
+//         // alignment.setIndices(same);
+//         alignment.setSourceFeatures(source_f);
+//         alignment.setInputTarget(target);
+//         alignment.setTargetFeatures(target_f);
+//         PC::Ptr source_aligned(new PC);
+//         pcl::ScopeTime t("alignment");
+//         alignment.align(*source_aligned);
+//         if (alignment.hasConverged()){
+//             //save result into sequence to be used as next target
+//             {
+//                 Eigen::Matrix4f T = alignment.getFinalTransformation();
+//                 LOCK guard(mtx_sequence);
+//                 pcl::transformPointCloud(*cloud_sequence.front(),*source_aligned, T);
+//                 cloud_sequence.front() = source_aligned;
+//             }
+//             //update model
+//             PC::Ptr tmp (new PC);
+//             {
+//                 LOCK guard(mtx_model);
+//                 *model += *source_aligned;
+//                 if(model->points.size() > 1e4){
+//                     vg.setInputCloud(model);
+//                     vg.setLeafSize(0.001, 0.001, 0.001);
+//                     vg.filter(*tmp);
+//                     pcl::copyPointCloud(*tmp, *model);
+//                 }
+//                 vg.setInputCloud(model);
+//                 vg.setLeafSize(model_ls, model_ls, model_ls);
+//                 vg.filter(*tmp);
+//                 pcl::transformPointCloud(*tmp, *model_ds, T_mk);
+//             }
+//         }
+//         //TODO add octomap hand removal
+//         else{
+//             ROS_ERROR("[InHandModeler][%s]Alignment FAILED!",__func__);
+//             //TODO add error handling and termination
+//         }
+//         {
+//             LOCK guard(mtx_sequence);
+//             if(cloud_sequence.size() < 2)
+//             {
+//                 ROS_INFO("[InHandModeler][%s]Finished alignment!", __func__);
+//                 break;
+//             }
+//         }
         boost::this_thread::sleep(boost::posix_time::milliseconds(5));
     }//endwhile
     do_alignment = false;
@@ -337,47 +342,73 @@ InHandModeler::alignSequence()
 void
 InHandModeler::fuseSimilarFrames()
 {
-    fuse_it = cloud_sequence.begin();
+    //This is started after sequence has already some items
+    pcl::visualization::PCLVisualizer v("frames"); //TODO temp visualization
+    {
+        LOCK guard(mtx_sequence);
+        v.addPointCloud(cloud_sequence.front().makeShared(), "frame");
+        fuse_it = cloud_sequence.begin();
+    }
     while (do_frame_fusion)
     {
-        std::list<PC::Ptr>::iterator fuse_next = ++fuse_it;
+        std::list<PC>::iterator fuse_next = ++fuse_it;
         --fuse_it;
-        if (fuse_next == cloud_sequence.end()){
+        std::list<PC>::iterator end;
+        {
+            LOCK guard(mtx_sequence);
+            end = cloud_sequence.end();
+        }
+        if (fuse_next == end){
             if(do_acquisition){
+                //lets wait for acquisition thread to add more clouds to sequence
                 boost::this_thread::sleep(boost::posix_time::milliseconds(200));
                 continue;
             }
             else{
+                //Finished traversing sequence, let's get out of here
                 break;
             }
         }
-        PC::Ptr current(new PC);
-        PC::Ptr next_c(new PC);
-        {
+        {//locked block
             LOCK guard(mtx_sequence);
-            current = *fuse_it;
-            next_c = *rem_it_next;
+            PC::Ptr current(new PC);
+            PC::Ptr next_c(new PC);
+            current = fuse_it->makeShared();
+            next_c = fuse_next->makeShared();
+            oct_cd_frames.setInputCloud(current);
+            oct_cd_frames.addPointsFromInputCloud();
+            oct_cd_frames.switchBuffers();
+            oct_cd_frames.setInputCloud(next_c);
+            oct_cd_frames.addPointsFromInputCloud();
+            std::vector<int> changes;
+            oct_cd_frames.getPointIndicesFromNewVoxels(changes);
+            oct_cd_frames.deleteCurrentBuffer();
+            oct_cd_frames.deletePreviousBuffer();
+            if (changes.size() > next_c->size() * 0.04){
+                //From new  frame more than  4% of  points were not  in previous
+                //one, Most likely there was a  motion, so we keep the new frame
+                //into sequence and move on.
+                ++fuse_it;
+            }
+            else{
+                //Old and  new frames are  almost equal in point  differences we
+                //can fuse them togheter into a single frame and resample.
+                *current += *next_c;
+                pcl::VoxelGrid<PT> resamp;
+                resamp.setLeafSize(leaf,leaf,leaf);
+                resamp.setInputCloud(current);
+                resamp.filter(*fuse_it);
+                cloud_sequence.erase(fuse_next);
+            }
+            //TODO temp visualization
+            v.updatePointCloud(fuse_it->makeShared(), "frame");
+            v.spinOnce(1000,true);
+            ///////
         }
-        oct_cd_frames.setInputCloud(current);
-        oct_cd_frames.addPointsFromInputCloud();
-        oct_cd_frames.switchBuffers();
-        oct_cd_frames.setInputCloud(next_c);
-        oct_cd_frames.addPointsFromInputCloud();
-        std::vector<int> changes;
-        oct_cd_frames.getPointIndicesFromNewVoxels(changes);
-        oct_cd_frames.deleteCurrentBuffer();
-        oct_cd_frames.deletePreviousBuffer();
-        if (changes.size() > next_c->size() * 0.1){
-            //more than 10% of points have changed, we keep it
-            ++fuse_it;
-        }
-        else{
-            //frames are almost equal we remove one
-            LOCK guard(mtx_sequence);
-            cloud_sequence.erase(rem_it_next);
-        }
+        boost::this_thread::sleep(boost::posix_time::milliseconds(50));
     }//endwhile
-    do_frame_fusion = false;
+    v.close();
+    ROS_INFO("[InHandModeler][%s]\tJob finished!",__func__);
 }
 
 void
@@ -392,16 +423,16 @@ InHandModeler::spin_once()
         tf_broadcaster.sendTransform(tf::StampedTransform(t_km, ros::Time::now(), sensor_ref_frame.c_str(), "in_hand_model_frame"));
     }
     if (do_acquisition){
-        PC::Ptr scene (new PC);
+        PC::Ptr scene;
         this->storage->read_scene_processed(scene);
         {
             LOCK guard(mtx_sequence);
-            cloud_sequence.push_back(scene);
+            cloud_sequence.push_back(*scene);
         }
     }
     if (!do_frame_fusion){
         if (cloud_sequence.size()>10){
-            //time to start the removal thread
+            //time to start the fusion thread
             do_frame_fusion = true;
             remove_driver = boost::thread(&InHandModeler::fuseSimilarFrames, this);
         }

@@ -21,10 +21,11 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_ros/transforms.h>
+#include <pcl/features/multiscale_feature_persistence.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/fpfh_omp.h>
 #include <pcl/registration/icp.h>
-#include <pcl/registration/sample_consensus_prerejective.h>
+// #include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
 #include <pcl/visualization/pcl_visualizer.h>
 // ROS generated headers
@@ -64,7 +65,9 @@ class InHandModeler
         //mutex to protect point clouds and model
         boost::mutex mtx_sequence, mtx_model;
         //pointers to queue
-        std::list<PC::Ptr>::iterator align_it, fuse_it;
+        std::list<PC>::iterator align_it, fuse_it;
+        //leaf size for frames
+        const float leaf;
 
         //subscriber to clickedpoints
         ros::Subscriber sub_clicked;
@@ -89,7 +92,7 @@ class InHandModeler
 
         //pointclouds sequence
         //in kinect reference frame
-        std::list<PC::Ptr> cloud_sequence;
+        std::list<PC> cloud_sequence;
         //model and downsampled model in model reference frame
         PC::Ptr model, model_ds;
 
@@ -97,7 +100,7 @@ class InHandModeler
         pcl::VoxelGrid<PT> vg;
 
         //Registration
-        pcl::SampleConsensusPrerejective<PT, PT, pcl::FPFHSignature33> alignment;
+        // pcl::SampleConsensusPrerejective<PT, PT, pcl::FPFHSignature33> alignment;
         pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
         pcl::NormalEstimationOMP<PT, NT> ne;
         pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33> fpfh;

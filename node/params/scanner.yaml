@@ -20,7 +20,7 @@ pacman_vision:
   hand_boxes: false, ignore_clicked_point: false, iterations: 5, keep_organized: false,
   model_leaf_size: 0.001, neighbors: 20, normal_importance: 0.3333, normals_search_radius: 0.01,
   object_calibration: false, pass_xmax: 0.15, pass_xmin: -0.15, pass_ymax: 0.2, pass_ymin: -0.2,
-  pass_zmax: 1.2, pass_zmin: 0.8, passthrough: true, passthrough_limits: true, plane_segmentation: true,
+  pass_zmax: 1.2, pass_zmin: 0.8, passthrough: true, passthrough_limits: true, plane_segmentation: false,
   plane_tolerance: 0.008, publish_tf: true, refinement_iterations: 2, seed_resolution: 0.18,
   sensor_fake_calibration: false, sensor_type: 2, spatial_importance: 0.3333, table_pass: 10,
   tracker_bounding_box: false, tracker_disturbance: false, use_service: false, use_table_transform: false,
