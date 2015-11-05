@@ -64,7 +64,7 @@ class InHandModeler
         //mutex to protect point clouds and model
         boost::mutex mtx_sequence, mtx_model;
         //pointers to queue
-        std::list<PC::Ptr>::iterator align_it, remove_it;
+        std::list<PC::Ptr>::iterator align_it, fuse_it;
 
         //subscriber to clickedpoints
         ros::Subscriber sub_clicked;
@@ -73,7 +73,6 @@ class InHandModeler
         ros::Publisher pub_model;
 
         //transform broadcaster and listener
-        ////TODO move this broadcasting to broadcaster module !
         tf::TransformBroadcaster tf_broadcaster;
         tf::TransformListener tf_listener;
 
@@ -85,8 +84,8 @@ class InHandModeler
         bool do_acquisition;
         //needs to process acquired clouds?
         bool do_alignment;
-        //needs to remove similar frames from cloud sequence ?
-        bool do_removal;
+        //needs to fuse similar frames from cloud sequence ?
+        bool do_frame_fusion;
 
         //pointclouds sequence
         //in kinect reference frame
@@ -136,7 +135,7 @@ class InHandModeler
         alignSequence();
         //discard too similar frames
         void
-        removeSimilarFramesFromSequence();
+        fuseSimilarFrames();
 
         //custom spin method
         void

@@ -2,7 +2,7 @@
 #include <pcl/common/time.h>
 
 InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_acquisition(false),
-            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_removal(false)
+            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
@@ -65,121 +65,123 @@ bool InHandModeler::saveModel()
 
 void InHandModeler::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg)
 {
-    if(!ignore_clicked_point && !do_acquisition){
-        float nx,ny,nz;
-        PT pt;
-        //Get clicked point
-        pt.x = msg->point.x;
-        pt.y = msg->point.y;
-        pt.z = msg->point.z;
-        std::string sensor;
-        PC::Ptr scene;
-        this->storage->read_scene_processed(scene);
-        this->storage->read_sensor_ref_frame(sensor);
-        if (msg->header.frame_id.compare(sensor) != 0){
-            //Put the point read from rviz into kinect reference frame (if needed)
-            tf_listener.waitForTransform(sensor.c_str(), msg->header.frame_id.c_str(), ros::Time(0), ros::Duration(1.0));
-            tf::StampedTransform t_msg;
-            tf_listener.lookupTransform(sensor.c_str(), msg->header.frame_id.c_str(), ros::Time(0), t_msg);
-            Eigen::Matrix4f T;
-            geometry_msgs::Pose pose;
-            fromTF(t_msg, T, pose);
-            PT pt_t;
-            pt_t = pcl::transformPoint<PT>(pt, Eigen::Affine3f(T));
-            //now the point is in kinect ref. frame.
-            pt.x = pt_t.x;
-            pt.y = pt_t.y;
-            pt.z = pt_t.z;
-        }
-        //compute a normal around the point neighborhood (2cm)
-        pcl::search::KdTree<PT> kdtree;
-        std::vector<int> idx(scene->points.size());
-        std::vector<float> dist(scene->points.size());
-        kdtree.setInputCloud(scene);
-        kdtree.radiusSearch(pt, 0.02, idx, dist);
-        pcl::NormalEstimationOMP<PT, pcl::Normal> ne_point;
-        ne_point.setInputCloud(scene);
-        ne_point.useSensorOriginAsViewPoint();
-        float curv;
-        ne_point.computePointNormal (*scene, idx, nx,ny,nz, curv);
-        //Compute model transform
-        if (!computeModelTransform(pt,nx,ny,nz)){
-            ROS_WARN("[InHandModeler][%s]\tFailed to compute Model Transform, please click again!", __func__);
-            return;
-        }
-        //save this scene into the sequence, so that we can use it as a start.
-        if (!cloud_sequence.empty())
-            cloud_sequence.clear();
-        cloud_sequence.push_back(scene);
-    }
-    else{
-        ROS_INFO("[InHandModeler][%s]Ignoring clicked point as requested or because already started processing...", __func__);
-    }
+    /*
+     * if(!ignore_clicked_point && !do_acquisition){
+     *     float nx,ny,nz;
+     *     PT pt;
+     *     //Get clicked point
+     *     pt.x = msg->point.x;
+     *     pt.y = msg->point.y;
+     *     pt.z = msg->point.z;
+     *     std::string sensor;
+     *     PC::Ptr scene;
+     *     this->storage->read_scene_processed(scene);
+     *     this->storage->read_sensor_ref_frame(sensor);
+     *     if (msg->header.frame_id.compare(sensor) != 0){
+     *         //Put the point read from rviz into kinect reference frame (if needed)
+     *         tf_listener.waitForTransform(sensor.c_str(), msg->header.frame_id.c_str(), ros::Time(0), ros::Duration(1.0));
+     *         tf::StampedTransform t_msg;
+     *         tf_listener.lookupTransform(sensor.c_str(), msg->header.frame_id.c_str(), ros::Time(0), t_msg);
+     *         Eigen::Matrix4f T;
+     *         geometry_msgs::Pose pose;
+     *         fromTF(t_msg, T, pose);
+     *         PT pt_t;
+     *         pt_t = pcl::transformPoint<PT>(pt, Eigen::Affine3f(T));
+     *         //now the point is in kinect ref. frame.
+     *         pt.x = pt_t.x;
+     *         pt.y = pt_t.y;
+     *         pt.z = pt_t.z;
+     *     }
+     *     //compute a normal around the point neighborhood (2cm)
+     *     pcl::search::KdTree<PT> kdtree;
+     *     std::vector<int> idx(scene->points.size());
+     *     std::vector<float> dist(scene->points.size());
+     *     kdtree.setInputCloud(scene);
+     *     kdtree.radiusSearch(pt, 0.02, idx, dist);
+     *     pcl::NormalEstimationOMP<PT, pcl::Normal> ne_point;
+     *     ne_point.setInputCloud(scene);
+     *     ne_point.useSensorOriginAsViewPoint();
+     *     float curv;
+     *     ne_point.computePointNormal (*scene, idx, nx,ny,nz, curv);
+     *     //Compute model transform
+     *     if (!computeModelTransform(pt,nx,ny,nz)){
+     *         ROS_WARN("[InHandModeler][%s]\tFailed to compute Model Transform, please click again!", __func__);
+     *         return;
+     *     }
+     *     //save this scene into the sequence, so that we can use it as a start.
+     *     if (!cloud_sequence.empty())
+     *         cloud_sequence.clear();
+     *     cloud_sequence.push_back(scene);
+     * }
+     * else{
+     *     ROS_INFO("[InHandModeler][%s]Ignoring clicked point as requested or because already started processing...", __func__);
+     * }
+     */
 }
 
 bool
 InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_vision_comm::start_modeler::Response& res)
 {
-    if (!has_transform){
-        ROS_ERROR("[InHandModeler][%s]\tNo model transform defined, please click and publish a point in rviz", __func__);
-        return (false);
-    }
-    if (do_alignment || do_acquisition || do_removal){
+    /*
+     * if (!has_transform){
+     *     ROS_ERROR("[InHandModeler][%s]\tNo model transform defined, please click and publish a point in rviz", __func__);
+     *     return (false);
+     * }
+     */
+    if (do_alignment || do_acquisition || do_frame_fusion){
         ROS_ERROR("[InHandModeler][%s]\talignment is already started!", __func__);
         return (false);
     }
-    ///////////////////////Init Registration////////////////////////////////////
-    //RANSAC maximum iterations
-    alignment.setMaximumIterations(50000);
-    /*
-     * The number of point correspondences  to sample between source and target.
-     * At minimum, 3 points are required to calculate a pose.
-     */
-    alignment.setNumberOfSamples(3);
-    /*
-     * Instead of matching  each source FPFH descriptor to  its nearest matching
-     * feature  in the  target, we  can  choose between  the N  best matches  at
-     * random.  This increases  the  iterations necessary,  but  also makes  the
-     * algorithm robust towards outlier matches.
-     */
-    alignment.setCorrespondenceRandomness(5);
-    //Use  dual quaternion  method to  estimate a  rigid transformation  between
-    //correspondences.
-    //alignment.setTransformationEstimation(teDQ);
-    /*
-     * The alignment  class uses the CorrespondenceRejectorPoly  class for early
-     * elimination of bad poses  based on pose-invariant geometric consistencies
-     * of  the inter-distances  between sampled  points  on the  source and  the
-     * target. The closer  this value is set  to 1, the more  greedy and thereby
-     * fast  the algorithm  becomes. However,  this also  increases the  risk of
-     * eliminating good poses when noise is present.
-     */
-    alignment.setSimilarityThreshold(0.9f);
-    // Reject correspondences more distant than this value.
-    // This is heuristically set to 10 times point density
-    alignment.setMaxCorrespondenceDistance(2.5f * 0.005f);
-    /*
-     * In many  practical scenarios,  large parts  of the  source in  the target
-     * scene are not visible, either due to clutter, occlusions or both. In such
-     * cases, we  need to allow  for pose hypotheses that  do not align  all the
-     * source  points to  the target  scene.  The absolute  number of  correctly
-     * aligned points is determined using the inlier threshold, and if the ratio
-     * of this number to the total number of points in the source is higher than
-     * the specified inlier fraction, we accept a pose hypothesis as valid.
-     */
-    alignment.setInlierFraction(0.25f);
-
+    // ///////////////////////Init Registration////////////////////////////////////
+    // //RANSAC maximum iterations
+    // alignment.setMaximumIterations(50000);
+    // #<{(|
+    //  * The number of point correspondences  to sample between source and target.
+    //  * At minimum, 3 points are required to calculate a pose.
+    //  |)}>#
+    // alignment.setNumberOfSamples(3);
+    // #<{(|
+    //  * Instead of matching  each source FPFH descriptor to  its nearest matching
+    //  * feature  in the  target, we  can  choose between  the N  best matches  at
+    //  * random.  This increases  the  iterations necessary,  but  also makes  the
+    //  * algorithm robust towards outlier matches.
+    //  |)}>#
+    // alignment.setCorrespondenceRandomness(5);
+    // //Use  dual quaternion  method to  estimate a  rigid transformation  between
+    // //correspondences.
+    // //alignment.setTransformationEstimation(teDQ);
+    // #<{(|
+    //  * The alignment  class uses the CorrespondenceRejectorPoly  class for early
+    //  * elimination of bad poses  based on pose-invariant geometric consistencies
+    //  * of  the inter-distances  between sampled  points  on the  source and  the
+    //  * target. The closer  this value is set  to 1, the more  greedy and thereby
+    //  * fast  the algorithm  becomes. However,  this also  increases the  risk of
+    //  * eliminating good poses when noise is present.
+    //  |)}>#
+    // alignment.setSimilarityThreshold(0.9f);
+    // // Reject correspondences more distant than this value.
+    // // This is heuristically set to 10 times point density
+    // alignment.setMaxCorrespondenceDistance(2.5f * 0.005f);
+    // #<{(|
+    //  * In many  practical scenarios,  large parts  of the  source in  the target
+    //  * scene are not visible, either due to clutter, occlusions or both. In such
+    //  * cases, we  need to allow  for pose hypotheses that  do not align  all the
+    //  * source  points to  the target  scene.  The absolute  number of  correctly
+    //  * aligned points is determined using the inlier threshold, and if the ratio
+    //  * of this number to the total number of points in the source is higher than
+    //  * the specified inlier fraction, we accept a pose hypothesis as valid.
+    //  |)}>#
+    // alignment.setInlierFraction(0.25f);
+    //
     //initialize the model with first cloud from sequence
     model.reset(new PC);
     model_ds.reset(new PC);
-    pcl::copyPointCloud(*cloud_sequence.front(), *model);
-    vg.setInputCloud(model);
-    vg.setLeafSize(model_ls, model_ls, model_ls);
-    vg.filter(*model_ds);
-    //initialize the iterator pointers
-    align_it = cloud_sequence.begin();
-    remove_it = cloud_sequence.begin();
-    //start registering
+    cloud_sequence.clear();
+    // pcl::copyPointCloud(*cloud_sequence.front(), *model);
+    // vg.setInputCloud(model);
+    // vg.setLeafSize(model_ls, model_ls, model_ls);
+    // vg.filter(*model_ds);
+    //start acquiring sequence
     do_acquisition = true;
     return (true);
 }
@@ -204,12 +206,14 @@ InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vi
 void
 InHandModeler::alignSequence()
 {
+    //initialize the iterator pointers
+    align_it = cloud_sequence.begin();
     //we use two elements at a time, so point to last one used
     ++align_it;
     while (do_alignment)
     {
-        //determine if we have to wait for do_removal thread
-        if (align_it == remove_it)
+        //determine if we have to wait for do_frame_fusion thread
+        if (align_it == fuse_it)
         {
             boost::this_thread::sleep(boost::posix_time::milliseconds(200));
             continue;
@@ -331,13 +335,14 @@ InHandModeler::alignSequence()
 }
 
 void
-InHandModeler::removeSimilarFramesFromSequence()
+InHandModeler::fuseSimilarFrames()
 {
-    while (do_removal)
+    fuse_it = cloud_sequence.begin();
+    while (do_frame_fusion)
     {
-        std::list<PC::Ptr>::iterator rem_it_next = ++remove_it;
-        --remove_it;
-        if (rem_it_next == cloud_sequence.end()){
+        std::list<PC::Ptr>::iterator fuse_next = ++fuse_it;
+        --fuse_it;
+        if (fuse_next == cloud_sequence.end()){
             if(do_acquisition){
                 boost::this_thread::sleep(boost::posix_time::milliseconds(200));
                 continue;
@@ -350,7 +355,7 @@ InHandModeler::removeSimilarFramesFromSequence()
         PC::Ptr next_c(new PC);
         {
             LOCK guard(mtx_sequence);
-            current = *remove_it;
+            current = *fuse_it;
             next_c = *rem_it_next;
         }
         oct_cd_frames.setInputCloud(current);
@@ -364,7 +369,7 @@ InHandModeler::removeSimilarFramesFromSequence()
         oct_cd_frames.deletePreviousBuffer();
         if (changes.size() > next_c->size() * 0.1){
             //more than 10% of points have changed, we keep it
-            ++remove_it;
+            ++fuse_it;
         }
         else{
             //frames are almost equal we remove one
@@ -372,7 +377,7 @@ InHandModeler::removeSimilarFramesFromSequence()
             cloud_sequence.erase(rem_it_next);
         }
     }//endwhile
-    do_removal = false;
+    do_frame_fusion = false;
 }
 
 void
@@ -394,11 +399,11 @@ InHandModeler::spin_once()
             cloud_sequence.push_back(scene);
         }
     }
-    if (!do_removal){
+    if (!do_frame_fusion){
         if (cloud_sequence.size()>10){
             //time to start the removal thread
-            do_removal = true;
-            remove_driver = boost::thread(&InHandModeler::removeSimilarFramesFromSequence, this);
+            do_frame_fusion = true;
+            remove_driver = boost::thread(&InHandModeler::fuseSimilarFrames, this);
         }
     }
     if (!do_alignment){
