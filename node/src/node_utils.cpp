@@ -119,6 +119,7 @@ VisionNode::crop_hand(PC::Ptr source, PC::Ptr& dest, bool right)
 void
 VisionNode::process_scene()
 {
+    scene_processed.reset(new PC);
     PC::Ptr source;
     PC::Ptr dest;
     this->storage->read_scene(source);
