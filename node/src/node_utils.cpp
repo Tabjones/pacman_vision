@@ -119,10 +119,14 @@ VisionNode::crop_hand(PC::Ptr source, PC::Ptr& dest, bool right)
 void
 VisionNode::process_scene()
 {
-    PC::Ptr source (new PC);
+    PC::Ptr source;
     PC::Ptr dest;
     this->storage->read_scene(source);
     //check if we need to crop scene
+    if(!source)
+        return;
+    if(source->empty())
+        return;
     if (filter){
         //check if have a table transform
         if (use_table_trans){
@@ -137,6 +141,8 @@ VisionNode::process_scene()
         else{
             crop_a_box(source, dest, Eigen::Matrix4f::Identity(), *limits, false, keep_organized);
         }
+        if(dest->empty())
+            return;
     }
     //check if we need to downsample scene
     if (downsample){
@@ -150,6 +156,8 @@ VisionNode::process_scene()
             dest.reset(new PC);
         vg.setInputCloud (source);
         vg.filter (*dest);
+        if(dest->empty())
+            return;
     }
     if (plane){
         pcl::SACSegmentation<PT> seg;
@@ -174,6 +182,8 @@ VisionNode::process_scene()
         extract.setIndices(inliers);
         extract.setNegative(true);
         extract.filter(*dest);
+        if(dest->empty())
+            return;
     }
     //crop arms if listener is active and we set it
     if ((crop_r_arm || crop_l_arm || crop_r_hand || crop_l_hand) && this->en_listener && this->listener_module){
@@ -181,11 +191,15 @@ VisionNode::process_scene()
             if (dest)
                 pcl::copyPointCloud(*dest, *source);
             crop_arm(source, dest, false);
+            if(dest->empty())
+                return;
         }
         if (crop_r_arm){
             if (dest)
                 pcl::copyPointCloud(*dest, *source);
             crop_arm(source, dest, true);
+            if(dest->empty())
+                return;
         }
         if (crop_r_hand){
             if(dest)
@@ -194,9 +208,13 @@ VisionNode::process_scene()
                 for (size_t i=0; i<21; ++i)
                     listener_module->listen_and_crop_detailed_hand_piece(true, i, source);
                 pcl::copyPointCloud(*source, *dest);
+                if(dest->empty())
+                    return;
             }
             else{
                 crop_hand(source, dest, true);
+                if(dest->empty())
+                    return;
             }
         }
         if (crop_l_hand){
@@ -206,19 +224,22 @@ VisionNode::process_scene()
                 for (size_t i=0; i<21; ++i)
                     listener_module->listen_and_crop_detailed_hand_piece(false, i, source);
                 pcl::copyPointCloud(*source, *dest);
+                if(dest->empty())
+                    return;
             }
             else{
                 crop_hand(source, dest, false);
+                if(dest->empty())
+                    return;
             }
         }
     }
     //Save into storage
     if (dest){
-        pcl::copyPointCloud(*dest, *scene_processed);
-        this->storage->write_scene_processed(this->scene_processed);
-    }
-    else{
-        this->storage->write_scene_processed(this->scene);
+        if(!dest->empty()){
+            pcl::copyPointCloud(*dest, *scene_processed);
+            this->storage->write_scene_processed(this->scene_processed);
+        }
     }
 }
 

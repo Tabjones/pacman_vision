@@ -93,8 +93,8 @@ void
 VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
 {
     if(!master_disable){
-        if (!this->scene_processed)
-            this->scene_processed.reset( new PC);
+        if (!this->scene)
+            this->scene.reset(new PC);
         pcl::fromROSMsg (*message, *(this->scene));
         // Save untouched scene into storage
         this->storage->write_scene(this->scene);
