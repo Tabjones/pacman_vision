@@ -391,13 +391,13 @@ InHandModeler::spin_once()
     if (has_transform){
         tf::Transform t_km;
         geometry_msgs::Pose pose;
-        fromEigen(t_km, pose, t_km);
+        fromEigen(T_km, pose, t_km);
         std::string sensor_ref_frame;
         this->storage->read_sensor_ref_frame(sensor_ref_frame);
-        tf_broadcaster.sendTransform(tf::StampedTransform(t_km, ros::time::now(), sensor_ref_frame.c_str(), "in_hand_model_frame"));
+        tf_broadcaster.sendTransform(tf::StampedTransform(t_km, ros::Time::now(), sensor_ref_frame.c_str(), "in_hand_model_frame"));
     }
     if (do_acquisition){
-        pc::ptr scene;
+        PC::Ptr scene;
         this->storage->read_scene_processed(scene);
         {
             LOCK guard(mtx_sequence);
