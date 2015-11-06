@@ -2,7 +2,7 @@
 #include <pcl/common/time.h>
 
 InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_acquisition(false),
-            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false), leaf(0.004f),
+            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false), leaf(0.005f),
             leaf_f(0.001f)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
@@ -20,6 +20,7 @@ InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &sto
     sub_clicked = nh.subscribe(nh.resolveName("/clicked_point"), 1, &InHandModeler::cb_clicked, this);
     pub_model = nh.advertise<PC> ("in_hand_model",1);
     teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>);
+    fpfh.reset(new pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33>);
 }
 
 bool
@@ -241,6 +242,8 @@ InHandModeler::alignSequence()
             vg.setInputCloud(cloud_sequence.front().makeShared());
             vg.filter(*source);
             ++align_it;
+            //TODO: Need to check later if source and target needs to be switched
+            //(Fri 06 Nov 2015 08:07:25 PM CET -- tabjones)
         }
 
         //estimate normals
@@ -250,15 +253,30 @@ InHandModeler::alignSequence()
         ne.compute(*target_n);
         ne.setInputCloud(source);
         ne.compute(*source_n);
-        //estimate features
-        fpfh.setRadiusSearch(2.5f*leaf);
-        fpfh.setInputCloud(target);
-        fpfh.setInputNormals(target_n);
-        fpfh.compute(*target_f);
-        fpfh.setInputCloud(source);
-        // fpfh.setindices(same);
-        fpfh.setInputNormals(source_n);
-        fpfh.compute(*source_f);
+        //initialize feature estimator and compute it for target
+        std::vector<float> scales;
+        scales.push_back(2.0f*leaf);
+        scales.push_back(2.5f*leaf);
+        scales.push_back(3.0f*leaf);
+        scales.push_back(3.5f*leaf);
+        persistance.setInputCloud(target);
+        persistance.setScalesVector(scales);
+        fpfh->setInputNormals(target_n);
+        persistance.setFeatureEstimator(fpfh);
+        persistance.setAlpha(2); //presumably this is std_dev multiplier
+        persistance.setDistanceMetric(CS); //use chi squared distance
+        boost::shared_ptr<std::vector<int>> target_p_idx (new std::vector<int>);
+        persistance.determinePersistentFeatures(*target_f, target_p_idx);
+        //do it again for source
+        persistance.setInputCloud(source);
+        persistance.setScalesVector(scales);
+        fpfh->setInputNormals(source_n);
+        persistance.setFeatureEstimator(fpfh);
+        persistance.setAlpha(2); //presumably this is std_dev multiplier
+        persistance.setDistanceMetric(CS); //use chi squared distance
+        boost::shared_ptr<std::vector<int>> source_p_idx (new std::vector<int>);
+        persistance.determinePersistentFeatures(*source_f, source_p_idx);
+
         //do the alignment
 //
 //         alignment.setmaxcorrespondencedistance(8.0f*leaf);

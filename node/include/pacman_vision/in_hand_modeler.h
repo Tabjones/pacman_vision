@@ -104,7 +104,7 @@ class InHandModeler
         pcl::MultiscaleFeaturePersistence<PT,pcl::FPFHSignature33> persistance;
         pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
         pcl::NormalEstimationOMP<PT, NT> ne;
-        pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33> fpfh;
+        pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33>::Ptr fpfh;
 
         //Octrees
         pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
