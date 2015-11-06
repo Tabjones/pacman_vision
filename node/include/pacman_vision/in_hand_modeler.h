@@ -66,8 +66,8 @@ class InHandModeler
         boost::mutex mtx_sequence, mtx_model;
         //pointers to queue
         std::list<PC>::iterator align_it, fuse_it;
-        //leaf size for frames
-        const float leaf;
+        //leaf size for frames fusion and frame alignment
+        const float leaf_f, leaf;
 
         //subscriber to clickedpoints
         ros::Subscriber sub_clicked;
@@ -101,6 +101,7 @@ class InHandModeler
 
         //Registration
         // pcl::SampleConsensusPrerejective<PT, PT, pcl::FPFHSignature33> alignment;
+        pcl::MultiscaleFeaturePersistence<PT,pcl::FPFHSignature33> persistance;
         pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
         pcl::NormalEstimationOMP<PT, NT> ne;
         pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33> fpfh;

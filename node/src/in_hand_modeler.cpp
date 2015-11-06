@@ -2,7 +2,8 @@
 #include <pcl/common/time.h>
 
 InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_acquisition(false),
-            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false), leaf(0.001f)
+            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false), leaf(0.004f),
+            leaf_f(0.001f)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
@@ -218,119 +219,92 @@ InHandModeler::alignSequence()
     while (do_alignment)
     {
         //determine if we have to wait for do_frame_fusion thread
-        if (align_it == fuse_it)
+        if (align_it == fuse_it && do_frame_fusion)
         {
             boost::this_thread::sleep(boost::posix_time::milliseconds(200));
             continue;
         }
-        PC::Ptr target, source;
+        PC::Ptr target(new PC), source(new PC);
         //source and target normals
         NC::Ptr source_n(new NC), target_n(new NC);
         //source and target features
         pcl::PointCloud<pcl::FPFHSignature33>::Ptr source_f(new pcl::PointCloud<pcl::FPFHSignature33>);
         pcl::PointCloud<pcl::FPFHSignature33>::Ptr target_f(new pcl::PointCloud<pcl::FPFHSignature33>);
-        //get source and target
+        //get source and target and downsample them
         {
+            vg.setLeafSize(leaf, leaf, leaf);
             LOCK guard(mtx_sequence);
-            target = cloud_sequence.front().makeShared();
+            //downsample
+            vg.setInputCloud(cloud_sequence.front().makeShared());
+            vg.filter(*target);
             cloud_sequence.pop_front();
-            source = cloud_sequence.front().makeShared();
+            vg.setInputCloud(cloud_sequence.front().makeShared());
+            vg.filter(*source);
             ++align_it;
         }
-//         //downsample
-//         vg.setLeafSize(leaf, leaf, leaf);
-//         vg.setInputCloud(target);
-//         vg.filter(*target);
-//         vg.setInputCloud(source);
-//         vg.filter(*source);
-//         *
-//         //remove differences
-//         pcl::octree::OctreePointCloudChangeDetector<PT> oct(leaf*2.0f);
-//         oct.setInputCloud(target);
-//         oct.addPointsFromInputCloud();
-//         oct.switchBuffers();
-//         oct.setInputCloud(source);
-//         oct.addPointsFromInputCloud();
-//         std::vector<int> changes;
-//         oct_cd_frames.getPointIndicesFromNewVoxels(changes);
-//         pcl::IndicesPtr same(new std::vector<int>);
-//         for(size_t i=0; i<source->size(); ++i)
-//         {
-//             bool found(false);
-//             for(size_t j=0; j<changes.size(); ++i)
-//             {
-//                 if(changes[j] == i){
-//                     found=true;
-//                     break;
-//                 }
-//             }
-//             if(!found)
-//                 same->push_back(i);
-//         }
-//          *
-//         //estimate normals
-//         ne.setRadiusSearch(2.0f*leaf);
-//         ne.useSensorOriginAsViewPoint();
-//         ne.setInputCloud(target);
-//         ne.compute(*target_n);
-//         ne.setInputCloud(source);
-//         // ne.setIndices(same);
-//         ne.compute(*source_n);
-//         //estimate features
-//         fpfh.setRadiusSearch(4.0f*leaf);
-//         fpfh.setInputCloud(target);
-//         fpfh.setInputNormals(target_n);
-//         fpfh.compute(*target_f);
-//         fpfh.setInputCloud(source);
-//         // fpfh.setIndices(same);
-//         fpfh.setInputNormals(source_n);
-//         fpfh.compute(*source_f);
-//         //do the alignment
+
+        //estimate normals
+        ne.setRadiusSearch(2.0f*leaf);
+        ne.useSensorOriginAsViewPoint();
+        ne.setInputCloud(target);
+        ne.compute(*target_n);
+        ne.setInputCloud(source);
+        ne.compute(*source_n);
+        //estimate features
+        fpfh.setRadiusSearch(2.5f*leaf);
+        fpfh.setInputCloud(target);
+        fpfh.setInputNormals(target_n);
+        fpfh.compute(*target_f);
+        fpfh.setInputCloud(source);
+        // fpfh.setindices(same);
+        fpfh.setInputNormals(source_n);
+        fpfh.compute(*source_f);
+        //do the alignment
 //
-//         alignment.setMaxCorrespondenceDistance(8.0f*leaf);
-//         alignment.setInputSource(source);
-//         // alignment.setIndices(same);
-//         alignment.setSourceFeatures(source_f);
-//         alignment.setInputTarget(target);
-//         alignment.setTargetFeatures(target_f);
-//         PC::Ptr source_aligned(new PC);
-//         pcl::ScopeTime t("alignment");
+//         alignment.setmaxcorrespondencedistance(8.0f*leaf);
+//         alignment.setinputsource(source);
+//         // alignment.setindices(same);
+//         alignment.setsourcefeatures(source_f);
+//         alignment.setinputtarget(target);
+//         alignment.settargetfeatures(target_f);
+//         pc::ptr source_aligned(new pc);
+//         pcl::scopetime t("alignment");
 //         alignment.align(*source_aligned);
-//         if (alignment.hasConverged()){
+//         if (alignment.hasconverged()){
 //             //save result into sequence to be used as next target
 //             {
-//                 Eigen::Matrix4f T = alignment.getFinalTransformation();
-//                 LOCK guard(mtx_sequence);
-//                 pcl::transformPointCloud(*cloud_sequence.front(),*source_aligned, T);
+//                 eigen::matrix4f t = alignment.getfinaltransformation();
+//                 lock guard(mtx_sequence);
+//                 pcl::transformpointcloud(*cloud_sequence.front(),*source_aligned, t);
 //                 cloud_sequence.front() = source_aligned;
 //             }
 //             //update model
-//             PC::Ptr tmp (new PC);
+//             pc::ptr tmp (new pc);
 //             {
-//                 LOCK guard(mtx_model);
+//                 lock guard(mtx_model);
 //                 *model += *source_aligned;
 //                 if(model->points.size() > 1e4){
-//                     vg.setInputCloud(model);
-//                     vg.setLeafSize(0.001, 0.001, 0.001);
+//                     vg.setinputcloud(model);
+//                     vg.setleafsize(0.001, 0.001, 0.001);
 //                     vg.filter(*tmp);
-//                     pcl::copyPointCloud(*tmp, *model);
+//                     pcl::copypointcloud(*tmp, *model);
 //                 }
-//                 vg.setInputCloud(model);
-//                 vg.setLeafSize(model_ls, model_ls, model_ls);
+//                 vg.setinputcloud(model);
+//                 vg.setleafsize(model_ls, model_ls, model_ls);
 //                 vg.filter(*tmp);
-//                 pcl::transformPointCloud(*tmp, *model_ds, T_mk);
+//                 pcl::transformpointcloud(*tmp, *model_ds, t_mk);
 //             }
 //         }
-//         //TODO add octomap hand removal
+//         //todo add octomap hand removal
 //         else{
-//             ROS_ERROR("[InHandModeler][%s]Alignment FAILED!",__func__);
-//             //TODO add error handling and termination
+//             ros_error("[inhandmodeler][%s]alignment failed!",__func__);
+//             //todo add error handling and termination
 //         }
 //         {
-//             LOCK guard(mtx_sequence);
+//             lock guard(mtx_sequence);
 //             if(cloud_sequence.size() < 2)
 //             {
-//                 ROS_INFO("[InHandModeler][%s]Finished alignment!", __func__);
+//                 ros_info("[inhandmodeler][%s]finished alignment!", __func__);
 //                 break;
 //             }
 //         }
@@ -342,8 +316,8 @@ InHandModeler::alignSequence()
 void
 InHandModeler::fuseSimilarFrames()
 {
-    //This is started after sequence has already some items
-    pcl::visualization::PCLVisualizer v("frames"); //TODO temp visualization
+    //this is started after sequence has already some items
+    pcl::visualization::PCLVisualizer v("frames"); //todo temp visualization
     {
         LOCK guard(mtx_sequence);
         v.addPointCloud(cloud_sequence.front().makeShared(), "frame");
@@ -365,7 +339,7 @@ InHandModeler::fuseSimilarFrames()
                 continue;
             }
             else{
-                //Finished traversing sequence, let's get out of here
+                //finished traversing sequence, let's get out of here
                 break;
             }
         }
@@ -385,22 +359,22 @@ InHandModeler::fuseSimilarFrames()
             oct_cd_frames.deleteCurrentBuffer();
             oct_cd_frames.deletePreviousBuffer();
             if (changes.size() > next_c->size() * 0.04){
-                //From new  frame more than  4% of  points were not  in previous
-                //one, Most likely there was a  motion, so we keep the new frame
+                //from new  frame more than  4% of  points were not  in previous
+                //one, most likely there was a  motion, so we keep the new frame
                 //into sequence and move on.
                 ++fuse_it;
             }
             else{
-                //Old and  new frames are  almost equal in point  differences we
+                //old and  new frames are  almost equal in point  differences we
                 //can fuse them togheter into a single frame and resample.
                 *current += *next_c;
                 pcl::VoxelGrid<PT> resamp;
-                resamp.setLeafSize(leaf,leaf,leaf);
+                resamp.setLeafSize(leaf_f,leaf_f,leaf_f);
                 resamp.setInputCloud(current);
                 resamp.filter(*fuse_it);
                 cloud_sequence.erase(fuse_next);
             }
-            //TODO temp visualization
+            //todo temp visualization
             v.updatePointCloud(fuse_it->makeShared(), "frame");
             v.spinOnce(1000,true);
             ///////
@@ -417,13 +391,13 @@ InHandModeler::spin_once()
     if (has_transform){
         tf::Transform t_km;
         geometry_msgs::Pose pose;
-        fromEigen(T_km, pose, t_km);
+        fromEigen(t_km, pose, t_km);
         std::string sensor_ref_frame;
         this->storage->read_sensor_ref_frame(sensor_ref_frame);
-        tf_broadcaster.sendTransform(tf::StampedTransform(t_km, ros::Time::now(), sensor_ref_frame.c_str(), "in_hand_model_frame"));
+        tf_broadcaster.sendTransform(tf::StampedTransform(t_km, ros::time::now(), sensor_ref_frame.c_str(), "in_hand_model_frame"));
     }
     if (do_acquisition){
-        PC::Ptr scene;
+        pc::ptr scene;
         this->storage->read_scene_processed(scene);
         {
             LOCK guard(mtx_sequence);
@@ -452,5 +426,5 @@ InHandModeler::spin_once()
     }
     //process this module callbacks
     this->queue_ptr->callAvailable(ros::WallDuration(0));
-    ROS_WARN("Sequence size: %d", (int)cloud_sequence.size()); //TODO remove
+    ROS_WARN("sequence size: %d", (int)cloud_sequence.size()); //todo remove
 }
