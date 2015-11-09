@@ -3,7 +3,7 @@
 
 InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_acquisition(false),
             oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false), leaf(0.005f),
-            leaf_f(0.001f)
+            leaf_f(0.001f), start_alignment(false), start_fusion(false), frames(0)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
@@ -186,6 +186,7 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
     //start acquiring sequence
     do_acquisition = true;
     do_alignment = do_frame_fusion = false;
+    start_alignment = start_fusion = false;
     return (true);
 }
 
@@ -210,6 +211,10 @@ InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vi
 void
 InHandModeler::alignSequence()
 {
+    pcl::visualization::PCLVisualizer v("registration"); //todo temp visualization
+    int v1(0), v2(1);
+    v.createViewPort(0.0,0.0,0.5,1.0, v1);
+    v.createViewPort(0.5,0.0,1.0,1.0, v2);
     {
         LOCK guard(mtx_sequence);
         //initialize the iterator pointers
@@ -217,6 +222,7 @@ InHandModeler::alignSequence()
     }
     //we use two elements at a time, so point to last one used
     ++align_it;
+    bool tmp(true);
     while (do_alignment)
     {
         //determine if we have to wait for do_frame_fusion thread
@@ -226,6 +232,13 @@ InHandModeler::alignSequence()
             continue;
         }
         PC::Ptr target(new PC), source(new PC);
+        //tmp
+        if(tmp){
+            v.addPointCloud(source,"source",v1);
+            v.addPointCloud(target,"target",v2);
+            tmp=false;
+        }
+        //
         //source and target normals
         NC::Ptr source_n(new NC), target_n(new NC);
         //source and target features
@@ -259,10 +272,13 @@ InHandModeler::alignSequence()
         scales.push_back(2.5f*leaf);
         scales.push_back(3.0f*leaf);
         scales.push_back(3.5f*leaf);
+        pcl::DefaultPointRepresentation<pcl::FPFHSignature33> point_rep;
+        fpfh->setInputNormals(target_n);
+        fpfh->setInputCloud(target);
         persistance.setInputCloud(target);
         persistance.setScalesVector(scales);
-        fpfh->setInputNormals(target_n);
         persistance.setFeatureEstimator(fpfh);
+        persistance.setPointRepresentation(point_rep.makeShared());
         persistance.setAlpha(2); //presumably this is std_dev multiplier
         persistance.setDistanceMetric(CS); //use chi squared distance
         boost::shared_ptr<std::vector<int>> target_p_idx (new std::vector<int>);
@@ -271,11 +287,24 @@ InHandModeler::alignSequence()
         persistance.setInputCloud(source);
         persistance.setScalesVector(scales);
         fpfh->setInputNormals(source_n);
+        fpfh->setInputCloud(source);
         persistance.setFeatureEstimator(fpfh);
         persistance.setAlpha(2); //presumably this is std_dev multiplier
         persistance.setDistanceMetric(CS); //use chi squared distance
         boost::shared_ptr<std::vector<int>> source_p_idx (new std::vector<int>);
         persistance.determinePersistentFeatures(*source_f, source_p_idx);
+        //tmp color pers feat red
+        uint8_t r=255, g=0, b=0;
+        uint32_t rgb = ( (uint32_t)r<<16 | (uint32_t)g<<8 | (uint32_t)b );
+        for (size_t i=0; i<source_p_idx->size(); ++i)
+            source->points[source_p_idx->at(i)].rgb = *reinterpret_cast<float*>(&rgb);
+        for (size_t i=0; i<target_p_idx->size(); ++i)
+            target->points[target_p_idx->at(i)].rgb = *reinterpret_cast<float*>(&rgb);
+        v.updatePointCloud(source, "source");
+        v.updatePointCloud(target, "target");
+        v.spinOnce(1000,true);
+        ROS_INFO("[InHandModeler] One step");
+        ////
 
         //do the alignment
 //
@@ -334,6 +363,7 @@ InHandModeler::alignSequence()
 void
 InHandModeler::fuseSimilarFrames()
 {
+    int fused(0);
     //this is started after sequence has already some items
     pcl::visualization::PCLVisualizer v("frames"); //todo temp visualization
     {
@@ -381,6 +411,10 @@ InHandModeler::fuseSimilarFrames()
                 //one, most likely there was a  motion, so we keep the new frame
                 //into sequence and move on.
                 ++fuse_it;
+                ++fused;
+                //if we fused 4 times start alignment
+                if(fused > 4 && !start_alignment)
+                    start_alignment = true;
             }
             else{
                 //old and  new frames are  almost equal in point  differences we
@@ -421,20 +455,19 @@ InHandModeler::spin_once()
             LOCK guard(mtx_sequence);
             cloud_sequence.push_back(*scene);
         }
+        ++frames;
+        if(frames >10 && !start_fusion)
+            start_fusion = true;
     }
-    if (!do_frame_fusion){
-        if (cloud_sequence.size()>10){
-            //time to start the fusion thread
-            do_frame_fusion = true;
-            remove_driver = boost::thread(&InHandModeler::fuseSimilarFrames, this);
-        }
+    if (!do_frame_fusion && start_fusion){
+        //time to start the fusion thread
+        do_frame_fusion = true;
+        remove_driver = boost::thread(&InHandModeler::fuseSimilarFrames, this);
     }
-    if (!do_alignment){
-        if (cloud_sequence.size()>20){
-            //time to start the alignment thread
-            do_alignment = true;
-            alignment_driver = boost::thread(&InHandModeler::alignSequence, this);
-        }
+    if (!do_alignment && start_alignment){
+        //time to start the alignment thread
+        do_alignment = true;
+        alignment_driver = boost::thread(&InHandModeler::alignSequence, this);
     }
     {
         LOCK guard(mtx_model);
@@ -444,5 +477,5 @@ InHandModeler::spin_once()
     }
     //process this module callbacks
     this->queue_ptr->callAvailable(ros::WallDuration(0));
-    ROS_WARN("sequence size: %d", (int)cloud_sequence.size()); //todo remove
+    //ROS_WARN("sequence size: %d", (int)cloud_sequence.size()); //todo remove
 }

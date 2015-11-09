@@ -83,12 +83,16 @@ class InHandModeler
         Eigen::Matrix4f T_km, T_mk;
         //has a model trasform ?
         bool has_transform;
-        //needs to acquire clouds ?
+        //is acquiring clouds ? also start acquisition
         bool do_acquisition;
-        //needs to process acquired clouds?
+        //is aligning clouds?
         bool do_alignment;
-        //needs to fuse similar frames from cloud sequence ?
+        //is fusing clouds ?
         bool do_frame_fusion;
+        //control when to start threads
+        bool start_fusion, start_alignment;
+        //count how many frames are acquired
+        int frames;
 
         //pointclouds sequence
         //in kinect reference frame
