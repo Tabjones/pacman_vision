@@ -59,11 +59,6 @@ class InHandModeler
         ros::ServiceServer srv_start;
         ros::ServiceServer srv_stop;
 
-        //threads
-        boost::thread alignment_driver;
-        boost::thread remove_driver;
-        //mutex to protect point clouds and model
-        boost::mutex mtx_sequence, mtx_model;
         //pointers to queue
         std::list<PC>::iterator align_it, fuse_it;
         //leaf size for frames fusion and frame alignment
@@ -89,9 +84,7 @@ class InHandModeler
         bool do_alignment;
         //is fusing clouds ?
         bool do_frame_fusion;
-        //control when to start threads
-        bool start_fusion, start_alignment;
-        //count how many frames are acquired
+        //count how many frames have been acquired
         int frames;
 
         //pointclouds sequence

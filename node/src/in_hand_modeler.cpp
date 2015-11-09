@@ -198,12 +198,8 @@ InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vi
         return (false);
     }
     do_acquisition = false;
-    //wait for alignment to end
-    //alignment_driver.join();
-    //TODO add save model to disk
-    //model.reset();
-    //model_ds.reset();
-    //cloud_sequence.clear();
+    do_frame_fusion = true;
+    fuse_it = cloud_sequence.begin();
     ROS_INFO("[InHandModeler]\tPlease wait for processing to end...");
     return (true);
 }
@@ -211,15 +207,13 @@ InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vi
 void
 InHandModeler::alignSequence()
 {
+    //TODO remove multithreading
     pcl::visualization::PCLVisualizer v("registration"); //todo temp visualization
     int v1(0), v2(1);
     v.createViewPort(0.0,0.0,0.5,1.0, v1);
     v.createViewPort(0.5,0.0,1.0,1.0, v2);
-    {
-        LOCK guard(mtx_sequence);
-        //initialize the iterator pointers
-        align_it = cloud_sequence.begin();
-    }
+    //initialize the iterator pointers
+    align_it = cloud_sequence.begin();
     //we use two elements at a time, so point to last one used
     ++align_it;
     bool tmp(true);
@@ -363,78 +357,46 @@ InHandModeler::alignSequence()
 void
 InHandModeler::fuseSimilarFrames()
 {
-    int fused(0);
-    //this is started after sequence has already some items
-    pcl::visualization::PCLVisualizer v("frames"); //todo temp visualization
-    {
-        LOCK guard(mtx_sequence);
-        v.addPointCloud(cloud_sequence.front().makeShared(), "frame");
-        fuse_it = cloud_sequence.begin();
+    std::list<PC>::iterator fuse_next = ++fuse_it;
+    --fuse_it;
+    if (fuse_next == cloud_sequence.end()){
+            //finished traversing sequence, let's get out of here
+            do_alignment = true;
+            do_frame_fusion = false;
+            align_it = cloud_sequence.begin();
+            ROS_INFO("[InHandModeler][%s]\tFinished!",__func__);
+            return;
     }
-    while (do_frame_fusion)
-    {
-        std::list<PC>::iterator fuse_next = ++fuse_it;
-        --fuse_it;
-        std::list<PC>::iterator end;
-        {
-            LOCK guard(mtx_sequence);
-            end = cloud_sequence.end();
-        }
-        if (fuse_next == end){
-            if(do_acquisition){
-                //lets wait for acquisition thread to add more clouds to sequence
-                boost::this_thread::sleep(boost::posix_time::milliseconds(200));
-                continue;
-            }
-            else{
-                //finished traversing sequence, let's get out of here
-                break;
-            }
-        }
-        {//locked block
-            LOCK guard(mtx_sequence);
-            PC::Ptr current(new PC);
-            PC::Ptr next_c(new PC);
-            current = fuse_it->makeShared();
-            next_c = fuse_next->makeShared();
-            oct_cd_frames.setInputCloud(current);
-            oct_cd_frames.addPointsFromInputCloud();
-            oct_cd_frames.switchBuffers();
-            oct_cd_frames.setInputCloud(next_c);
-            oct_cd_frames.addPointsFromInputCloud();
-            std::vector<int> changes;
-            oct_cd_frames.getPointIndicesFromNewVoxels(changes);
-            oct_cd_frames.deleteCurrentBuffer();
-            oct_cd_frames.deletePreviousBuffer();
-            if (changes.size() > next_c->size() * 0.04){
-                //from new  frame more than  4% of  points were not  in previous
-                //one, most likely there was a  motion, so we keep the new frame
-                //into sequence and move on.
-                ++fuse_it;
-                ++fused;
-                //if we fused 4 times start alignment
-                if(fused > 4 && !start_alignment)
-                    start_alignment = true;
-            }
-            else{
-                //old and  new frames are  almost equal in point  differences we
-                //can fuse them togheter into a single frame and resample.
-                *current += *next_c;
-                pcl::VoxelGrid<PT> resamp;
-                resamp.setLeafSize(leaf_f,leaf_f,leaf_f);
-                resamp.setInputCloud(current);
-                resamp.filter(*fuse_it);
-                cloud_sequence.erase(fuse_next);
-            }
-            //todo temp visualization
-            v.updatePointCloud(fuse_it->makeShared(), "frame");
-            v.spinOnce(1000,true);
-            ///////
-        }
-        boost::this_thread::sleep(boost::posix_time::milliseconds(50));
-    }//endwhile
-    v.close();
-    ROS_INFO("[InHandModeler][%s]\tJob finished!",__func__);
+    PC::Ptr current(new PC);
+    PC::Ptr next_c(new PC);
+    current = fuse_it->makeShared();
+    next_c = fuse_next->makeShared();
+    oct_cd_frames.setInputCloud(current);
+    oct_cd_frames.addPointsFromInputCloud();
+    oct_cd_frames.switchBuffers();
+    oct_cd_frames.setInputCloud(next_c);
+    oct_cd_frames.addPointsFromInputCloud();
+    std::vector<int> changes;
+    oct_cd_frames.getPointIndicesFromNewVoxels(changes);
+    oct_cd_frames.deleteCurrentBuffer();
+    oct_cd_frames.deletePreviousBuffer();
+    if (changes.size() > next_c->size() * 0.04){
+        //from new  frame more than  4% of  points were not  in previous
+        //one, most likely there was a  motion, so we keep the new frame
+        //into sequence and move on.
+        ++fuse_it;
+        return;
+    }
+    else{
+        //old and  new frames are  almost equal in point  differences we
+        //can fuse them togheter into a single frame and resample.
+        *current += *next_c;
+        pcl::VoxelGrid<PT> resamp;
+        resamp.setLeafSize(leaf_f,leaf_f,leaf_f);
+        resamp.setInputCloud(current);
+        resamp.filter(*fuse_it);
+        cloud_sequence.erase(fuse_next);
+    }
 }
 
 void
@@ -451,30 +413,18 @@ InHandModeler::spin_once()
     if (do_acquisition){
         PC::Ptr scene;
         this->storage->read_scene_processed(scene);
-        {
-            LOCK guard(mtx_sequence);
-            cloud_sequence.push_back(*scene);
-        }
+        cloud_sequence.push_back(*scene);
         ++frames;
-        if(frames >10 && !start_fusion)
-            start_fusion = true;
     }
-    if (!do_frame_fusion && start_fusion){
-        //time to start the fusion thread
-        do_frame_fusion = true;
-        remove_driver = boost::thread(&InHandModeler::fuseSimilarFrames, this);
-    }
-    if (!do_alignment && start_alignment){
-        //time to start the alignment thread
-        do_alignment = true;
-        alignment_driver = boost::thread(&InHandModeler::alignSequence, this);
-    }
-    {
-        LOCK guard(mtx_model);
-        if (model_ds)
-            if(!model_ds->empty() && pub_model.getNumSubscribers()>0)
-                pub_model.publish(*model_ds);
-    }
+    if (!do_acquisition && frames>1 && do_frame_fusion)
+        //perform fusion of two frames if necessary
+        fuseSimilarFrames();
+    if (!do_acquisition && frames>1 && do_alignment)
+        //time to start the alignment
+        alignSequence();
+    if (model_ds)
+        if(!model_ds->empty() && pub_model.getNumSubscribers()>0)
+            pub_model.publish(*model_ds);
     //process this module callbacks
     this->queue_ptr->callAvailable(ros::WallDuration(0));
     //ROS_WARN("sequence size: %d", (int)cloud_sequence.size()); //todo remove
