@@ -3,7 +3,7 @@
 
 InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor):
     has_transform(false), do_acquisition(false), oct_adj(0.003), oct_cd(0.003),
-    do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false), leaf(0.005f),
+    do_alignment(false), oct_cd_frames(0.001), do_frame_fusion(false), leaf(0.005f),
     leaf_f(0.003f), frames(0), not_fused(0), done_alignment(false), done_frame_fusion(false)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
@@ -215,12 +215,10 @@ InHandModeler::alignSequence()
     queue_alignment.reset(new ros::CallbackQueue);
     nh_alignment.setCallbackQueue(&(*this->queue_alignment));
     pcl::visualization::PCLVisualizer v("registration"); //todo temp visualization
-    int v1(0), v2(1);
-    v.createViewPort(0.0,0.0,0.5,1.0, v1);
-    v.createViewPort(0.5,0.0,1.0,1.0, v2);
     PC::Ptr tmp(new PC);
-    v.addPointCloud(tmp, "source", v1);
-    v.addPointCloud(tmp, "target",v2);
+    v.addPointCloud(tmp, "source");
+    v.addPointCloud(tmp, "target");
+    v.addPointCloud(tmp, "source_align");
     //end tmp visualization
     ROS_INFO("[InHandModeler][%s]\tStarting Sequence alignment",__func__);
     while (do_alignment)
@@ -277,7 +275,6 @@ InHandModeler::alignSequence()
         scales.push_back(2.5f*leaf);
         scales.push_back(3.0f*leaf);
         scales.push_back(3.5f*leaf);
-        scales.push_back(4.0f*leaf);
         pcl::DefaultFeatureRepresentation<pcl::FPFHSignature33> point_rep;
         fpfh->setInputNormals(target_n);
         fpfh->setInputCloud(target);
@@ -285,8 +282,9 @@ InHandModeler::alignSequence()
         persistance.setScalesVector(scales);
         persistance.setFeatureEstimator(fpfh);
         persistance.setPointRepresentation(point_rep.makeShared());
-        persistance.setAlpha(2); //presumably this is std_dev multiplier
-        persistance.setDistanceMetric(CS); //use chi squared distance
+        //we dont want to discard too many features
+        persistance.setAlpha(0.5); //presumably this is std_dev multiplier
+        persistance.setDistanceMetric(L2); //use euclidean distance
         boost::shared_ptr<std::vector<int>> target_p_idx (new std::vector<int>);
         persistance.determinePersistentFeatures(*target_f, target_p_idx);
         //do it again for source
@@ -299,7 +297,7 @@ InHandModeler::alignSequence()
         // persistance.setDistanceMetric(CS); //use chi squared distance
         boost::shared_ptr<std::vector<int>> source_p_idx (new std::vector<int>);
         persistance.determinePersistentFeatures(*source_f, source_p_idx);
-        //tmp visualization color pers feat red
+        //tmp visualization color persistant feats in red
         uint8_t r=255, g=0, b=0;
         uint32_t rgb = ( (uint32_t)r<<16 | (uint32_t)g<<8 | (uint32_t)b );
         for (size_t i=0; i<source_p_idx->size(); ++i)
@@ -309,7 +307,6 @@ InHandModeler::alignSequence()
         v.updatePointCloud(source, "source");
         v.updatePointCloud(target, "target");
         v.spinOnce(1000,true);
-        ROS_INFO("[InHandModeler][%s]\tOne step",__func__); //TODO tmp debug
         {
             LOCK guard(mtx_seq);
             cloud_sequence.pop_front();
@@ -323,7 +320,7 @@ InHandModeler::alignSequence()
         //If source features are n, these will be n*k matrices
         std::vector<std::vector<int>> k_idx;
         std::vector<std::vector<float>> k_dist;
-        tree.nearestKSearch (*source_f, std::vector<int>(), 1, k_idx, k_dist);
+        tree.nearestKSearch (*source_f, std::vector<int>(), 3, k_idx, k_dist);
         pcl::Correspondences corr_s_over_t;
         for(size_t i=0; i < k_idx.size(); ++i)
         {
@@ -335,8 +332,7 @@ InHandModeler::alignSequence()
         }
         //tmp visualization
         std::string name("corr");
-        int vport(0);
-        v.addCorrespondences<pcl::PointXYZRGB>(source, target, corr_s_over_t, name, vport);
+        v.addCorrespondences<pcl::PointXYZRGB>(source, target, corr_s_over_t, name);
         v.spinOnce(1000,true);
         v.removeShape(name);
         //end tmp
@@ -346,9 +342,15 @@ InHandModeler::alignSequence()
         PC::Ptr source_aligned (new PC);
         pcl::transformPointCloud(*source, *source_aligned, frame_trans);
         //tmp vis
-        v.addPointCloud(source_aligned, "source_align", v2);
+        r =0;
+        g =255;
+        rgb = ( (uint32_t)r<<16 | (uint32_t)g<<8 | (uint32_t)b );
+        for (size_t i=0; i<source_aligned->size(); ++i)
+            source_aligned->points[i].rgb = *reinterpret_cast<float*>(&rgb);
+        v.updatePointCloud(source_aligned, "source_align");
+        v.removePointCloud("source");
         v.spinOnce(3000,true);
-        v.removePointCloud("source_align");
+        v.addPointCloud(source, "source");
         //end tmp
 //         alignment.setmaxcorrespondencedistance(8.0f*leaf);
 //         alignment.setinputsource(source);
@@ -451,8 +453,8 @@ InHandModeler::fuseSimilarFrames()
         oct_cd_frames.getPointIndicesFromNewVoxels(changes);
         oct_cd_frames.deleteCurrentBuffer();
         oct_cd_frames.deletePreviousBuffer();
-        if (changes.size() > next_c->size() * 0.04){
-            //from new  frame more than  4% of  points were not  in previous
+        if (changes.size() > next_c->size() * 0.02){
+            //from new  frame more than  2% of  points were not  in previous
             //one, most likely there was a  motion, so we keep the new frame
             //into sequence and move on.
             ++fuse_it;
