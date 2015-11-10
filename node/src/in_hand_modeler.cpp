@@ -222,6 +222,7 @@ InHandModeler::alignSequence()
     v.addPointCloud(tmp, "source", v1);
     v.addPointCloud(tmp, "target",v2);
     //end tmp visualization
+    ROS_INFO("[InHandModeler][%s]\tStarting Sequence alignment",__func__);
     while (do_alignment)
     {
         //Next element, previous is always front (or begin)
@@ -265,42 +266,39 @@ InHandModeler::alignSequence()
         }
         vg.filter(*source);
         //estimate normals
-        ne.setRadiusSearch(2.0f*leaf);
+        ne.setRadiusSearch(2.5f*leaf);
         ne.useSensorOriginAsViewPoint();
         ne.setInputCloud(target);
         ne.compute(*target_n);
         ne.setInputCloud(source);
         ne.compute(*source_n);
-        ROS_ERROR("done normals"); //tmp remove
         //initialize feature estimator and compute it for target
         std::vector<float> scales;
-        scales.push_back(2.0f*leaf);
         scales.push_back(2.5f*leaf);
         scales.push_back(3.0f*leaf);
         scales.push_back(3.5f*leaf);
-        pcl::DefaultPointRepresentation<pcl::FPFHSignature33> point_rep;
+        scales.push_back(4.0f*leaf);
+        pcl::DefaultFeatureRepresentation<pcl::FPFHSignature33> point_rep;
         fpfh->setInputNormals(target_n);
         fpfh->setInputCloud(target);
         persistance.setInputCloud(target);
         persistance.setScalesVector(scales);
         persistance.setFeatureEstimator(fpfh);
         persistance.setPointRepresentation(point_rep.makeShared());
-        persistance.setAlpha(1.5); //presumably this is std_dev multiplier
+        persistance.setAlpha(2); //presumably this is std_dev multiplier
         persistance.setDistanceMetric(CS); //use chi squared distance
         boost::shared_ptr<std::vector<int>> target_p_idx (new std::vector<int>);
         persistance.determinePersistentFeatures(*target_f, target_p_idx);
-        ROS_ERROR("done target persist"); //tmp remove
         //do it again for source
         persistance.setInputCloud(source);
-        persistance.setScalesVector(scales);
+        // persistance.setScalesVector(scales);
         fpfh->setInputNormals(source_n);
         fpfh->setInputCloud(source);
         persistance.setFeatureEstimator(fpfh);
-        persistance.setAlpha(2); //presumably this is std_dev multiplier
-        persistance.setDistanceMetric(CS); //use chi squared distance
+        // persistance.setAlpha(1.5); //presumably this is std_dev multiplier
+        // persistance.setDistanceMetric(CS); //use chi squared distance
         boost::shared_ptr<std::vector<int>> source_p_idx (new std::vector<int>);
         persistance.determinePersistentFeatures(*source_f, source_p_idx);
-        ROS_ERROR("done source persist"); //tmp remove
         //tmp visualization color pers feat red
         uint8_t r=255, g=0, b=0;
         uint32_t rgb = ( (uint32_t)r<<16 | (uint32_t)g<<8 | (uint32_t)b );
@@ -316,10 +314,42 @@ InHandModeler::alignSequence()
             LOCK guard(mtx_seq);
             cloud_sequence.pop_front();
         }
-    ////
-
-        //do the alignment
-//
+        //Find correspondences between source and target
+        SearchT tree (true, CreatorT(new IndexT(4)));
+        tree.setPointRepresentation (RepT(new pcl::DefaultFeatureRepresentation<pcl::FPFHSignature33>));
+        tree.setChecks(256);
+        tree.setInputCloud(target_f);
+        //Search source features over target features
+        //If source features are n, these will be n*k matrices
+        std::vector<std::vector<int>> k_idx;
+        std::vector<std::vector<float>> k_dist;
+        tree.nearestKSearch (*source_f, std::vector<int>(), 1, k_idx, k_dist);
+        pcl::Correspondences corr_s_over_t;
+        for(size_t i=0; i < k_idx.size(); ++i)
+        {
+            for(size_t k=0; k < k_idx[i].size(); ++k)
+            {
+                pcl::Correspondence cor(source_p_idx->at(i), target_p_idx->at(k_idx[i][k]), k_dist[i][k]);
+                corr_s_over_t.push_back(cor);
+            }
+        }
+        //tmp visualization
+        std::string name("corr");
+        int vport(0);
+        v.addCorrespondences<pcl::PointXYZRGB>(source, target, corr_s_over_t, name, vport);
+        v.spinOnce(1000,true);
+        v.removeShape(name);
+        //end tmp
+        //Estimate the rigid transformation of source -> target
+        Eigen::Matrix4f frame_trans;
+        teDQ->estimateRigidTransformation(*source, *target, corr_s_over_t, frame_trans);
+        PC::Ptr source_aligned (new PC);
+        pcl::transformPointCloud(*source, *source_aligned, frame_trans);
+        //tmp vis
+        v.addPointCloud(source_aligned, "source_align", v2);
+        v.spinOnce(3000,true);
+        v.removePointCloud("source_align");
+        //end tmp
 //         alignment.setmaxcorrespondencedistance(8.0f*leaf);
 //         alignment.setinputsource(source);
 //         // alignment.setindices(same);

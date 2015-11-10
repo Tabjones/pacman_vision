@@ -12,10 +12,11 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud_conversion.h>
 //PCL
-#include <pcl/common/centroid.h>
+// #include <pcl/common/centroid.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/eigen.h>
+#include <pcl/correspondence.h>
 #include <pcl/octree/octree_pointcloud_adjacency.h>
 #include <pcl/octree/octree_pointcloud_changedetector.h>
 #include <pcl/point_cloud.h>
@@ -24,7 +25,8 @@
 #include <pcl/features/multiscale_feature_persistence.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/fpfh_omp.h>
-#include <pcl/registration/icp.h>
+#include <pcl/search/flann_search.h>
+#include <pcl/search/impl/flann_search.hpp>
 // #include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
 #include <pcl/visualization/pcl_visualizer.h>
@@ -107,6 +109,12 @@ class InHandModeler
         pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd_frames;
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
+
+        //Feature comparation
+        typedef search::FlannSearch<pcl::FPFHSignature33, flann::L2<float>> SearchT;
+        typedef typename SearchT::FlannIndexCreatorPtr CreatorT;
+        typedef typename SearchT::KdTreeMultiIndexCreator IndexT;
+        typedef typename SearchT::PointRepresentationPtr RepT;
 
         //Threads stuff
         boost::thread fusion_driver, alignment_driver;
