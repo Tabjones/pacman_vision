@@ -4,7 +4,7 @@
 InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor):
     has_transform(false), do_acquisition(false), oct_adj(0.003), oct_cd(0.003),
     do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false), leaf(0.005f),
-    leaf_f(0.003f), frames(0)
+    leaf_f(0.003f), frames(0), not_fused(0), done_alignment(false), done_frame_fusion(false)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
@@ -135,7 +135,7 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
         ROS_ERROR("[InHandModeler][%s]\talignment is already started!", __func__);
         return (false);
     }
-    ROS_INFO("[InHandModeler][%s]\tRecord a motion then call stop service to start processing");
+    ROS_INFO("[InHandModeler][%s]\tRecord a motion then call stop service when satisfied",__func__);
     // ///////////////////////Init Registration////////////////////////////////////
     // //RANSAC maximum iterations
     // alignment.setMaximumIterations(50000);
@@ -188,6 +188,7 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
     //start acquiring sequence
     do_acquisition = true;
     do_alignment = do_frame_fusion = false;
+    done_alignment = done_frame_fusion = false;
     return (true);
 }
 
@@ -199,8 +200,6 @@ InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vi
         return (false);
     }
     do_acquisition = false;
-    do_frame_fusion = true;
-    fuse_it = cloud_sequence.begin();
     ROS_INFO("[InHandModeler]\tPlease wait for processing to end...");
     return (true);
 }
@@ -208,35 +207,63 @@ InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vi
 void
 InHandModeler::alignSequence()
 {
-    //TODO remove multithreading
+    {
+        LOCK guard(mtx_seq);
+        align_it = cloud_sequence.begin();
+    }
+    nh_alignment = ros::NodeHandle(nh, "frame_alignment");
+    queue_alignment.reset(new ros::CallbackQueue);
+    nh_alignment.setCallbackQueue(&(*this->queue_alignment));
     pcl::visualization::PCLVisualizer v("registration"); //todo temp visualization
     int v1(0), v2(1);
     v.createViewPort(0.0,0.0,0.5,1.0, v1);
     v.createViewPort(0.5,0.0,1.0,1.0, v2);
-    //Next element, previous is always front (or begin)
-    align_it = cloud_sequence.begin();
-    ++align_it;
-    if (align_it == cloud_sequence.end()){
-        ROS_INFO("[InHandModeler][%s]\tFinished alignment",__func__);
-        return;
-    }
-    //source ans target frames
-    PC::Ptr target(new PC), source(new PC);
-    //source and target normals
-    NC::Ptr source_n(new NC), target_n(new NC);
-    //source and target features
-    pcl::PointCloud<pcl::FPFHSignature33>::Ptr source_f(new pcl::PointCloud<pcl::FPFHSignature33>);
-    pcl::PointCloud<pcl::FPFHSignature33>::Ptr target_f(new pcl::PointCloud<pcl::FPFHSignature33>);
-    //get source and target and downsample them
-    vg.setLeafSize(leaf, leaf, leaf);
-    //downsample
-    vg.setInputCloud(cloud_sequence.front().makeShared());
-    vg.filter(*target);
-    vg.setInputCloud(*align_it.makeShared());
-    vg.filter(*source);
-    //TODO: Need to check later if source and target needs to be switched
-    //(Fri 06 Nov 2015 08:07:25 PM CET -- tabjones)
-    cloud_sequence.pop_front();
+    PC::Ptr tmp(new PC);
+    v.addPointCloud(tmp, "source", v1);
+    v.addPointCloud(tmp, "target",v2);
+    //end tmp visualization
+    while (do_alignment)
+    {
+        //Next element, previous is always front (or begin)
+        std::list<PC>::iterator end;
+        {
+            LOCK guard(mtx_seq);
+            align_it = cloud_sequence.begin();
+            end = cloud_sequence.end();
+        }
+        ++align_it;
+        if (!done_frame_fusion && align_it == fuse_it){
+            //We have to wait for frame fusion
+            boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+            continue;
+        }
+        if (done_frame_fusion && align_it == end){
+            ROS_INFO("[InHandModeler][%s]\tFinished alignment",__func__);
+            done_alignment = true;
+            //Leave do_alignment = true so thread wont start again
+            //It will get reset by a new start anyway
+            break;
+        }
+        //source and target frames
+        PC::Ptr target(new PC), source(new PC);
+        //source and target normals
+        NC::Ptr source_n(new NC), target_n(new NC);
+        //source and target features
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr source_f(new pcl::PointCloud<pcl::FPFHSignature33>);
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr target_f(new pcl::PointCloud<pcl::FPFHSignature33>);
+        //get source and target and downsample them
+        vg.setLeafSize(leaf, leaf, leaf);
+        //downsample
+        vg.setInputCloud(align_it->makeShared());
+        vg.filter(*target);
+        //TODO: Need to check later if source and target needs to be switched
+        //(Fri 06 Nov 2015 08:07:25 PM CET -- tabjones)
+        //TODO: switched! (Tue 10 Nov 2015 12:21:26 PM CET -- tabjones)
+        {
+            LOCK guard(mtx_seq);
+            vg.setInputCloud(cloud_sequence.front().makeShared());
+        }
+        vg.filter(*source);
         //estimate normals
         ne.setRadiusSearch(2.0f*leaf);
         ne.useSensorOriginAsViewPoint();
@@ -244,6 +271,7 @@ InHandModeler::alignSequence()
         ne.compute(*target_n);
         ne.setInputCloud(source);
         ne.compute(*source_n);
+        ROS_ERROR("done normals"); //tmp remove
         //initialize feature estimator and compute it for target
         std::vector<float> scales;
         scales.push_back(2.0f*leaf);
@@ -257,10 +285,11 @@ InHandModeler::alignSequence()
         persistance.setScalesVector(scales);
         persistance.setFeatureEstimator(fpfh);
         persistance.setPointRepresentation(point_rep.makeShared());
-        persistance.setAlpha(2); //presumably this is std_dev multiplier
+        persistance.setAlpha(1.5); //presumably this is std_dev multiplier
         persistance.setDistanceMetric(CS); //use chi squared distance
         boost::shared_ptr<std::vector<int>> target_p_idx (new std::vector<int>);
         persistance.determinePersistentFeatures(*target_f, target_p_idx);
+        ROS_ERROR("done target persist"); //tmp remove
         //do it again for source
         persistance.setInputCloud(source);
         persistance.setScalesVector(scales);
@@ -271,7 +300,8 @@ InHandModeler::alignSequence()
         persistance.setDistanceMetric(CS); //use chi squared distance
         boost::shared_ptr<std::vector<int>> source_p_idx (new std::vector<int>);
         persistance.determinePersistentFeatures(*source_f, source_p_idx);
-        //tmp color pers feat red
+        ROS_ERROR("done source persist"); //tmp remove
+        //tmp visualization color pers feat red
         uint8_t r=255, g=0, b=0;
         uint32_t rgb = ( (uint32_t)r<<16 | (uint32_t)g<<8 | (uint32_t)b );
         for (size_t i=0; i<source_p_idx->size(); ++i)
@@ -281,8 +311,12 @@ InHandModeler::alignSequence()
         v.updatePointCloud(source, "source");
         v.updatePointCloud(target, "target");
         v.spinOnce(1000,true);
-        ROS_INFO("[InHandModeler] One step");
-        ////
+        ROS_INFO("[InHandModeler][%s]\tOne step",__func__); //TODO tmp debug
+        {
+            LOCK guard(mtx_seq);
+            cloud_sequence.pop_front();
+        }
+    ////
 
         //do the alignment
 //
@@ -333,54 +367,84 @@ InHandModeler::alignSequence()
 //                 break;
 //             }
 //         }
-        boost::this_thread::sleep(boost::posix_time::milliseconds(5));
-    }//endwhile
-    do_alignment = false;
+        queue_alignment->callAvailable(ros::WallDuration(0));
+        boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+    }//EndWhile
+    nh_alignment.shutdown();
+    return;
 }
 
 void
 InHandModeler::fuseSimilarFrames()
 {
-    std::list<PC>::iterator fuse_next = ++fuse_it;
-    --fuse_it;
-    if (fuse_next == cloud_sequence.end()){
-            //finished traversing sequence, let's get out of here
-            do_alignment = true;
-            do_frame_fusion = false;
-            align_it = cloud_sequence.begin();
-            ROS_INFO("[InHandModeler][%s]\tFinished!",__func__);
-            return;
+    {
+        LOCK guard(mtx_seq);
+        fuse_it = cloud_sequence.begin();
     }
-    PC::Ptr current(new PC);
-    PC::Ptr next_c(new PC);
-    current = fuse_it->makeShared();
-    next_c = fuse_next->makeShared();
-    oct_cd_frames.setInputCloud(current);
-    oct_cd_frames.addPointsFromInputCloud();
-    oct_cd_frames.switchBuffers();
-    oct_cd_frames.setInputCloud(next_c);
-    oct_cd_frames.addPointsFromInputCloud();
-    std::vector<int> changes;
-    oct_cd_frames.getPointIndicesFromNewVoxels(changes);
-    oct_cd_frames.deleteCurrentBuffer();
-    oct_cd_frames.deletePreviousBuffer();
-    if (changes.size() > next_c->size() * 0.04){
-        //from new  frame more than  4% of  points were not  in previous
-        //one, most likely there was a  motion, so we keep the new frame
-        //into sequence and move on.
-        ++fuse_it;
-        return;
-    }
-    else{
-        //old and  new frames are  almost equal in point  differences we
-        //can fuse them togheter into a single frame and resample.
-        *current += *next_c;
-        pcl::VoxelGrid<PT> resamp;
-        resamp.setLeafSize(leaf_f,leaf_f,leaf_f);
-        resamp.setInputCloud(current);
-        resamp.filter(*fuse_it);
-        cloud_sequence.erase(fuse_next);
-    }
+    nh_fusion = ros::NodeHandle(nh, "frame_fusion");
+    queue_fusion.reset(new ros::CallbackQueue);
+    nh_fusion.setCallbackQueue(&(*this->queue_fusion));
+    while (do_frame_fusion)
+    {
+        std::list<PC>::iterator fuse_next = ++fuse_it;
+        --fuse_it;
+        std::list<PC>::iterator end;
+        {
+            LOCK guard(mtx_seq);
+            end = cloud_sequence.end();
+        }
+        if (fuse_next == end){
+            if (!do_acquisition){
+                //finished traversing sequence, let's get out of here
+                ROS_INFO("[InHandModeler][%s]\tFinished Frame fusion!",__func__);
+                done_frame_fusion = true;
+                //Leave do_frame_fusion = true so thread wont start again
+                //It will get reset by a new start anyway
+                break;
+            }
+            else{
+                //Wait for more frames to be acquired
+                boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+                continue;
+            }
+        }
+        PC::Ptr current(new PC);
+        PC::Ptr next_c(new PC);
+        current = fuse_it->makeShared();
+        next_c = fuse_next->makeShared();
+        oct_cd_frames.setInputCloud(current);
+        oct_cd_frames.addPointsFromInputCloud();
+        oct_cd_frames.switchBuffers();
+        oct_cd_frames.setInputCloud(next_c);
+        oct_cd_frames.addPointsFromInputCloud();
+        std::vector<int> changes;
+        oct_cd_frames.getPointIndicesFromNewVoxels(changes);
+        oct_cd_frames.deleteCurrentBuffer();
+        oct_cd_frames.deletePreviousBuffer();
+        if (changes.size() > next_c->size() * 0.04){
+            //from new  frame more than  4% of  points were not  in previous
+            //one, most likely there was a  motion, so we keep the new frame
+            //into sequence and move on.
+            ++fuse_it;
+            ++not_fused;
+            continue;
+        }
+        else{
+            //old and  new frames are  almost equal in point  differences we
+            //can fuse them togheter into a single frame and resample.
+            *current += *next_c;
+            pcl::VoxelGrid<PT> resamp;
+            resamp.setLeafSize(leaf_f,leaf_f,leaf_f);
+            resamp.setInputCloud(current);
+            LOCK guard(mtx_seq);
+            resamp.filter(*fuse_it);
+            cloud_sequence.erase(fuse_next);
+        }
+    queue_fusion->callAvailable(ros::WallDuration(0));
+    boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+    }//EndWhile
+    nh_fusion.shutdown();
+    return;
 }
 
 void
@@ -397,19 +461,25 @@ InHandModeler::spin_once()
     if (do_acquisition){
         PC::Ptr scene;
         this->storage->read_scene_processed(scene);
+        if (frames < 300)
+            ++frames;
+        LOCK guard(mtx_seq);
         cloud_sequence.push_back(*scene);
-        ++frames;
     }
-    if (!do_acquisition && frames>1 && do_frame_fusion)
-        //perform fusion of two frames if necessary
-        fuseSimilarFrames();
-    if (!do_acquisition && frames>1 && do_alignment)
+    if (frames>5 && !do_frame_fusion){
+        //start fusion of two frames if necessary
+        do_frame_fusion = true;
+        fusion_driver = boost::thread(&InHandModeler::fuseSimilarFrames, this);
+    }
+    if (not_fused>2 && !do_alignment){
         //time to start the alignment
-        alignSequence();
+        do_alignment = true;
+        alignment_driver = boost::thread(&InHandModeler::alignSequence, this);
+    }
     if (model_ds)
         if(!model_ds->empty() && pub_model.getNumSubscribers()>0)
             pub_model.publish(*model_ds);
     //process this module callbacks
     this->queue_ptr->callAvailable(ros::WallDuration(0));
-    //ROS_WARN("sequence size: %d", (int)cloud_sequence.size()); //todo remove
+    // ROS_WARN("sequence size: %d", (int)cloud_sequence.size()); //todo remove
 }

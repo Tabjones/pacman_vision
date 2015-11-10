@@ -375,8 +375,8 @@ VisionNode::spin_modeler()
     {
         //spin
         this->modeler_module->spin_once();
-        boost::this_thread::sleep(boost::posix_time::milliseconds(50));
-        //In hand modeler can try to go at 20Hz
+        boost::this_thread::sleep(boost::posix_time::milliseconds(30));
+        //In hand modeler can try to go at ~33Hz
     }
 //modeler got stopped
 return;

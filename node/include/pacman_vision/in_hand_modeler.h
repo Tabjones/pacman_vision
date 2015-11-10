@@ -81,11 +81,11 @@ class InHandModeler
         //is acquiring clouds ? also start acquisition
         bool do_acquisition;
         //is aligning clouds?
-        bool do_alignment;
+        bool do_alignment, done_alignment;
         //is fusing clouds ?
-        bool do_frame_fusion;
-        //count how many frames have been acquired
-        int frames;
+        bool do_frame_fusion, done_frame_fusion;
+        //count how many frames have been acquired and not fused
+        int frames, not_fused;
 
         //pointclouds sequence
         //in kinect reference frame
@@ -107,6 +107,13 @@ class InHandModeler
         pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd_frames;
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
+
+        //Threads stuff
+        boost::thread fusion_driver, alignment_driver;
+        ros::NodeHandle nh_fusion, nh_alignment;
+        boost::shared_ptr<ros::CallbackQueue> queue_fusion, queue_alignment;
+        boost::mutex mtx_seq, mtx_model;
+
 
         //Dynamic reconfigurable parameters
         //ignore accidentally clicked points
