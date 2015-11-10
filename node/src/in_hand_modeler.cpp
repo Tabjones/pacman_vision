@@ -1,9 +1,10 @@
 #include <pacman_vision/in_hand_modeler.h>
 #include <pcl/common/time.h>
 
-InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor): has_transform(false), do_acquisition(false),
-            oct_adj(0.003), oct_cd(0.003), do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false), leaf(0.005f),
-            leaf_f(0.001f), start_alignment(false), start_fusion(false), frames(0)
+InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor):
+    has_transform(false), do_acquisition(false), oct_adj(0.003), oct_cd(0.003),
+    do_alignment(false), oct_cd_frames(0.01), do_frame_fusion(false), leaf(0.005f),
+    leaf_f(0.003f), frames(0)
 {
     this->nh = ros::NodeHandle(n, "in_hand_modeler");
     this->queue_ptr.reset(new ros::CallbackQueue);
@@ -134,6 +135,7 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
         ROS_ERROR("[InHandModeler][%s]\talignment is already started!", __func__);
         return (false);
     }
+    ROS_INFO("[InHandModeler][%s]\tRecord a motion then call stop service to start processing");
     // ///////////////////////Init Registration////////////////////////////////////
     // //RANSAC maximum iterations
     // alignment.setMaximumIterations(50000);
@@ -186,7 +188,6 @@ InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_
     //start acquiring sequence
     do_acquisition = true;
     do_alignment = do_frame_fusion = false;
-    start_alignment = start_fusion = false;
     return (true);
 }
 
@@ -212,47 +213,30 @@ InHandModeler::alignSequence()
     int v1(0), v2(1);
     v.createViewPort(0.0,0.0,0.5,1.0, v1);
     v.createViewPort(0.5,0.0,1.0,1.0, v2);
-    //initialize the iterator pointers
+    //Next element, previous is always front (or begin)
     align_it = cloud_sequence.begin();
-    //we use two elements at a time, so point to last one used
     ++align_it;
-    bool tmp(true);
-    while (do_alignment)
-    {
-        //determine if we have to wait for do_frame_fusion thread
-        if (align_it == fuse_it && do_frame_fusion)
-        {
-            boost::this_thread::sleep(boost::posix_time::milliseconds(200));
-            continue;
-        }
-        PC::Ptr target(new PC), source(new PC);
-        //tmp
-        if(tmp){
-            v.addPointCloud(source,"source",v1);
-            v.addPointCloud(target,"target",v2);
-            tmp=false;
-        }
-        //
-        //source and target normals
-        NC::Ptr source_n(new NC), target_n(new NC);
-        //source and target features
-        pcl::PointCloud<pcl::FPFHSignature33>::Ptr source_f(new pcl::PointCloud<pcl::FPFHSignature33>);
-        pcl::PointCloud<pcl::FPFHSignature33>::Ptr target_f(new pcl::PointCloud<pcl::FPFHSignature33>);
-        //get source and target and downsample them
-        {
-            vg.setLeafSize(leaf, leaf, leaf);
-            LOCK guard(mtx_sequence);
-            //downsample
-            vg.setInputCloud(cloud_sequence.front().makeShared());
-            vg.filter(*target);
-            cloud_sequence.pop_front();
-            vg.setInputCloud(cloud_sequence.front().makeShared());
-            vg.filter(*source);
-            ++align_it;
-            //TODO: Need to check later if source and target needs to be switched
-            //(Fri 06 Nov 2015 08:07:25 PM CET -- tabjones)
-        }
-
+    if (align_it == cloud_sequence.end()){
+        ROS_INFO("[InHandModeler][%s]\tFinished alignment",__func__);
+        return;
+    }
+    //source ans target frames
+    PC::Ptr target(new PC), source(new PC);
+    //source and target normals
+    NC::Ptr source_n(new NC), target_n(new NC);
+    //source and target features
+    pcl::PointCloud<pcl::FPFHSignature33>::Ptr source_f(new pcl::PointCloud<pcl::FPFHSignature33>);
+    pcl::PointCloud<pcl::FPFHSignature33>::Ptr target_f(new pcl::PointCloud<pcl::FPFHSignature33>);
+    //get source and target and downsample them
+    vg.setLeafSize(leaf, leaf, leaf);
+    //downsample
+    vg.setInputCloud(cloud_sequence.front().makeShared());
+    vg.filter(*target);
+    vg.setInputCloud(*align_it.makeShared());
+    vg.filter(*source);
+    //TODO: Need to check later if source and target needs to be switched
+    //(Fri 06 Nov 2015 08:07:25 PM CET -- tabjones)
+    cloud_sequence.pop_front();
         //estimate normals
         ne.setRadiusSearch(2.0f*leaf);
         ne.useSensorOriginAsViewPoint();
