@@ -29,6 +29,7 @@
 #include <pcl/search/impl/flann_search.hpp>
 // #include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
+#include <pcl/registration/correspondence_rejection_distance.h>
 #include <pcl/visualization/pcl_visualizer.h>
 // ROS generated headers
 #include <pacman_vision_comm/start_modeler.h>
@@ -92,18 +93,23 @@ class InHandModeler
         //pointclouds sequence
         //in kinect reference frame
         std::list<PC> cloud_sequence;
-        //model and downsampled model in model reference frame
+        //model and downsampled model
         PC::Ptr model, model_ds;
+        //model features
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr model_f;
+        //model normals
+        NC::Ptr model_n;
 
         //Voxelgrid downsampling
         pcl::VoxelGrid<PT> vg;
 
         //Registration
         // pcl::SampleConsensusPrerejective<PT, PT, pcl::FPFHSignature33> alignment;
-        pcl::MultiscaleFeaturePersistence<PT,pcl::FPFHSignature33> persistance;
+        // pcl::MultiscaleFeaturePersistence<PT,pcl::FPFHSignature33> persistance;
         pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
         pcl::NormalEstimationOMP<PT, NT> ne;
         pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33>::Ptr fpfh;
+        pcl::registration::CorrespondenceRejectorDistance cr;
 
         //Octrees
         pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
