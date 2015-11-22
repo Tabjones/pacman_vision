@@ -7,7 +7,7 @@ pacman_vision:
     crop_left_hand: false,
     crop_right_arm: true,
     crop_right_hand: false,
-    downsample_leaf_size: 0.005,
+    downsample_leaf_size: 0.015,
     downsampling: true,
     enable_broadcaster: true,
     enable_estimator: false,
