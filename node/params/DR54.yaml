@@ -43,4 +43,5 @@ pacman_vision:
     use_service: false,
     use_table_transform: false,
     voxel_resolution: 0.02
+    geometry_scale: 1.5
   }
