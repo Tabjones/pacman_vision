@@ -383,7 +383,7 @@ InHandModeler::alignSequence()
         }
         //reject too far points
         pcl::Correspondences corr_s_over_t;
-        cr.setMaximumDistance(0.02); //2cm
+        cr.setMaximumDistance(0.01);
         cr.getRemainingCorrespondences(*corr_s_over_t_pre, corr_s_over_t);
         if(corr_s_over_t.size() < 3){
             ROS_ERROR("[InHandModeler][%s]\tToo few correspondences found... abort",__func__);
@@ -511,6 +511,7 @@ InHandModeler::fuseSimilarFrames()
         PC::Ptr next_c(new PC);
         current = fuse_it->makeShared();
         next_c = fuse_next->makeShared();
+        //Add color filter to try remove hand
         oct_cd_frames.setInputCloud(current);
         oct_cd_frames.addPointsFromInputCloud();
         oct_cd_frames.switchBuffers();
