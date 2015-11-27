@@ -1,12 +1,6 @@
-#ifndef _INCL_UTILITY
-#define _INCL_UTILITY
+#ifndef _INCL_COMMON_
+#define _INCL_COMMON_
 // ROS headers
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <ros/package.h>
-#include <ros/spinner.h>
-#include <ros/callback_queue.h>
-#include <ros/callback_queue_interface.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_datatypes.h>
@@ -15,25 +9,24 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/common/io.h>
-#include <pcl/filters/crop_box.h>
 // General Utils
 #include <cmath>
 #include <fstream>
 #include <string>
 #include <stdlib.h>
-#include <boost/thread.hpp>
+#include <memory>
+#include <thread>
+#include <mutex>
+#include <chrono>
+#include <utility>
 #include <boost/filesystem.hpp>
-#include <boost/date_time.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/timer.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
-#include <boost/range/algorithm.hpp>
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
-#include <utility>
 
-#define D2R 0.017453293  //deg to rad conversion
+#define D2R M_PI/180  //deg to rad conversion
+#define R2D 180/M_PI  //rad to deg conversion
 
 using namespace pcl;
 
@@ -49,7 +42,7 @@ fromTF(tf::Transform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &pose_d
 void
 fromTF(tf::StampedTransform &source, Eigen::Matrix4f &dest, geometry_msgs::Pose &pose_dest);
 
-// Convenient Typedefs
+// Convenient Typedefs for point clouds
 typedef pcl::PointXYZRGB PT; //default point type
 typedef pcl::PointCloud<PT> PC; //default point cloud with default point type
 
