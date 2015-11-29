@@ -3,7 +3,7 @@
 
 #include <pacman_vision/config.h>
 //Utility
-#include <pacman_vision/utility.h>
+#include <pacman_vision/common.h>
 #include <pcl/segmentation/supervoxel_clustering.h>
 
 class Storage
