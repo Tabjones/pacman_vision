@@ -99,11 +99,12 @@ class ModuleDriver
         {
             return (running);
         }
-        inline auto getModule() const //this requires c++14 ..!
+        inline Module::Ptr getModule() const
         {
-            //Derived classes from Module are FORCED to implement getMyPtr, so
-            //with function you actually get a shared_ptr of Derived type.
-            return (module->getMyPtr());
+            //Derived classes from Module are forced to implement getMyPtr, so
+            //with this function you could access a shared_ptr of Derived type.
+            //i.e. by calling from outside auto <return_val>->getMyPtr();
+            return (module);
         }
         typedef std::shared_ptr<ModuleDriver> Ptr;
     protected:
@@ -112,19 +113,9 @@ class ModuleDriver
         bool running;
         std::string name;
 };
-//Container of ModuleDriver, this handles all the module present
-class MasterOfModules
-{
-    public:
-        MasterOfModules()=default;
-        virtual ~MasterOfModules()
-        {
-            modules.clear();
-        }
-    protected:
-        std::unordered_map<std::string,MasterOfModules::anyPtr> modules;
+//Container of ModuleDriver easy typing
+typedef std::unordered_map<std::string,ModuleDriver::Ptr> ModuleMap;
 
-};
 /**\brief Class MasterNode
  * {:Brief Base Class implementing a ROS master node that uses Modules with
  * separate threads.}
@@ -139,7 +130,7 @@ class MasterNode : public BaseCommon
         {
             nh = ros::NodeHandle(ns);
             name_space = ns;
-            storage.reset(new Storage);
+            storage = std::make_shared<Storage>();
             spin_rate = rate;
         }
         ///Destructor
@@ -158,15 +149,15 @@ class MasterNode : public BaseCommon
         {
             ros::spinOnce();
         }
-        ///Shut it down
+        ///Reset everything
         virtual void reset()
         {
-            // modules.clear();
-            storage.reset(new Storage);
+            module_map.clear();
+            storage=std::make_shared<Storage>();
         }
     protected:
         ///Check Modules Method
         virtual void checkModules()=0;
+        ModuleMap module_map;
 };
-
 #endif // _INCL_BASE_ROS_NODE_HELPERS_HPP_
