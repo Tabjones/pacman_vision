@@ -12,6 +12,24 @@
 // #include <pacman_vision/storage.h>
 #include <unordered_map>
 
+// TODO: Solution: (tabjones on Monday 30/11/2015)
+//
+// 1) Use CRTP for modules, i.e Estimator:public Module<Estimator>             .
+//
+// 2) Add masternode handle as shared_ptr into Module<Derived>.
+//
+// 3) Let Module<Derived> handle thread creation and stopping, possibly via GUI.
+//
+// 4)  Hard to  destroy  Module<Derived>, so  it could  implement  a self  reset
+// member, and handle self creation from GUI callback.
+//
+// 5) So master node  does not have to keep track of  what modules are currently
+// running. This removes the need of an hetherogeneous contaier.
+//
+// 6) Need to study gtk/glade better  in order to understand how callback works,
+// and if  we can hide/disable  some part of the  complete GUI. To  make modular
+// compilation and a sigle GUI. <--- This ASAP, before starting other points.
+
 struct Storage{}; //TMP
 ///common members between master and modules
 class BaseCommon{
