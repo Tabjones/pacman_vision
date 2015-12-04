@@ -61,9 +61,8 @@ typedef std::lock_guard<std::mutex> LOCK; //default lock type
 class Box
 {
     public:
-        double x1,x2;
-        double y1,y2;
-        double z1,z2;
+        double x1,y1,z1;
+        double x2,y2,z2;
         //ctors
         Box(){}
         Box(double xmin, double ymin, double zmin, double xmax, double ymax, double zmax)

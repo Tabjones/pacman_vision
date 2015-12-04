@@ -34,29 +34,30 @@ set (PACMAN_VISION_BUILD_KINECT2_PROCESSOR  1)
 ################################################
 ## Set default sources
 set(SOURCES
-  src/vision_node.cpp
-  src/node_utils.cpp
-  src/utility.cpp
+  # src/vision_node.cpp TODO
+  # src/node_utils.cpp TODO
+  src/common.cpp
   src/storage.cpp
-  src/broadcaster.cpp
+  # src/broadcaster.cpp TODO
+  src/main.cpp
   )
 
 
 IF(PACMAN_VISION_BUILD_MODELER)
     LIST(APPEND SOURCES
-        src/in_hand_modeler.cpp
+        # src/in_hand_modeler.cpp TODO
     )
 ENDIF(PACMAN_VISION_BUILD_MODELER)
 
 IF(PACMAN_VISION_BUILD_LISTENER)
     LIST(APPEND SOURCES
-        src/vito_listener.cpp
+        # src/vito_listener.cpp TODO
     )
 ENDIF(PACMAN_VISION_BUILD_LISTENER)
 
 IF(PACMAN_VISION_BUILD_SUPERVOXELS)
     LIST(APPEND SOURCES
-        src/supervoxels.cpp
+        # src/supervoxels.cpp TODO
     )
 ENDIF(PACMAN_VISION_BUILD_SUPERVOXELS)
 
@@ -73,7 +74,7 @@ IF(PACMAN_VISION_BUILD_KINECT2_PROCESSOR)
         set(PACMAN_VISION_WITH_KINECT2_SUPPORT 1)
         include_directories(${freenect2_INCLUDE_DIRS})
         LIST(APPEND SOURCES
-            src/kinect2_processor.cpp
+            # src/kinect2_processor.cpp TODO
         )
         LIST(APPEND LIBRARIES
             ${freenect2_LIBRARY}
@@ -97,8 +98,8 @@ IF(PACMAN_VISION_BUILD_RECOGNITION)
         set(PACMAN_VISION_WITH_PEL_SUPPORT 1)
         include_directories(${pel_INCLUDE_DIRS})
         LIST(APPEND SOURCES
-            src/estimator.cpp
-            src/tracker.cpp
+            # src/estimator.cpp TODO remove hpp from main
+            # src/tracker.cpp
         )
         LIST(APPEND LIBRARIES
             ${pel_LIBRARIES}
@@ -202,20 +203,14 @@ link_directories(
   ${LINK_DIR}
   )
 
-# add_executable(pacman_vision ${SOURCES})
+add_executable(pacman_vision ${SOURCES})
 
-# add_dependencies(pacman_vision
-#   pacman_vision_comm_generate_messages_cpp
-#   pacman_vision_gencfg
-#   )
+add_dependencies(pacman_vision
+  pacman_vision_comm_generate_messages_cpp
+  pacman_vision_gencfg
+  )
 
-# target_link_libraries(pacman_vision
-#    ${LIBRARIES}
-#    ${catkin_LIBRARIES}
-#    ${PCL_LIBRARIES}
-# )
-add_executable(prova src/prova.cpp)
-target_link_libraries(prova
+target_link_libraries(pacman_vision
    ${LIBRARIES}
    ${catkin_LIBRARIES}
    ${PCL_LIBRARIES}

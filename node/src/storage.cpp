@@ -99,7 +99,7 @@ Storage::write_scene_processed(PC::Ptr &cloud)
 }
 
 bool
-Storage::read_obj_clusters (boost::shared_ptr<std::vector<PXC>> &objs)
+Storage::read_obj_clusters (std::shared_ptr<std::vector<PXC>> &objs)
 {
     LOCK guard(mtx_clusters);
     if (!objs)
@@ -110,18 +110,18 @@ Storage::read_obj_clusters (boost::shared_ptr<std::vector<PXC>> &objs)
         ROS_WARN("[Storage][%s] Clusters from Storage are empty! Not reading anything",__func__);
         return false;
     }
-    boost::copy(clusters, back_inserter(*objs));
+    std::copy(clusters.begin(), clusters.end(), std::back_inserter(*objs));
     return true;
 }
 
 bool
-Storage::write_obj_clusters (boost::shared_ptr<std::vector<PXC>> &objs)
+Storage::write_obj_clusters (std::shared_ptr<std::vector<PXC>> &objs)
 {
     if (objs){
         if (!objs->empty()){
             LOCK guard(mtx_clusters);
             this->clusters.clear();
-            boost::copy(*objs, back_inserter(clusters));
+            std::copy(objs->begin(), objs->begin(), std::back_inserter(clusters));
             return true;
         }
     }
@@ -130,7 +130,7 @@ Storage::write_obj_clusters (boost::shared_ptr<std::vector<PXC>> &objs)
 }
 
 bool
-Storage::read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &trans)
+Storage::read_obj_transforms (std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &trans)
 {
     LOCK guard(mtx_estimations);
     if (!trans)
@@ -139,18 +139,18 @@ Storage::read_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f,Eige
         trans->clear();
     if (this->estimations.empty())
         return false;
-    boost::copy(estimations, back_inserter(*trans));
+    std::copy(estimations.begin(), estimations.end(), std::back_inserter(*trans));
     return true;
 }
 
 bool
-Storage::write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &trans)
+Storage::write_obj_transforms (std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &trans)
 {
     if (trans){
         if (!trans->empty()){
             LOCK guard(mtx_estimations);
             this->estimations.clear();
-            boost::copy(*trans, back_inserter(estimations));
+            std::copy(trans->begin(), trans->end(), std::back_inserter(estimations));
             return true;
         }
     }
@@ -159,7 +159,7 @@ Storage::write_obj_transforms (boost::shared_ptr<std::vector<Eigen::Matrix4f,Eig
 }
 
 bool
-Storage::read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string,std::string>>> &n)
+Storage::read_obj_names (std::shared_ptr<std::vector<std::pair<std::string,std::string>>> &n)
 {
     LOCK guard(mtx_names);
     if (!n)
@@ -170,18 +170,18 @@ Storage::read_obj_names (boost::shared_ptr<std::vector<std::pair<std::string,std
         ROS_WARN("[Storage][%s] Names of objects from Storage are empty! Not reading anything",__func__);
         return false;
     }
-    boost::copy(names, back_inserter(*n));
+    std::copy(names.begin(), names.end(), std::back_inserter(*n));
     return true;
 }
 
 bool
-Storage::write_obj_names (boost::shared_ptr<std::vector<std::pair<std::string,std::string>>> &n)
+Storage::write_obj_names (std::shared_ptr<std::vector<std::pair<std::string,std::string>>> &n)
 {
     if (n){
         if (!n->empty()){
             LOCK guard(mtx_names);
             this->names.clear();
-            boost::copy(*n, back_inserter(names));
+            std::copy(n->begin(), n->end(), back_inserter(names));
             return true;
         }
     }
@@ -204,7 +204,7 @@ Storage::search_obj_name(std::string n, int &idx)
 }
 
 bool
-Storage::read_obj_transform_by_index(int idx, boost::shared_ptr<Eigen::Matrix4f> &trans)
+Storage::read_obj_transform_by_index(int idx, std::shared_ptr<Eigen::Matrix4f> &trans)
 {
     if (!trans)
         trans.reset(new Eigen::Matrix4f);
@@ -220,7 +220,7 @@ Storage::read_obj_transform_by_index(int idx, boost::shared_ptr<Eigen::Matrix4f>
 }
 
 bool
-Storage::write_obj_transform_by_index(int idx, boost::shared_ptr<Eigen::Matrix4f> &trans)
+Storage::write_obj_transform_by_index(int idx, std::shared_ptr<Eigen::Matrix4f> &trans)
 {
     if (!trans){
         ROS_WARN("[Storage][%s] Passed transform is empty! Not writing anything",__func__);
@@ -236,7 +236,7 @@ Storage::write_obj_transform_by_index(int idx, boost::shared_ptr<Eigen::Matrix4f
 }
 
 bool
-Storage::read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
+Storage::read_left_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
 {
     LOCK guard(mtx_left_arm);
     if (!arm)
@@ -247,18 +247,18 @@ Storage::read_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::alig
         ROS_WARN("[Storage][%s] Vito Left Arm transforms from Storage are empty! Not reading anything",__func__);
         return false;
     }
-    boost::copy(left_arm, back_inserter(*arm));
+    std::copy(left_arm.begin(), left_arm.end(), std::back_inserter(*arm));
     return true;
 }
 
 bool
-Storage::write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
+Storage::write_left_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
 {
     if (arm){
         if (!arm->empty()){
             LOCK guard(mtx_left_arm);
             left_arm.clear();
-            boost::copy(*arm, back_inserter(left_arm));
+            std::copy(arm->begin(), arm->end(), std::back_inserter(left_arm));
             return true;
         }
     }
@@ -267,7 +267,7 @@ Storage::write_left_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::ali
 }
 
 bool
-Storage::read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
+Storage::read_right_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
 {
     LOCK guard(mtx_right_arm);
     if (!arm)
@@ -278,18 +278,18 @@ Storage::read_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::ali
         ROS_WARN("[Storage][%s] Vito Right Arm transforms from Storage are empty! Not reading anything",__func__);
         return false;
     }
-    boost::copy(right_arm, back_inserter(*arm));
+    std::copy(right_arm.begin(), right_arm.end(),  std::back_inserter(*arm));
     return true;
 }
 
 bool
-Storage::write_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
+Storage::write_right_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
 {
     if (arm){
         if (!arm->empty()){
             LOCK guard(mtx_right_arm);
             right_arm.clear();
-            boost::copy(*arm, back_inserter(right_arm));
+            std::copy(arm->begin(), arm->end(),  std::back_inserter(right_arm));
             return true;
         }
     }
@@ -298,7 +298,7 @@ Storage::write_right_arm(boost::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::al
 }
 
 void
-Storage::read_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
+Storage::read_left_hand(std::shared_ptr<Eigen::Matrix4f> &hand)
 {
     LOCK guard(mtx_left_hand);
     if (!hand)
@@ -308,7 +308,7 @@ Storage::read_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
 }
 
 bool
-Storage::write_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
+Storage::write_left_hand(std::shared_ptr<Eigen::Matrix4f> &hand)
 {
     if (hand){
         LOCK guard(mtx_left_hand);
@@ -320,7 +320,7 @@ Storage::write_left_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
 }
 
 void
-Storage::read_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
+Storage::read_right_hand(std::shared_ptr<Eigen::Matrix4f> &hand)
 {
     LOCK guard(mtx_right_hand);
     if (!hand)
@@ -330,7 +330,7 @@ Storage::read_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
 }
 
 bool
-Storage::write_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
+Storage::write_right_hand(std::shared_ptr<Eigen::Matrix4f> &hand)
 {
     if (hand){
         LOCK guard(mtx_right_hand);
@@ -342,7 +342,7 @@ Storage::write_right_hand(boost::shared_ptr<Eigen::Matrix4f> &hand)
 }
 
 void
-Storage::read_table(boost::shared_ptr<Eigen::Matrix4f> &t)
+Storage::read_table(std::shared_ptr<Eigen::Matrix4f> &t)
 {
     LOCK guard(mtx_table);
     if (!t)
@@ -352,7 +352,7 @@ Storage::read_table(boost::shared_ptr<Eigen::Matrix4f> &t)
 }
 
 bool
-Storage::write_table(boost::shared_ptr<Eigen::Matrix4f> &t)
+Storage::write_table(std::shared_ptr<Eigen::Matrix4f> &t)
 {
     if (t){
         LOCK guard(mtx_table);
@@ -380,7 +380,7 @@ Storage::write_tracked_index(int idx)
 }
 
 void
-Storage::read_tracked_box(boost::shared_ptr<Box> &b)
+Storage::read_tracked_box(std::shared_ptr<Box> &b)
 {
     if(!b)
         b.reset(new Box);
@@ -395,7 +395,7 @@ Storage::read_tracked_box(boost::shared_ptr<Box> &b)
 }
 
 bool
-Storage::write_tracked_box(boost::shared_ptr<Box> &b)
+Storage::write_tracked_box(std::shared_ptr<Box> &b)
 {
     if (b){
         LOCK guard(mtx_bbox);
@@ -412,7 +412,7 @@ Storage::write_tracked_box(boost::shared_ptr<Box> &b)
 }
 
 bool
-Storage::read_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr>> &clus)
+Storage::read_supervoxels_clusters(std::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr>> &clus)
 {
     if (!clus)
         clus.reset(new std::map<uint32_t, pcl::Supervoxel<PT>::Ptr>);
@@ -428,7 +428,7 @@ Storage::read_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t, pcl::Sup
 }
 
 bool
-Storage::write_supervoxels_clusters(boost::shared_ptr<std::map<uint32_t,pcl::Supervoxel<PT>::Ptr>> &clus)
+Storage::write_supervoxels_clusters(std::shared_ptr<std::map<uint32_t,pcl::Supervoxel<PT>::Ptr>> &clus)
 {
     if (clus){
         if (!clus->empty()){

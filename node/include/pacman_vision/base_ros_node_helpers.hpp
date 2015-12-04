@@ -1,5 +1,5 @@
-#ifndef _INCL_BASE_ROS_NODE_HELPERS_HPP_
-#define _INCL_BASE_ROS_NODE_HELPERS_HPP_
+#ifndef _BASE_ROS_NODE_HELPERS_HPP_
+#define _BASE_ROS_NODE_HELPERS_HPP_
 //this header is hpp cause it also contains implementations
 
 #include <ros/ros.h>
@@ -157,7 +157,7 @@ class MasterNode
         std::string name_space;
         std::shared_ptr<Storage> storage;
 };
-#endif // _INCL_BASE_ROS_NODE_HELPERS_HPP_
+#endif // _BASE_ROS_NODE_HELPERS_HPP_
 
 /** Use this as:
  *

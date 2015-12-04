@@ -1,17 +1,93 @@
-#include <pacman_vision/estimator.h>
+#ifndef _ESTIMATOR_HPP_
+#define _ESTIMATOR_HPP_
+
+#include <pacman_vision/config.h>
+//Utility
+#include <pacman_vision/common.h>
+#include <pacman_vision/base_ros_node_helpers.hpp>
+//PCL
+#include <pcl/common/centroid.h>
+#include <pcl/common/eigen.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/search/kdtree.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/sample_consensus/ransac.h>
+#include <pcl/sample_consensus/sac_model_plane.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/segmentation/extract_clusters.h>
+#include <pcl_ros/transforms.h>
+#include <pcl_conversions/pcl_conversions.h>
+// ROS generated headers
+#include <pacman_vision_comm/estimate.h>
+#include <pacman_vision_comm/pe.h>
+#include <pacman_vision_comm/peArray.h>
+//Storage
+#include <pacman_vision/storage.h>
+//PEL
+#include <pel/pe_progressive_bisection.h>
+
+using namespace pcl;
+
+class Estimator : public Module<Estimator>
+{
+    friend class Module<Estimator>;
+    public:
+    Estimator()=delete;
+    Estimator(const ros::NodeHandle n, const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate);
+    virtual ~Estimator()=default;
+    //Eigen alignment
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    private:
+        //Service Server
+        ros::ServiceServer srv_estimate;
+        //estimated transforms
+        std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> estimations;
+        //object clusters found on scene
+        std::shared_ptr<std::vector<PXC>> clusters;
+        //naming and id-ing of estimated objects
+        std::shared_ptr<std::vector<std::pair<std::string,std::string>>> names; //name/id pairs
+        //actual scene
+        PXC::Ptr scene;
+        //path to pel database
+        boost::filesystem::path db_path;
+
+        //class behaviour
+        bool calibration, disabled;
+        int iterations, neighbors;
+        double clus_tol;
+
+        //PEL object
+        pel::interface::PEProgressiveBisection pe;
+
+        /*
+         * method to extract clusters of objects in a table top scenario with
+         * table already removed
+         */
+        int
+        extract_clusters();
+        //perform estimation
+        bool
+        estimate();
+        //estimate service callback
+        bool
+        cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res);
+};
+
+//Implementations
 
 //Constructor
-Estimator::Estimator(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
+Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate)
+    :Module<Estimator>(n,ns,stor,rate)
 {
-    this->scene.reset(new PXC);
-    this->nh = ros::NodeHandle (n, "estimator");
-    this->queue_ptr.reset(new ros::CallbackQueue);
-    this->nh.setCallbackQueue(&(*this->queue_ptr));
-    this->storage = stor;
-    this->db_path = (ros::package::getPath("pacman_vision") + "/database" );
+    scene.reset(new PXC);
+    db_path = (ros::package::getPath("pacman_vision") + "/database" );
     if (!boost::filesystem::exists(db_path) || !boost::filesystem::is_directory(db_path))
         ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
-    this->srv_estimate = nh.advertiseService("estimate", &Estimator::cb_estimate, this);
+    srv_estimate = nh.advertiseService("estimate", &Estimator::cb_estimate, this);
     //init params
     nh.param<bool>("/pacman_vision/object_calibration", calibration, false);
     disabled = false;
@@ -26,15 +102,11 @@ Estimator::Estimator(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor)
     pe.loadAndSetDatabase(this->db_path);
     ROS_INFO("[Estimator] Estimator module extract euclidean clusters from current scene and tries to identify each of them by matching with provided database. For the Estimator to work properly please enable at least plane segmentation during scene processing.");
 }
-Estimator::~Estimator()
-{
-    this->nh.shutdown();
-}
 
 int
 Estimator::extract_clusters()
 {
-    this->storage->read_scene_processed(this->scene);
+    storage->read_scene_processed(scene);
     if (scene->empty()){
         ROS_WARN("[Estimator][%s] Processed scene is empty, cannot continue...",__func__);
         return -1;
@@ -148,11 +220,4 @@ Estimator::estimate()
     this->storage->write_obj_transforms(this->estimations);
     return true;
 }
-
-void
-Estimator::spin_once()
-{
-    //process this module callback
-    this->queue_ptr->callAvailable(ros::WallDuration(0));
-}
-
+#endif
