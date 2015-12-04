@@ -16,13 +16,13 @@ class Storage
 
         //Read and write scene methods
         bool
-        read_scene (PC::Ptr &cloud);
+        read_scene (PTC::Ptr &cloud);
         bool
-        write_scene (PC::Ptr &cloud);
+        write_scene (PTC::Ptr &cloud);
         bool
-        read_scene_processed (PC::Ptr &cloud);
+        read_scene_processed (PTC::Ptr &cloud);
         bool
-        write_scene_processed (PC::Ptr &cloud);
+        write_scene_processed (PTC::Ptr &cloud);
         bool
         read_scene (PXC::Ptr &cloud);
         bool
@@ -91,10 +91,10 @@ class Storage
         write_supervoxels_clusters(std::shared_ptr<std::map<uint32_t, pcl::Supervoxel<PT>::Ptr>>  &clus);
     private:
         //untouched scene from kinect
-        PC::Ptr scene;
+        PTC::Ptr scene;
         std::mutex mtx_scene;
         //scene after processing
-        PC::Ptr scene_processed;
+        PTC::Ptr scene_processed;
         std::mutex mtx_scene_processed;
         //sensor reference frame
         std::string sensor_ref_frame;

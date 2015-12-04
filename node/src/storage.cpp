@@ -7,9 +7,9 @@ Storage::Storage()
 }
 
 bool
-Storage::read_scene(PC::Ptr &cloud)
+Storage::read_scene(PTC::Ptr &cloud)
 {
-    cloud.reset(new PC);
+    cloud.reset(new PTC);
     if (scene){
         if(!scene->empty()){
             LOCK guard(mtx_scene);
@@ -37,9 +37,9 @@ Storage::read_scene(PXC::Ptr &cloud)
 }
 
 bool
-Storage::read_scene_processed(PC::Ptr &cloud)
+Storage::read_scene_processed(PTC::Ptr &cloud)
 {
-    cloud.reset(new PC);
+    cloud.reset(new PTC);
     if (scene_processed){
         if(!scene_processed->empty()){
             LOCK guard(mtx_scene_processed);
@@ -67,13 +67,13 @@ Storage::read_scene_processed(PXC::Ptr &cloud)
 }
 
 bool
-Storage::write_scene(PC::Ptr &cloud)
+Storage::write_scene(PTC::Ptr &cloud)
 {
     if (cloud){
         if (!cloud->empty()){
             LOCK guard(mtx_scene);
             if (!scene)
-                scene.reset(new PC);
+                scene.reset(new PTC);
             pcl::copyPointCloud(*cloud, *scene);
             return true;
         }
@@ -83,13 +83,13 @@ Storage::write_scene(PC::Ptr &cloud)
 }
 
 bool
-Storage::write_scene_processed(PC::Ptr &cloud)
+Storage::write_scene_processed(PTC::Ptr &cloud)
 {
     if (cloud){
         if (!cloud->empty()){
             LOCK guard(mtx_scene_processed);
             if (!scene_processed)
-                scene_processed.reset(new PC);
+                scene_processed.reset(new PTC);
             pcl::copyPointCloud(*cloud, *scene_processed);
             return true;
         }
