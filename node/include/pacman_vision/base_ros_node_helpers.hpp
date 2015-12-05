@@ -11,16 +11,30 @@
 #include <pacman_vision/common.h>
 #include <pacman_vision/storage.h>
 
-///Base class module, should be inherited by modules in CRPT
+//The magic starts here
+//
+///Base  class for  dynamic  modules, should  be inherited  by  modules in  CRPT
+//fashion. See the end of the file for an example usage!
 template<typename Derived>
 class Module
 {
+    //////Methods
     public:
-        //no empty module creation
+        //no empty module creation allowed
         Module()=delete;
-        //ctor with node handle of masternode, namespace, pointer to storage and desired rate
+        //ctor with  node handle to  create named namespace, pointer  to storage
+        //and desired rate. This is for master node
+        Module(const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate):
+            is_running(false), spin_rate(rate), disabled(false)
+        {
+            nh = ros::NodeHandle (ns);
+            storage=stor;
+            name_space = ns;
+        }
+        //ctor with  node handle of  masternode, namespace, pointer  to storagee
+        //and desired rate. This is for modules, dependant of master node
         Module(const ros::NodeHandle n, const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate):
-            is_running(false), spin_rate(rate)
+            is_running(false), spin_rate(rate), disabled(false)
         {
             nh = ros::NodeHandle (n, ns);
             storage=stor;
@@ -38,42 +52,71 @@ class Module
         {
             return derived().is_running;
         }
-        inline std::string getName() const
+        inline const std::string getName() const
         {
             return derived().name_space;
         }
-        //spawn with spin implemented here
-        void default_spawn()
+        ///wait for rate
+        inline void sleep()
         {
-            //subsequent calls to spawn are prohibited
-            if (isRunning()){
-                ROS_WARN("[%s]\tTried to spawn %s, but it is already spawned and running.",__func__,getName().c_str());
-                return;
-            }
-            derived().is_running = true;
-            derived().worker = std::thread(&Module::spin, this);
+            derived().spin_rate.sleep();
+        }
+        //Check OK-ness
+        inline bool isOk() const
+        {
+            return derived().nh.ok();
+        }
+        inline Storage::ConstPtr getStorage() const
+        {
+            return derived().storage;
+        }
+        inline const ros::NodeHandle getNodeHandle() const
+        {
+            return derived().nh;
         }
         void kill()
         {
-            if (!isRunning()){
-                ROS_WARN("[%s]\tTried to kill %s, but it is not running.",__func__,getName().c_str());
+            if (!derived().isRunning()){
+                ROS_WARN("[%s]\tTried to kill %s, but it is not running.",__func__,derived().name_space.c_str());
                 return;
             }
             derived().is_running = false;
             derived().worker.join();
         }
-        //spawn with spin implemented in Derived
+        //spawn with spin implemented in Derived, or if it doesnt exist use this spin
         void spawn ()
         {
-            if(isRunning()){
-                ROS_WARN("[%s]\tTried to spawn %s, but it is already spawned and running.",__func__,getName().c_str());
+            if(derived().isRunning()){
+                ROS_WARN("[%s]\tTried to spawn %s, but it is already spawned and running.",__func__,derived().name_space.c_str());
                 return;
             }
             derived().is_running = true;
             derived().worker = std::thread(&Derived::spin, derived_ptr());
         }
+        inline void disable()
+        {
+            derived().disabled=true;
+        }
+        inline void enable()
+        {
+            derived().disabled=false;
+        }
+    protected:
+        //general spin, cannot be called from outside, only via spawn
+        void spin()
+        {
+            while(derived().nh.ok() && derived().is_running)
+            {
+                if(!derived().disabled){
+                    derived().spinOnce();
+                    derived().spin_rate.sleep();
+                }
+            }
+        }
+    ///////Members
     protected:
         bool is_running;
+        bool disabled;
         ros::NodeHandle nh;
         ros::Rate spin_rate;
         std::string name_space;
@@ -87,137 +130,63 @@ class Module
         //return derived_ptr
         Derived* derived_ptr() {return static_cast<Derived*>(this); }
         const Derived* derived_ptr() const {return static_cast<const Derived*>(this); }
-        //general spin
-        void spin()
-        {
-            while(derived().nh.ok() && derived().is_running)
-            {
-                spinOnce();
-                derived().spin_rate.sleep();
-            }
-        }
-};
-
-/**\brief Class MasterNode
- * {:Brief Base Class implementing a ROS master node that uses Modules with
- * separate threads.}
-*/
-class MasterNode
-{
-    public:
-        ///empty obj creation is not allowed
-        MasterNode()=delete;
-        ///Only this ctor is allowed
-        MasterNode(const std::string ns, const ros::Rate rate) : spin_rate(rate), name_space(ns)
-        {
-            nh = ros::NodeHandle(ns);
-            storage = std::make_shared<Storage>();
-        }
-        ///Destructor
-        virtual ~MasterNode(){}
-        ///Main loop spin, crude implementation
-        virtual void spin()
-        {
-            while (ok())
-            {
-                spinOnce();
-                sleep();
-            }
-        }
-        ///Custom spin method
-        virtual void spinOnce()
-        {
-            ros::spinOnce();
-        }
-        ///wait for rate
-        virtual void sleep()
-        {
-            spin_rate.sleep();
-        }
-        //Check OK-ness
-        virtual inline bool ok() const
-        {
-            return nh.ok();
-        }
-        inline std::shared_ptr<Storage> getStorage() const
-        {
-            return storage;
-        }
-        inline ros::NodeHandle getNodeHandle() const
-        {
-            return nh;
-        }
-        inline std::string getName() const
-        {
-            return name_space;
-        }
-    protected:
-        ros::NodeHandle nh;
-        ros::Rate spin_rate;
-        std::string name_space;
-        std::shared_ptr<Storage> storage;
 };
 #endif // _BASE_ROS_NODE_HELPERS_HPP_
 
-/** Use this as:
+/** Example usage:
  *
  * Module Foo
 class Foo: public Module<Foo>
 {
     public:
-        friend class Module<Foo>;
-        Foo ()=delete;
+        friend class Module<Foo>; //this lets the base class access all of our members, even private ones
+        //Foo ()=delete; no need to delete it since its base is deleted
         Foo (const ros::NodeHandle n, const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate):
             Module<Foo>(n,ns,stor,rate)
         {}
     private:
         void spin()
         {
-            std::cout<<"Foo start\n";
             while(nh.ok() && is_running)
             {
-                std::cout<<"Foo spinning\n";
+                std::cout<<"Foo is spinning\n";
                 spinOnce();
                 spin_rate.sleep();
             }
-            std::cout<<"Foo stop\n";
         }
 };
-
-* Master node
-class Master: public MasterNode
-{
-    public:
-        Master()=delete;
-        Master(const std::string ns, const ros::Rate rate): MasterNode(ns,rate)
-        {}
-        virtual ~Master(){}
-};
-
 * main
 int main (int argc, char *argv[])
 {
-    std::string ns("master");
+    std::string ns("main");
     ros::init(argc, argv, ns);
     ros::Time::init();
-    Master node(ns,20);
-    Foo module(ns,"module",node.getStorage(), 40);
+    ros::NodeHandle node(ns);
+    ros::Rate rate(10);
+    Storage::Ptr storage (new Storage);
+    Foo module(node,"foo",storage, 40);
     int count(0);
     while (node.ok())
     {
-        std::cout<<"Master spinning\n";
-        node.spinOnce();
-        node.sleep();
+        //main node is spinning at 10Hz, its namespace is "main"
+        ros::spinOnce();
+        rate.sleep();
         ++count;
+        std::cout<<"Main is spinning\n";
         if (count == 100)
         {
             module.spawn();
-            //start spamming Foo spinning at double rate
+            //start Foo spinning at 40Hz, its namespace is "main/foo"
         }
         if (count == 200)
         {
             module.kill();
-            //stop spamming Foo spinning at double rate
+            //Foo dies, now only main remains
+        }
+        if (count == 300)
+        {
+            break;
+            //also main dies
         }
     }
     return 0;

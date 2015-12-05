@@ -9,6 +9,8 @@
 class Storage
 {
     public:
+        typedef std::shared_ptr<Storage> Ptr;
+        typedef std::shared_ptr<const Storage> ConstPtr;
         Storage();
         ~Storage(){}
         //Eigen Alignment
