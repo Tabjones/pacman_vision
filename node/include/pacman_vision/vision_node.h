@@ -1,10 +1,11 @@
-#ifndef _INCL_NODE
-#define _INCL_NODE
+#ifndef _VISION_NODE_H_
+#define _VISION_NODE_H_
 
 #include <pacman_vision/config.h>
+#include <pacman_vision/common.h>
+#include <pacman_vision/storage.h>
 // ROS headers
 #include <dynamic_reconfigure/server.h>
-#include <pcl_ros/point_cloud.h>
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud_conversion.h>
@@ -12,31 +13,28 @@
 #include <tf/transform_broadcaster.h>
 //PCL
 #include <pcl/filters/voxel_grid.h>
-#include <pcl/filters/crop_box.h>
 #include <pcl/filters/extract_indices.h>
-#include <pcl/io/pcd_io.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/sample_consensus/ransac.h>
 #include <pcl/sample_consensus/sac_model_plane.h>
 #include <pcl/segmentation/sac_segmentation.h>
-#include <pcl_ros/transforms.h>
-#include <pcl_conversions/pcl_conversions.h>
 // ROS generated headers
 #include <pacman_vision_comm/get_scene.h>
 #include <pacman_vision/pacman_visionConfig.h>
 
-#include <pacman_vision/utility.h>
-#include <pacman_vision/storage.h>
+//TODO
 #ifdef PACMAN_VISION_WITH_KINECT2_SUPPORT
 #include <pacman_vision/kinect2_processor.h>
 #endif
+
 //Modules
 #ifdef PACMAN_VISION_WITH_PEL_SUPPORT
 #include <pacman_vision/estimator.h>
 #include <pacman_vision/tracker.h>
 #endif
+
 #include <pacman_vision/broadcaster.h>
 #include <pacman_vision/vito_listener.h>
 #include <pacman_vision/supervoxels.h>

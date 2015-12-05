@@ -12,6 +12,7 @@
 #include <pcl/filters/crop_box.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl_ros/transforms.h>
+#include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 // General Utils
 #include <cmath>
