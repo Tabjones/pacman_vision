@@ -1,6 +1,5 @@
-#ifndef _BASE_ROS_NODE_HELPERS_HPP_
-#define _BASE_ROS_NODE_HELPERS_HPP_
-//this header is hpp cause it also contains implementations
+#ifndef _DYNAMIC_MODULES_HPP_
+#define _DYNAMIC_MODULES_HPP_
 
 #include <ros/ros.h>
 #include <ros/console.h>

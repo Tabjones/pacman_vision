@@ -4,7 +4,7 @@
 #include <pacman_vision/config.h>
 //Utility
 #include <pacman_vision/common.h>
-#include <pacman_vision/base_ros_node_helpers.hpp>
+#include <pacman_vision/dynamic_modules.hpp>
 //PCL
 #include <pcl/common/centroid.h>
 #include <pcl/common/eigen.h>
@@ -29,8 +29,6 @@
 #include <pacman_vision/storage.h>
 //PEL
 #include <pel/pe_progressive_bisection.h>
-
-using namespace pcl;
 
 class Estimator : public Module<Estimator>
 {

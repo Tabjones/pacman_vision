@@ -4,6 +4,7 @@
 #include <pacman_vision/config.h>
 #include <pacman_vision/common.h>
 #include <pacman_vision/storage.h>
+#include <pacman_vision/dynamic_modules.hpp>
 // ROS headers
 #include <dynamic_reconfigure/server.h>
 #include <sensor_msgs/PointCloud.h>
