@@ -65,6 +65,7 @@ typedef std::lock_guard<std::mutex> LOCK; //default lock type
 //Data structure for box, defined by bounduaries and some basic arithmetics
 struct Box
 {
+    typedef std::shared_ptr<Box> Ptr;
     double x1,y1,z1;
     double x2,y2,z2;
     //ctors

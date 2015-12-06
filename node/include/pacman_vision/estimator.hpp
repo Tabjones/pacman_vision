@@ -61,10 +61,8 @@ class Estimator : public Module<Estimator>
         //PEL object
         pel::interface::PEProgressiveBisection pe;
 
-        /*
-         * method to extract clusters of objects in a table top scenario with
-         * table already removed
-         */
+         // method to extract  clusters of objects in a table  top scenario with
+         // table already removed
         int
         extract_clusters();
         //perform estimation
@@ -73,6 +71,8 @@ class Estimator : public Module<Estimator>
         //estimate service callback
         bool
         cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res);
+        //spin redefinition
+        void spin();
 };
 
 //Implementations
@@ -87,18 +87,16 @@ Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const std::s
         ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
     srv_estimate = nh.advertiseService("estimate", &Estimator::cb_estimate, this);
     //init params
-    nh.param<bool>("/pacman_vision/object_calibration", calibration, false);
-    disabled = false;
-    nh.param<int>("/pacman_vison/iterations", iterations, 5);
-    nh.param<int>("/pacman_vision/neighbors", neighbors, 20);
-    nh.param<double>("/pacman_vision/cluster_tol", clus_tol, 0.05);
+    nh.param<bool>("object_calibration", calibration, false); //legacy param for phase space star-object calibration
+    nh.param<int>("iterations", iterations, 5);
+    nh.param<int>("neighbors", neighbors, 20);
+    nh.param<double>("cluster_tol", clus_tol, 0.05);
     pe.setParam("verbosity",2);
     pe.setRMSEThreshold(0.003);
     pe.setStepIterations(iterations);
     pe.setParam("lists_size",neighbors);
     pe.setParam("downsamp",0);
     pe.loadAndSetDatabase(this->db_path);
-    ROS_INFO("[Estimator] Estimator module extract euclidean clusters from current scene and tries to identify each of them by matching with provided database. For the Estimator to work properly please enable at least plane segmentation during scene processing.");
 }
 
 int
@@ -135,7 +133,7 @@ Estimator::extract_clusters()
     {
         PXC::Ptr object (new PXC);
         extract.setInputCloud(scene);
-        extract.setIndices(boost::make_shared<PointIndices>(*it));
+        extract.setIndices(boost::make_shared<pcl::PointIndices>(*it));
         extract.setNegative(false);
         extract.filter(clusters->at(j));
     }
@@ -217,5 +215,16 @@ Estimator::estimate()
     this->storage->write_obj_names(this->names);
     this->storage->write_obj_transforms(this->estimations);
     return true;
+}
+void Estimator::spin()
+{
+    ROS_INFO("[Estimator] Estimator module extract euclidean clusters from current scene and tries to identify each of them by matching with provided database. For the Estimator to work properly please enable at least plane segmentation during scene processing.");
+    while(nh.ok() && is_running)
+    {
+        if(!disabled){
+            spinOnce();
+            spin_rate.sleep();
+        }
+    }
 }
 #endif

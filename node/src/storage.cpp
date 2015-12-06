@@ -6,6 +6,7 @@ Storage::Storage()
     this->index = -1;
 }
 
+//TODO review pointer references in function arguments
 bool
 Storage::read_scene(PTC::Ptr &cloud)
 {

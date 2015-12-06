@@ -1,19 +1,20 @@
 #include <pacman_vision/common.h>
 #include <pacman_vision/estimator.hpp>
+#include <pacman_vision/basic_node.hpp>
 
 int main (int argc, char *argv[])
 {
     std::string node_namespace ("pacman_vision");
     ros::init(argc, argv, node_namespace);
     ros::Time::init();
-    std::shared_ptr<Storage> stor;
-    Estimator module(node_namespace, "estimator", stor, 10);
-    ros::Rate main_rate(30);
-    module.spawn();
+    std::shared_ptr<Storage> storage (new Storage);
+    BasicNode node(node_namespace, storage, 50);
+    Estimator estimator(node_namespace, "estimator", storage, 2);
+    node.spawn();
     while (ros::ok())
     {
-        ros::spinOnce();
-        main_rate.sleep();
+        //no op until GUI is here
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
     return 0;
 }
