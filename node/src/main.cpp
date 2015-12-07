@@ -1,6 +1,7 @@
 #include <pacman_vision/common.h>
-#include <pacman_vision/estimator.hpp>
 #include <pacman_vision/basic_node.hpp>
+#include <pacman_vision/sensor_processor.hpp>
+#include <pacman_vision/estimator.hpp>
 
 int main (int argc, char *argv[])
 {
@@ -9,8 +10,11 @@ int main (int argc, char *argv[])
     ros::Time::init();
     std::shared_ptr<Storage> storage (new Storage);
     BasicNode node(node_namespace, storage, 50);
+    SensorProcessor sensor(node_namespace, "sensor_processor", storage, 50);
     Estimator estimator(node_namespace, "estimator", storage, 2);
+    //node and sensor always spawn
     node.spawn();
+    sensor.spawn();
     while (ros::ok())
     {
         //no op until GUI is here

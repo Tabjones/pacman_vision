@@ -23,7 +23,7 @@ class Module
         Module()=delete;
         //ctor with  node handle to  create named namespace, pointer  to storage
         //and desired rate. This is for master node
-        Module(const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate):
+        Module(const std::string ns, const Storage::Ptr stor, const ros::Rate rate):
             is_running(false), spin_rate(rate), disabled(false)
         {
             nh = ros::NodeHandle (ns);
@@ -32,7 +32,7 @@ class Module
         }
         //ctor with  node handle of  masternode, namespace, pointer  to storagee
         //and desired rate. This is for modules, dependant of master node
-        Module(const ros::NodeHandle n, const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate):
+        Module(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate):
             is_running(false), spin_rate(rate), disabled(false)
         {
             nh = ros::NodeHandle (n, ns);
@@ -65,11 +65,11 @@ class Module
         {
             return derived().nh.ok();
         }
-        inline Storage::ConstPtr getStorage() const
+        inline Storage::Ptr getStorage() const
         {
             return derived().storage;
         }
-        inline const ros::NodeHandle getNodeHandle() const
+        inline ros::NodeHandle getNodeHandle() const
         {
             return derived().nh;
         }
@@ -108,8 +108,8 @@ class Module
             {
                 if(!derived().disabled){
                     derived().spinOnce();
-                    derived().spin_rate.sleep();
                 }
+                derived().spin_rate.sleep();
             }
         }
     ///////Members
@@ -119,7 +119,7 @@ class Module
         ros::NodeHandle nh;
         ros::Rate spin_rate;
         std::string name_space;
-        std::shared_ptr<Storage> storage;
+        Storage::Ptr storage;
         std::shared_ptr<ros::CallbackQueue> queue_ptr;
         std::thread worker;
     private:

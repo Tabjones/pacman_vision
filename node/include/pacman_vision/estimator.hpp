@@ -35,7 +35,7 @@ class Estimator : public Module<Estimator>
     friend class Module<Estimator>;
     public:
     Estimator()=delete;
-    Estimator(const ros::NodeHandle n, const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate);
+    Estimator(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
     virtual ~Estimator()=default;
     //Eigen alignment
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -78,7 +78,7 @@ class Estimator : public Module<Estimator>
 //Implementations
 
 //Constructor
-Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate)
+Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate)
     :Module<Estimator>(n,ns,stor,rate)
 {
     scene.reset(new PXC);

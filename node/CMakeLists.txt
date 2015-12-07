@@ -206,7 +206,6 @@ add_executable(pacman_vision ${SOURCES})
 
 add_dependencies(pacman_vision
   pacman_vision_comm_generate_messages_cpp
-  pacman_vision_gencfg
   )
 
 target_link_libraries(pacman_vision

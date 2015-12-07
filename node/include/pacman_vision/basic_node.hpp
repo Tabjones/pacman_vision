@@ -2,8 +2,6 @@
 #define _BASIC_NODE_HPP_
 
 #include <pacman_vision/config.h>
-#include <pacman_vision/common.h>
-#include <pacman_vision/storage.h>
 #include <pacman_vision/dynamic_modules.hpp>
 // ROS headers
 #include <sensor_msgs/PointCloud.h>
@@ -26,51 +24,25 @@
 class BasicNode: public Module<BasicNode>
 {
     friend class Module<BasicNode>;
-    // TODO: Lets this  become a class and let it  handle subscribers, then save
-    // scene into storage  basic node then just has to  read scene from storage,
-    // this will of course incorporate the kinect2 processor (tabjones on Sunday
-    // 06/12/2015)
-    /*
-     * struct SensorParams
-    {
-        std::string ref_frame;
-        int type;
-        int resolution;
-        //sensor subscribers need update
-        bool needs_update;
-    };
-    */
-
     public:
         BasicNode()=delete;
-        BasicNode(const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate);
+        BasicNode(const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
         //Takes care of Eigen Alignment on Fixed-Size Containers
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:
-        //Service Server to retrieve processed scene
-        ros::ServiceServer srv_get_scene;
-        /* TODO move into sensor class
-         * //Message Subscriber to read from kinect
-         * ros::Subscriber sub_kinect;
-         */
         //Message Publisher to republish processed scene
         ros::Publisher pub_scene;
+        //server for get_scene_processed
+        ros::ServiceServer srv_get_scene;
         PTC::Ptr scene_processed;
-        /* TODO move into sensor class
-         * //tf broadcaster for sensor reference frame (used if internal processor in enabled)
-         * tf::TransformBroadcaster tf_sensor_ref_frame_brcaster;
-         */
         //Service callback for srv_get_scene
         bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
-        /*
-         * //Message callback, for sub_kinect
-         * void
-         * cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message);
-         */
 
         //filter parameters
         bool crop, downsample, keep_organized, plane;
         Box::Ptr limits; //cropbox limits
+        //publish filter limits
+        bool publish_limits;
         double leaf, plane_tol;
 
         //Publish scene processed
@@ -97,15 +69,7 @@ class BasicNode: public Module<BasicNode>
          */
 };
 
-//TODO:
-//1) Rename pose scanner to in-hand-scanner, and modify it
-//1)when tracker re-finds object in scene: make use of hand-obj rel trans
-//  as a starting condition
-//2)Fill tracker service grasp verification, also design a service that fills
-//  which hand is grasping
-//3)Make a separated thread for Kinect2Processor ?! (wait until libfreenect2 is more developed)
-
-BasicNode::BasicNode(const std::string ns, const std::shared_ptr<Storage> stor, const ros::Rate rate):
+BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor, const ros::Rate rate):
         Module<BasicNode>(ns,stor,rate)
 {
     scene_processed.reset(new PTC);
@@ -149,21 +113,6 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
         return false;
     }
 }
-// todo move this into sensor class
-// //when new msg from sensor arrive
-// void
-// VisionNode::cb_kinect(const sensor_msgs::PointCloud2::ConstPtr& message)
-// {
-//     if(!master_disable){
-//         if (!this->scene)
-//             this->scene.reset(new PC);
-//         pcl::fromROSMsg (*message, *(this->scene));
-//         // Save untouched scene into storage
-//         this->storage->write_scene(this->scene);
-//         process_scene();
-//         publish_scene_processed();
-//     }
-// }
 
 void
 BasicNode::downsamp_scene(const PTC::ConstPtr source, PTC::Ptr dest){
@@ -288,6 +237,7 @@ BasicNode::process_scene()
     //         }
     //     }
     // }
+
     //Save into storage
     if (dest){
         if(!dest->empty()){
