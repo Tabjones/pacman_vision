@@ -41,7 +41,11 @@ class Module
             queue_ptr.reset(new ros::CallbackQueue);
             nh.setCallbackQueue(&(*queue_ptr));
         }
-        virtual ~Module(){}
+        virtual ~Module()
+        {
+            derived().kill();
+            derived().nh.shutdown();
+        }
         //general spinOnce
         void spinOnce()
         {
