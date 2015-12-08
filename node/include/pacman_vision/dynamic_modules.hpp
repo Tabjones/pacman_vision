@@ -28,7 +28,8 @@ class Module
         {
             nh = ros::NodeHandle (ns);
             storage=stor;
-            name_space = ns;
+            name_space = nh.getNamespace();
+            father_name_space = nh.getNamespace();
         }
         //ctor with  node handle of  masternode, namespace, pointer  to storagee
         //and desired rate. This is for modules, dependant of master node
@@ -37,13 +38,15 @@ class Module
         {
             nh = ros::NodeHandle (n, ns);
             storage=stor;
-            name_space = ns;
+            name_space = nh.getNamespace();
+            father_name_space=n.getNamespace();
             queue_ptr.reset(new ros::CallbackQueue);
             nh.setCallbackQueue(&(*queue_ptr));
         }
         virtual ~Module()
         {
-            derived().kill();
+            derived().is_running=false;
+            derived().worker.join();
             derived().nh.shutdown();
         }
         //general spinOnce
@@ -55,7 +58,7 @@ class Module
         {
             return derived().is_running;
         }
-        inline const std::string getName() const
+        inline const std::string getNamespace() const
         {
             return derived().name_space;
         }
@@ -123,6 +126,7 @@ class Module
         ros::NodeHandle nh;
         ros::Rate spin_rate;
         std::string name_space;
+        std::string father_name_space;
         Storage::Ptr storage;
         std::shared_ptr<ros::CallbackQueue> queue_ptr;
         std::thread worker;

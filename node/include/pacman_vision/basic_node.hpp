@@ -27,23 +27,35 @@ class BasicNode: public Module<BasicNode>
     public:
         BasicNode()=delete;
         BasicNode(const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
+        struct Config
+        {
+            //filter parameters
+            bool cropping, downsampling, keep_organized, segmenting;
+            Box limits; //cropbox limits
+            //publish filter limits and or plane model
+            bool publish_limits, publish_plane;
+            double downsampling_leaf_size, plane_tolerance;
+        };
+        typedef std::shared_ptr<BasicNode::Config> ConfigPtr;
+        //update current configuration with new one
+        void update(const BasicNode::ConfigPtr conf);
         //Takes care of Eigen Alignment on Fixed-Size Containers
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:
+        //Configuration
+        BasicNode::ConfigPtr config;
         //Message Publisher to republish processed scene
         ros::Publisher pub_scene;
+        //publisher for markers
+        ros::Publisher pub_markers;
+        //marker to publish
+        visualization_msgs::Marker mark_lim, mark_plane;
         //server for get_scene_processed
         ros::ServiceServer srv_get_scene;
         PTC::Ptr scene_processed;
         //Service callback for srv_get_scene
         bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
 
-        //filter parameters
-        bool crop, downsample, keep_organized, plane;
-        Box::Ptr limits; //cropbox limits
-        //publish filter limits
-        bool publish_limits;
-        double leaf, plane_tol;
 
         //Publish scene processed
         void publish_scene_processed() const;
@@ -54,6 +66,8 @@ class BasicNode: public Module<BasicNode>
         void spinOnce();
         void downsamp_scene(const PTC::ConstPtr source, PTC::Ptr dest);
         void segment_scene(const PTC::ConstPtr source, PTC::Ptr dest);
+        void update_markers();
+        void publish_markers();
         //Create a box marker
         /* TODO move into listener, handle realtime cropping with services OR conditional variable
          * void
@@ -73,22 +87,42 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor, const ros::R
         Module<BasicNode>(ns,stor,rate)
 {
     scene_processed.reset(new PTC);
-    this->limits.reset(new Box);
+    config.reset(new BasicNode::Config);
     srv_get_scene = nh.advertiseService("get_scene_processed", &BasicNode::cb_get_scene, this);
     pub_scene = nh.advertise<PTC> ("scene_processed", 5);
+    pub_markers = nh.advertise<visualization_msgs::Marker>("markers", 1);
     //init node params
-    nh.param<bool>("passthrough", crop, true);
-    nh.param<bool>("downsampling", downsample, false);
-    nh.param<bool>("plane_segmentation", plane, false);
-    nh.param<bool>("keep_organized", keep_organized, false);
-    nh.param<double>("pass_xmax", limits->x2, 0.5);
-    nh.param<double>("pass_xmin", limits->x1, -0.5);
-    nh.param<double>("pass_ymax", limits->y2, 0.5);
-    nh.param<double>("pass_ymin", limits->y1, -0.5);
-    nh.param<double>("pass_zmax", limits->z2, 1.0);
-    nh.param<double>("pass_zmin", limits->z1, 0.3);
-    nh.param<double>("downsample_leaf_size", leaf, 0.01);
-    nh.param<double>("plane_tolerance", plane_tol, 0.004);
+    nh.param<bool>("cropping", config->cropping, true);
+    nh.param<bool>("downsampling", config->downsampling, false);
+    nh.param<bool>("segmenting", config->segmenting, false);
+    nh.param<bool>("keep_organized", config->keep_organized, false);
+    nh.param<bool>("publish_limits", config->publish_limits, false);
+    nh.param<bool>("publish_plane", config->publish_plane, false);
+    nh.param<double>("limit_xmax", config->limits.x2, 0.5);
+    nh.param<double>("limit_xmin", config->limits.x1, -0.5);
+    nh.param<double>("limit_ymax", config->limits.y2, 0.5);
+    nh.param<double>("limit_ymin", config->limits.y1, -0.5);
+    nh.param<double>("limit_zmax", config->limits.z2, 1.0);
+    nh.param<double>("limit_zmin", config->limits.z1, 0.3);
+    nh.param<double>("downsampling_leaf_size", config->downsampling_leaf_size, 0.01);
+    nh.param<double>("plane_tolerance", config->plane_tolerance, 0.004);
+}
+
+void
+BasicNode::update(const BasicNode::ConfigPtr conf)
+{
+    if (conf){
+        config->cropping = conf->cropping;
+        config->downsampling = conf->downsampling;
+        config->segmenting = conf->segmenting;
+        config->keep_organized = conf->keep_organized;
+        config->publish_limits = conf->publish_limits;
+        config->publish_plane = conf->publish_plane;
+        config->limits = conf->limits;
+        config->downsampling_leaf_size = conf->downsampling_leaf_size;
+        config->plane_tolerance = conf->plane_tolerance;
+        update_markers();
+    }
 }
 
 //when service to get scene is called
@@ -120,7 +154,9 @@ BasicNode::downsamp_scene(const PTC::ConstPtr source, PTC::Ptr dest){
     if (!dest)
         dest.reset(new PTC);
     pcl::VoxelGrid<PT> vg;
-    vg.setLeafSize(leaf, leaf, leaf);
+    vg.setLeafSize( config->downsampling_leaf_size,
+                    config->downsampling_leaf_size,
+                    config->downsampling_leaf_size);
     vg.setDownsampleAllData(true);
     vg.setInputCloud (source);
     vg.filter (*dest);
@@ -139,13 +175,17 @@ BasicNode::segment_scene(const PTC::ConstPtr source, PTC::Ptr dest)
     seg.setModelType (pcl::SACMODEL_PLANE);
     seg.setMethodType (pcl::SAC_RANSAC);
     seg.setMaxIterations (100);
-    seg.setDistanceThreshold (this->plane_tol);
+    seg.setDistanceThreshold (config->plane_tolerance);
     seg.segment(*inliers, *coefficients);
     //extract what's on top of plane
     extract.setInputCloud(seg.getInputCloud());
     extract.setIndices(inliers);
     extract.setNegative(true);
     extract.filter(*dest);
+    //optionally extract a plane model for visualization purpose
+    if (config->publish_plane){
+        extract.setNegative(false);
+    }
 }
 void
 BasicNode::process_scene()
@@ -159,13 +199,13 @@ BasicNode::process_scene()
         return;
     if(source->empty())
         return;
-    if (crop){
-        crop_a_box(source, dest, *limits, false, Eigen::Matrix4f::Identity(), keep_organized);
+    if (config->cropping){
+        crop_a_box(source, dest, config->limits, false, Eigen::Matrix4f::Identity(), config->keep_organized);
         if(dest->empty())
             return;
     }
     //check if we need to downsample scene
-    if (downsample){
+    if (config->downsampling){
         if (dest){
             //means we have performed at least one filter before this
             pcl::copyPointCloud(*dest, *tmp);
@@ -176,7 +216,7 @@ BasicNode::process_scene()
         if(dest->empty())
             return;
     }
-    if (plane){
+    if (config->segmenting){
         if (dest){
             //means we have performed at least one filter before this
             pcl::copyPointCloud(*dest, *tmp);
@@ -246,7 +286,6 @@ BasicNode::process_scene()
         }
     }
 }
-
 void
 BasicNode::publish_scene_processed() const
 {
@@ -257,10 +296,39 @@ BasicNode::publish_scene_processed() const
 }
 
 void
+BasicNode::update_markers()
+{
+    //only update crop limits, plane always gets recomputed if active
+    visualization_msgs::Marker mark;
+    create_box_marker(config->limits, mark, false);
+    //make it red
+    mark.color.g = 0.0f;
+    mark.color.b = 0.0f;
+    //name it
+    mark.ns="Cropping Limits";
+    mark.id=1;
+    mark.header.frame_id = scene_processed->header.frame_id;
+    mark_lim = mark;
+}
+void
+BasicNode::publish_markers()
+{
+    if (config->publish_limits && pub_markers.getNumSubscribers()>0){
+        mark_lim.header.stamp = ros::Time();
+        pub_markers.publish(mark_lim);
+    }
+    if (config->publish_plane && pub_markers.getNumSubscribers()>0){
+        mark_plane.header.stamp = ros::Time();
+        pub_markers.publish(mark_plane);
+    }
+}
+
+void
 BasicNode::spinOnce()
 {
     process_scene();
     publish_scene_processed();
+    publish_markers();
     ros::spinOnce();
 }
 

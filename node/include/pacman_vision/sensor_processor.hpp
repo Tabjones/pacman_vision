@@ -178,79 +178,78 @@ class SensorProcessor: public Module<SensorProcessor>
         SensorProcessor()=delete;
         virtual ~SensorProcessor()=default;
         SensorProcessor(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
-
+        struct Config
+        {
+            //Use the internal kinect2 processor, or a subscriber
+            bool internal;
+            //on which topic to listen if !internal
+            std::string topic;
+            //name of the internal processor
+            std::string name;
+        };
+        typedef std::shared_ptr<SensorProcessor::Config> ConfigPtr;
+        void update (const SensorProcessor::ConfigPtr conf);
     private:
-        //Use the internal kinect2 processor, or a subscriber
-        bool internal;
-
+        SensorProcessor::ConfigPtr config;
         //external subscriber to recieve a cloud
         ros::Subscriber sub_cloud;
-        //on which topic
-        std::string topic;
         //associated callback
         void cb_cloud(const sensor_msgs::PointCloud2::ConstPtr &msg);
-
         //internal kinect2 handler
         Kinect2 kinect2;
-        //name of the internal processor
-        std::string name;
         tf::TransformBroadcaster kinect2_ref_brcaster;
 
-        //tell if we need to update the sensor processing
-        bool needs_update;
-
-        void update ();
         void spinOnce();
 };
 
 SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate):
-    Module<SensorProcessor>(n,ns,stor,rate), internal(false), needs_update(true)
+    Module<SensorProcessor>(n,ns,stor,rate)
 {
     //default to asus xtion
-    topic = nh.resolveName("/camera/depth_registered/points");
+    config.reset(new SensorProcessor::Config);
+    config->internal = false;
+    config->topic = nh.resolveName("/camera/depth_registered/points");
 }
 
-void SensorProcessor::update()
+void SensorProcessor::update(const SensorProcessor::ConfigPtr conf)
 {
-    if(!needs_update)
-        return;
-    if (internal){
+    config->internal = conf->internal;
+    if (config->internal){
         //Use internal kinect2
-        name = "/kinect2_reference_frame";
+        config->name = conf->name;
         //Use internal sensor processor, no subscriber needed
         sub_cloud.shutdown();
         if (!kinect2.isInitialized())
             kinect2.initDevice();
         if (!kinect2.isStarted())
             kinect2.start();
-        needs_update=false;
         return;
     }
-    else if (!internal){
-        //assume topic is set via gui!
+    else if (!config->internal){
         //stop the internal kinect2
         if (kinect2.isStarted() || kinect2.isInitialized()){
             kinect2.stop();
             kinect2.close();
         }
-        //fire the subscriber
-        sub_cloud = nh.subscribe(topic, 5, &SensorProcessor::cb_cloud, this);
-        needs_update=false;
+        if (config->topic.compare(conf->topic) != 0){
+            config->topic = conf->topic;
+            //fire the subscriber
+            sub_cloud = nh.subscribe(config->topic, 5, &SensorProcessor::cb_cloud, this);
+        }
+        return;
     }
 }
 
 void SensorProcessor::spinOnce()
 {
     queue_ptr->callAvailable(ros::WallDuration(0));
-    if (needs_update)
-        update();
-    if (internal){
-        //we need to publish a tf of the sensor and write also the ref frame inside
-        //the point cloud we send downstream
+    if (config->internal){
+        //get a cloud from  kinect2, we also need to publish a  tf of the sensor
+        //and write also the ref frame inside the point cloud we send downstream
         kinect2.processData();
         PTC::Ptr scene;
         kinect2.computePointCloud(scene);
-        scene->header.frame_id = name;
+        scene->header.frame_id = config->name;
         pcl_conversions::toPCL(ros::Time::now(), scene->header.stamp);
         //Send it to good riddance downstream!
         storage->write_scene(scene);
@@ -258,7 +257,7 @@ void SensorProcessor::spinOnce()
         tf::Quaternion q;
         q.setRPY(0,0,0);
         tf::Transform T(q,t);
-        kinect2_ref_brcaster.sendTransform(tf::StampedTransform(T, ros::Time::now(),"kinect2_anchor", name.c_str()));
+        kinect2_ref_brcaster.sendTransform(tf::StampedTransform(T, ros::Time::now(),"kinect2_anchor", config->name.c_str()));
     }
     //nothing to do if external, callback takes care of it
 }

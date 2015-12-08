@@ -240,6 +240,123 @@ crop_a_box(const PTC::ConstPtr source, PTC::Ptr& dest, const Box lim, const bool
     cb.filter (*dest);
 }
 
+void
+create_box_marker(const Box lim, visualization_msgs::Marker &marker, bool cube_type)
+{
+    if(!cube_type){
+        // Create lines
+        //Does not set time header, ref_frame, namespace and id of marker
+        marker.type = visualization_msgs::Marker::LINE_LIST;
+        marker.header.stamp = ros::Time();
+        //adjust these two values later if needed
+        marker.ns = "box";
+        marker.id = 0;
+        marker.scale.x = 0.002;
+        marker.action = visualization_msgs::Marker::ADD;
+        //white color default
+        marker.color.r = 1.0f;
+        marker.color.g = 1.0f;
+        marker.color.b = 1.0f;
+        marker.color.a = 1.0f;
+        //pose Identity
+        marker.pose.position.x=0.0f;
+        marker.pose.position.y=0.0f;
+        marker.pose.position.z=0.0f;
+        marker.pose.orientation.x=0.0f;
+        marker.pose.orientation.y=0.0f;
+        marker.pose.orientation.z=0.0f;
+        marker.pose.orientation.w=1.0f;
+        marker.lifetime = ros::Duration(1);
+        geometry_msgs::Point p, pf;
+        //0-1
+        p.x = lim.x1;
+        p.y = lim.y1;
+        p.z = lim.z1;
+        pf.x = lim.x2;
+        pf.y = lim.y1;
+        pf.z = lim.z1;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //2-3
+        pf.x = lim.x1;
+        pf.y = lim.y2;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //4-5
+        pf.x = lim.x1;
+        pf.y = lim.y1;
+        pf.z = lim.z2;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //6-7
+        p.x = lim.x2;
+        p.y = lim.y2;
+        p.z = lim.z2;
+        pf.x = lim.x2;
+        pf.y = lim.y2;
+        pf.z = lim.z1;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //8-9
+        pf.x = lim.x1;
+        pf.y = lim.y2;
+        pf.z = lim.z2;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //10-11
+        pf.x = lim.x2;
+        pf.y = lim.y1;
+        pf.z = lim.z2;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //12-13
+        p.x = lim.x1;
+        p.y = lim.y1;
+        p.z = lim.z2;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //14-15
+        pf.x = lim.x1;
+        pf.y = lim.y2;
+        pf.z = lim.z2;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //16-17
+        p.x = lim.x2;
+        p.y = lim.y2;
+        p.z = lim.z1;
+        pf.x = lim.x2;
+        pf.y = lim.y1;
+        pf.z = lim.z1;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //18-19
+        pf.x = lim.x1;
+        pf.y = lim.y2;
+        pf.z = lim.z1;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //20-21
+        p.x = lim.x1;
+        p.y = lim.y2;
+        p.z = lim.z2;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+        //22-23
+        p.x = lim.x2;
+        p.y = lim.y1;
+        p.z = lim.z2;
+        pf.x = lim.x2;
+        pf.y = lim.y1;
+        pf.z = lim.z1;
+        marker.points.push_back(p);
+        marker.points.push_back(pf);
+    }
+    else{
+        // create a cube
+    }
+}
+
 //copypaste from utils TODO
 /*
 void

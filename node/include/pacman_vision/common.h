@@ -5,6 +5,8 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_broadcaster.h>
+#include <visualization_msgs/Marker.h>
+#include <geometry_msgs/Point.h>
 //PCL
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -94,5 +96,8 @@ void crop_a_box(const PTC::ConstPtr source, PTC::Ptr &dest, const Box lim,
         const Eigen::Matrix4f& trans=Eigen::Matrix4f::Identity(),
         const bool keep_organized=false);
 
+//Create  a box  marker out  of a  Box object,  if cube  type is  true create  a
+//semitransparent cube instead of lines
+void create_box_marker(const Box lim, visualization_msgs::Marker &marker, bool cube_type);
 #endif
 
