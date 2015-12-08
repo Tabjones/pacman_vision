@@ -213,30 +213,32 @@ SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, 
 
 void SensorProcessor::update(const SensorProcessor::ConfigPtr conf)
 {
-    config->internal = conf->internal;
-    if (config->internal){
-        //Use internal kinect2
-        config->name = conf->name;
-        //Use internal sensor processor, no subscriber needed
-        sub_cloud.shutdown();
-        if (!kinect2.isInitialized())
-            kinect2.initDevice();
-        if (!kinect2.isStarted())
-            kinect2.start();
-        return;
-    }
-    else if (!config->internal){
-        //stop the internal kinect2
-        if (kinect2.isStarted() || kinect2.isInitialized()){
-            kinect2.stop();
-            kinect2.close();
+    if (conf){
+        config->internal = conf->internal;
+        if (config->internal){
+            //Use internal kinect2
+            config->name = conf->name;
+            //Use internal sensor processor, no subscriber needed
+            sub_cloud.shutdown();
+            if (!kinect2.isInitialized())
+                kinect2.initDevice();
+            if (!kinect2.isStarted())
+                kinect2.start();
+            return;
         }
-        if (config->topic.compare(conf->topic) != 0){
-            config->topic = conf->topic;
-            //fire the subscriber
-            sub_cloud = nh.subscribe(config->topic, 5, &SensorProcessor::cb_cloud, this);
+        else if (!config->internal){
+            //stop the internal kinect2
+            if (kinect2.isStarted() || kinect2.isInitialized()){
+                kinect2.stop();
+                kinect2.close();
+            }
+            if (config->topic.compare(conf->topic) != 0){
+                config->topic = conf->topic;
+                //fire the subscriber
+                sub_cloud = nh.subscribe(config->topic, 5, &SensorProcessor::cb_cloud, this);
+            }
+            return;
         }
-        return;
     }
 }
 

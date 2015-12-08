@@ -33,7 +33,7 @@ class BasicNode: public Module<BasicNode>
             bool cropping, downsampling, keep_organized, segmenting;
             Box limits; //cropbox limits
             //publish filter limits and or plane model
-            bool publish_limits, publish_plane;
+            bool publish_limits; //, publish_plane;
             double downsampling_leaf_size, plane_tolerance;
         };
         typedef std::shared_ptr<BasicNode::Config> ConfigPtr;
@@ -49,7 +49,7 @@ class BasicNode: public Module<BasicNode>
         //publisher for markers
         ros::Publisher pub_markers;
         //marker to publish
-        visualization_msgs::Marker mark_lim, mark_plane;
+        visualization_msgs::Marker mark_lim; //,mark_plane;
         //server for get_scene_processed
         ros::ServiceServer srv_get_scene;
         PTC::Ptr scene_processed;
@@ -97,7 +97,7 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor, const ros::R
     nh.param<bool>("segmenting", config->segmenting, false);
     nh.param<bool>("keep_organized", config->keep_organized, false);
     nh.param<bool>("publish_limits", config->publish_limits, false);
-    nh.param<bool>("publish_plane", config->publish_plane, false);
+    // nh.param<bool>("publish_plane", config->publish_plane, false);
     nh.param<double>("limit_xmax", config->limits.x2, 0.5);
     nh.param<double>("limit_xmin", config->limits.x1, -0.5);
     nh.param<double>("limit_ymax", config->limits.y2, 0.5);
@@ -117,7 +117,7 @@ BasicNode::update(const BasicNode::ConfigPtr conf)
         config->segmenting = conf->segmenting;
         config->keep_organized = conf->keep_organized;
         config->publish_limits = conf->publish_limits;
-        config->publish_plane = conf->publish_plane;
+        // config->publish_plane = conf->publish_plane;
         config->limits = conf->limits;
         config->downsampling_leaf_size = conf->downsampling_leaf_size;
         config->plane_tolerance = conf->plane_tolerance;
@@ -182,10 +182,27 @@ BasicNode::segment_scene(const PTC::ConstPtr source, PTC::Ptr dest)
     extract.setIndices(inliers);
     extract.setNegative(true);
     extract.filter(*dest);
-    //optionally extract a plane model for visualization purpose
-    if (config->publish_plane){
-        extract.setNegative(false);
-    }
+    //optionally extract  a plane model  for visualization purpose and  create a
+    // marker from it
+    // Disabled, cause broken!
+    /*
+     * if (config->publish_plane){
+     *     extract.setNegative(false);
+     *     PTC::Ptr plane (new PTC);
+     *     extract.filter(*plane);
+     *     Eigen::Vector4f min,max;
+     *     pcl::getMinMax3D(*plane, min, max);
+     *     Box limits(min[0],min[1],min[2],max[0],max[1],max[2]);
+     *     create_box_marker(mark_plane, limits, true);
+     *     //make it red
+     *     mark_plane.color.g = 0.0f;
+     *     mark_plane.color.b = 0.0f;
+     *     //name it
+     *     mark_plane.ns="Plane Estimation Model";
+     *     mark_plane.id=1;
+     *     mark_plane.header.frame_id = dest->header.frame_id;
+     * }
+     */
 }
 void
 BasicNode::process_scene()
@@ -317,10 +334,12 @@ BasicNode::publish_markers()
         mark_lim.header.stamp = ros::Time();
         pub_markers.publish(mark_lim);
     }
-    if (config->publish_plane && pub_markers.getNumSubscribers()>0){
-        mark_plane.header.stamp = ros::Time();
-        pub_markers.publish(mark_plane);
-    }
+    /*
+     * if (config->publish_plane && pub_markers.getNumSubscribers()>0){
+     *     mark_plane.header.stamp = ros::Time();
+     *     pub_markers.publish(mark_plane);
+     * }
+     */
 }
 
 void

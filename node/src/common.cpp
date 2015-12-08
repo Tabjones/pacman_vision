@@ -354,6 +354,36 @@ create_box_marker(const Box lim, visualization_msgs::Marker &marker, bool cube_t
     }
     else{
         // create a cube
+        //Does not set time header, ref_frame, namespace and id of marker
+        marker.type = visualization_msgs::Marker::CUBE;
+        marker.header.stamp = ros::Time();
+        //adjust these two values later if needed
+        marker.ns = "box";
+        marker.id = 0;
+        marker.scale.x = (lim.x2-lim.x1)*0.5;
+        marker.scale.y = (lim.y2-lim.y1)*0.5;
+        marker.scale.z = (lim.z2-lim.z1)*0.5;
+        marker.action = visualization_msgs::Marker::ADD;
+        //white color default, transparent
+        marker.color.r = 1.0f;
+        marker.color.g = 1.0f;
+        marker.color.b = 1.0f;
+        marker.color.a = 0.3f;
+        //pose Identity
+        marker.pose.position.x=0.0f;
+        marker.pose.position.y=0.0f;
+        marker.pose.position.z=0.0f;
+        marker.pose.orientation.x=0.0f;
+        marker.pose.orientation.y=0.0f;
+        marker.pose.orientation.z=0.0f;
+        marker.pose.orientation.w=1.0f;
+        marker.points.clear();
+        geometry_msgs::Point p;
+        p.x = (lim.x2+lim.x1)*0.5;
+        p.y = (lim.y2+lim.y1)*0.5;
+        p.z = (lim.z2+lim.z1)*0.5;
+        marker.points.push_back(p);
+        marker.lifetime = ros::Duration(1);
     }
 }
 
