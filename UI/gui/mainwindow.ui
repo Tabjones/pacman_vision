@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>400</height>
+   </rect>
+  </property>
+  <property name="font">
+   <font>
+    <family>Oxygen-Sans</family>
+    <pointsize>12</pointsize>
+   </font>
+  </property>
+  <property name="windowTitle">
+   <string>PaCMan Vision</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <widget class="QCheckBox" name="DisableCheckBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>340</y>
+      <width>161</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="focusPolicy">
+     <enum>Qt::NoFocus</enum>
+    </property>
+    <property name="contextMenuPolicy">
+     <enum>Qt::NoContextMenu</enum>
+    </property>
+    <property name="toolTip">
+     <string>Temporary disable all functionality.</string>
+    </property>
+    <property name="text">
+     <string>Master Disable</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="MasterReset">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>340</y>
+      <width>161</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="toolTip">
+     <string>Reset all node to default values.</string>
+    </property>
+    <property name="text">
+     <string>Master Reset</string>
+    </property>
+   </widget>
+   <widget class="QTabWidget" name="Tabs">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>400</width>
+      <height>320</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>0</number>
+    </property>
+    <widget class="QWidget" name="BaseTab">
+     <attribute name="title">
+      <string>Basic Node</string>
+     </attribute>
+    </widget>
+    <widget class="QWidget" name="SensorTab">
+     <attribute name="title">
+      <string>Sensor</string>
+     </attribute>
+    </widget>
+   </widget>
+  </widget>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>
