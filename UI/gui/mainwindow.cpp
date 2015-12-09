@@ -7,26 +7,29 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 }
-
 MainWindow::~MainWindow()
 {
     delete ui;
 }
 
-void MainWindow::on_DisableCheckBox_stateChanged(int state)
+void MainWindow::on_MasterDisable_clicked(bool checked)
 {
-    if (state == Qt::Unchecked){
+    if (checked == false){
+        ui->MasterDisable->setText("    Master Disable");
+        ui->MasterReset->setDisabled(false);
+        ui->LoggingConsole->appendPlainText("Functionality is globally resumed.");
         // re-enable everything
     }
-    else if (state == Qt::Checked){
+    else if (checked == true){
+        ui->MasterDisable->setText("    Master Enable");
+        ui->LoggingConsole->appendPlainText("Functionality is globally disabled.");
+        ui->MasterReset->setDisabled(true);
         // disable everything
-    }
-    else{
-        //partial state not-defined
     }
 }
 
 void MainWindow::on_MasterReset_pressed()
 {
+   ui->LoggingConsole->appendPlainText("Issued a MASTER RESET!");
    //Reset Everything
 }

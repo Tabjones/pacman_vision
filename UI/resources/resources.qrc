@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/disable">
+        <file>play.png</file>
+        <file>pause.png</file>
+        <file>reset.png</file>
+    </qresource>
+</RCC>

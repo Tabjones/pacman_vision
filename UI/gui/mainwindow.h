@@ -16,7 +16,7 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_DisableCheckBox_stateChanged(int state);
+    void on_MasterDisable_clicked(bool checked);
     void on_MasterReset_pressed();
 
 private:
