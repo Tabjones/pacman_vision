@@ -189,6 +189,10 @@ class SensorProcessor: public Module<SensorProcessor>
         };
         typedef std::shared_ptr<SensorProcessor::Config> ConfigPtr;
         void update (const SensorProcessor::ConfigPtr conf);
+        inline SensorProcessor::ConfigPtr getConfig() const
+        {
+            return config;
+        }
     private:
         SensorProcessor::ConfigPtr config;
         //external subscriber to recieve a cloud

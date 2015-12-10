@@ -39,6 +39,11 @@ class BasicNode: public Module<BasicNode>
         typedef std::shared_ptr<BasicNode::Config> ConfigPtr;
         //update current configuration with new one
         void update(const BasicNode::ConfigPtr conf);
+        //Get current config
+        inline BasicNode::ConfigPtr getConfig() const
+        {
+            return config;
+        }
         //Takes care of Eigen Alignment on Fixed-Size Containers
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:
@@ -330,7 +335,7 @@ BasicNode::update_markers()
 void
 BasicNode::publish_markers()
 {
-    if (config->publish_limits && pub_markers.getNumSubscribers()>0){
+    if (config->cropping && config->publish_limits && pub_markers.getNumSubscribers()>0){
         mark_lim.header.stamp = ros::Time();
         pub_markers.publish(mark_lim);
     }
