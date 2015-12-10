@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>682</width>
-    <height>676</height>
+    <width>526</width>
+    <height>745</height>
    </rect>
   </property>
   <property name="font">
@@ -168,7 +168,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="BaseTab">
        <attribute name="title">
@@ -1245,7 +1245,7 @@
         <item row="0" column="0" colspan="2">
          <widget class="QFrame" name="TypeF">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
