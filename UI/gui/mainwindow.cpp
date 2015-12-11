@@ -211,8 +211,8 @@ void MainWindow::on_External_toggled(bool checked)
 {
     if(checked){
         QString msg = ui->Topic->text();
-        ui->LoggingConsole->appendPlainText(msg.prepend("* Switching to a custom external subscriber, specified by topic name: "));
         std::string topic = msg.toStdString();
+        ui->LoggingConsole->appendPlainText(msg.prepend("* Switching to a custom external subscriber, specified by topic name: "));
         ui->TopicG->setDisabled(false);
         ui->RefreshT->setDisabled(false);
         //internal=false
@@ -226,12 +226,16 @@ void MainWindow::on_External_toggled(bool checked)
 
 void MainWindow::on_RefreshN_clicked()
 {
-    std::string name = ui->Name->text().toStdString();
+    QString msg = ui->Name->text();
+    std::string name = msg.toStdString();
+    ui->LoggingConsole->appendPlainText(msg.prepend("* Internal Kinect2 reference frame updated: "));
     //name =
 }
 
 void MainWindow::on_RefreshT_clicked()
 {
-    std::string topic = ui->Topic->text().toStdString();
+    QString msg = ui->Topic->text();
+    std::string topic = msg.toStdString();
+    ui->LoggingConsole->appendPlainText(msg.prepend("* External subscriber topic updated: "));
     //topic =
 }

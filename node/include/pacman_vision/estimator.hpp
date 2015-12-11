@@ -37,9 +37,17 @@ class Estimator : public Module<Estimator>
     Estimator()=delete;
     Estimator(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
     virtual ~Estimator()=default;
+    typedef std::shared_ptr<EstimatorConfig> ConfigPtr;
+    void update(const Estimator::ConfigPtr conf);
+    inline Estimator::ConfigPtr getConfig() const
+    {
+        return config;
+    }
     //Eigen alignment
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:
+        //Configuration
+        Estimator::ConfigPtr config;
         //Service Server
         ros::ServiceServer srv_estimate;
         //estimated transforms
@@ -81,6 +89,7 @@ class Estimator : public Module<Estimator>
 Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate)
     :Module<Estimator>(n,ns,stor,rate)
 {
+    //TODO config creation
     scene.reset(new PXC);
     db_path = (ros::package::getPath("pacman_vision") + "/database" );
     if (!boost::filesystem::exists(db_path) || !boost::filesystem::is_directory(db_path))

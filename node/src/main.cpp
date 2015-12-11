@@ -1,4 +1,4 @@
-#include <pacman_vision/common.h>
+#include <pacman_vision/module_config.h>
 #include <pacman_vision/basic_node.hpp>
 #include <pacman_vision/sensor_processor.hpp>
 #include <pacman_vision/estimator.hpp>

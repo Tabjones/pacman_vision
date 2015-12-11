@@ -2,6 +2,7 @@
 #define _BASIC_NODE_HPP_
 
 #include <pacman_vision/config.h>
+#include <pacman_vision/module_config.h>
 #include <pacman_vision/dynamic_modules.hpp>
 // ROS headers
 #include <sensor_msgs/PointCloud.h>
@@ -27,16 +28,7 @@ class BasicNode: public Module<BasicNode>
     public:
         BasicNode()=delete;
         BasicNode(const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
-        struct Config
-        {
-            //filter parameters
-            bool cropping, downsampling, keep_organized, segmenting;
-            Box limits; //cropbox limits
-            //publish filter limits and or plane model
-            bool publish_limits; //, publish_plane;
-            double downsampling_leaf_size, plane_tolerance;
-        };
-        typedef std::shared_ptr<BasicNode::Config> ConfigPtr;
+        typedef std::shared_ptr<BasicNodeConfig> ConfigPtr;
         //update current configuration with new one
         void update(const BasicNode::ConfigPtr conf);
         //Get current config
@@ -92,7 +84,7 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor, const ros::R
         Module<BasicNode>(ns,stor,rate)
 {
     scene_processed.reset(new PTC);
-    config.reset(new BasicNode::Config);
+    config.reset(new BasicNodeConfig);
     srv_get_scene = nh.advertiseService("get_scene_processed", &BasicNode::cb_get_scene, this);
     pub_scene = nh.advertise<PTC> ("scene_processed", 5);
     pub_markers = nh.advertise<visualization_msgs::Marker>("markers", 1);

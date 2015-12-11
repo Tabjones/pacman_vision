@@ -169,43 +169,6 @@ fromTF(const tf::Transform &source, geometry_msgs::Pose &dest)
     dest.position.z = source.getOrigin().z();
 }
 
-//Box implementations
-Box&
-Box::operator= (const Box& other)
-{
-    x1=other.x1;
-    x2=other.x2;
-    y1=other.y1;
-    y2=other.y2;
-    z1=other.z1;
-    z2=other.z2;
-    return *this;
-}
-Box&
-Box::operator= (Box&& other)
-{
-    x1= std::move(other.x1);
-    x2= std::move(other.x2);
-    y1= std::move(other.y1);
-    y2= std::move(other.y2);
-    z1= std::move(other.z1);
-    z2= std::move(other.z2);
-    return *this;
-}
-Box
-Box::operator* (const float scale) const
-{
-    double x1s,y1s,z1s;
-    double x2s,y2s,z2s;
-    x1s = (x2*(1-scale) + x1*(1+scale))*0.5;
-    y1s = (y2*(1-scale) + y1*(1+scale))*0.5;
-    z1s = (z2*(1-scale) + z1*(1+scale))*0.5;
-    x2s = (x2*(1+scale) + x1*(1-scale))*0.5;
-    y2s = (y2*(1+scale) + y1*(1-scale))*0.5;
-    z2s = (z2*(1+scale) + z1*(1-scale))*0.5;
-    return (Box(x1s, y1s, z1s, x2s, y2s, z2s));
-}
-
 void
 crop_a_box(const PTC::ConstPtr source, PTC::Ptr& dest, const Box lim, const bool remove_inside,
         const Eigen::Matrix4f &trans, const bool keep_organized)

@@ -2,6 +2,7 @@
 #define _SENSOR_PROCESSOR_HPP_
 
 #include <pacman_vision/config.h>
+#include <pacman_vision/module_config.h>
 #include <pacman_vision/dynamic_modules.hpp>
 //libfreenect2
 #include <libfreenect2/libfreenect2.hpp>
@@ -178,16 +179,7 @@ class SensorProcessor: public Module<SensorProcessor>
         SensorProcessor()=delete;
         virtual ~SensorProcessor()=default;
         SensorProcessor(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
-        struct Config
-        {
-            //Use the internal kinect2 processor, or a subscriber
-            bool internal;
-            //on which topic to listen if !internal
-            std::string topic;
-            //name of the internal processor
-            std::string name;
-        };
-        typedef std::shared_ptr<SensorProcessor::Config> ConfigPtr;
+        typedef std::shared_ptr<SensorProcessorConfig> ConfigPtr;
         void update (const SensorProcessor::ConfigPtr conf);
         inline SensorProcessor::ConfigPtr getConfig() const
         {
@@ -210,7 +202,7 @@ SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, 
     Module<SensorProcessor>(n,ns,stor,rate)
 {
     //default to asus xtion
-    config.reset(new SensorProcessor::Config);
+    config.reset(new SensorProcessorConfig);
     config->internal = false;
     config->topic = nh.resolveName("/camera/depth_registered/points");
 }

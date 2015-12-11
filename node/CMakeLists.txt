@@ -34,9 +34,9 @@ set (PACMAN_VISION_BUILD_KINECT2_PROCESSOR  1)
 ################################################
 ## Set default sources
 set(SOURCES
-  # src/vision_node.cpp TODO
   src/common.cpp
   src/storage.cpp
+  src/box.cpp
   # src/broadcaster.cpp TODO
   src/main.cpp
   )
