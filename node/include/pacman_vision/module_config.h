@@ -12,6 +12,7 @@ struct BasicNodeConfig
     //publish filter limits and or plane model
     bool publish_limits; //, publish_plane;
     double downsampling_leaf_size, plane_tolerance;
+    typedef std::shared_ptr<BasicNodeConfig> Ptr;
 };
 
 struct SensorProcessorConfig
@@ -22,11 +23,13 @@ struct SensorProcessorConfig
     std::string topic;
     //name of the internal processor
     std::string name;
+    typedef std::shared_ptr<SensorProcessorConfig> Ptr;
 };
 
 struct EstimatorConfig
 {
     //TODO
+    typedef std::shared_ptr<EstimatorConfig> Ptr;
 };
 
 #endif

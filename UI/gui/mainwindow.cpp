@@ -3,13 +3,28 @@
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    basic_conf(new BasicNodeConfig),
+    sensor_conf(new SensorProcessorConfig),
+    estimator_conf(new EstimatorConfig)
 {
     ui->setupUi(this);
 }
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+void MainWindow::configure(const BasicNodeConfig::Ptr b_conf)
+{
+
+}
+void MainWindow::configure(const SensorProcessorConfig::Ptr s_conf)
+{
+
+}
+void MainWindow::configure(const EstimatorConfig::Ptr e_config, const bool running)
+{
+
 }
 
 void MainWindow::on_MasterDisable_clicked(bool checked)
@@ -125,7 +140,7 @@ void MainWindow::on_SegmentingButt_clicked(bool checked)
     }
     if(!checked){
         ui->LoggingConsole->appendPlainText("* Disabling Plane Segmentation");
-        ui->LeafF->setDisabled(true);
+        ui->PlaneF->setDisabled(true);
         //updateBaseConfig
         //segmenting=false
     }

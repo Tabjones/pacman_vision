@@ -30,7 +30,7 @@ class BasicNode: public Module<BasicNode>
         BasicNode(const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
         typedef std::shared_ptr<BasicNodeConfig> ConfigPtr;
         //update current configuration with new one
-        void update(const BasicNode::ConfigPtr conf);
+        void updateIfNeeded(const BasicNode::ConfigPtr conf);
         //Get current config
         inline BasicNode::ConfigPtr getConfig() const
         {
@@ -52,7 +52,8 @@ class BasicNode: public Module<BasicNode>
         PTC::Ptr scene_processed;
         //Service callback for srv_get_scene
         bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
-
+        //protects config
+        std::mutex mtx_config;
 
         //Publish scene processed
         void publish_scene_processed() const;
@@ -106,19 +107,43 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor, const ros::R
 }
 
 void
-BasicNode::update(const BasicNode::ConfigPtr conf)
+BasicNode::updateIfNeeded(const BasicNode::ConfigPtr conf)
 {
     if (conf){
-        config->cropping = conf->cropping;
-        config->downsampling = conf->downsampling;
-        config->segmenting = conf->segmenting;
-        config->keep_organized = conf->keep_organized;
-        config->publish_limits = conf->publish_limits;
+        if (config->cropping != conf->cropping){
+            LOCK guard(mtx_config);
+            config->cropping = conf->cropping;
+        }
+        if (config->downsampling != conf->downsampling){
+            LOCK guard(mtx_config);
+            config->downsampling = conf->downsampling;
+        }
+        if (config->segmenting != conf->segmenting){
+            LOCK guard(mtx_config);
+            config->segmenting = conf->segmenting;
+        }
+        if (config->keep_organized != conf->keep_organized){
+            LOCK guard(mtx_config);
+            config->keep_organized = conf->keep_organized;
+        }
+        if (config->publish_limits != conf->publish_limits){
+            LOCK guard(mtx_config);
+            config->publish_limits = conf->publish_limits;
+        }
         // config->publish_plane = conf->publish_plane;
-        config->limits = conf->limits;
-        config->downsampling_leaf_size = conf->downsampling_leaf_size;
-        config->plane_tolerance = conf->plane_tolerance;
-        update_markers();
+        if (config->limits != conf->limits){
+            LOCK guard(mtx_config);
+            config->limits = conf->limits;
+            update_markers();
+        }
+        if (config->downsampling_leaf_size != conf->downsampling_leaf_size){
+            LOCK guard(mtx_config);
+            config->downsampling_leaf_size = conf->downsampling_leaf_size;
+        }
+        if (config->plane_tolerance != conf->plane_tolerance){
+            LOCK guard(mtx_config);
+            config->plane_tolerance = conf->plane_tolerance;
+        }
     }
 }
 
@@ -151,9 +176,12 @@ BasicNode::downsamp_scene(const PTC::ConstPtr source, PTC::Ptr dest){
     if (!dest)
         dest.reset(new PTC);
     pcl::VoxelGrid<PT> vg;
-    vg.setLeafSize( config->downsampling_leaf_size,
-                    config->downsampling_leaf_size,
-                    config->downsampling_leaf_size);
+    {
+        LOCK guard(mtx_config);
+        vg.setLeafSize( config->downsampling_leaf_size,
+                        config->downsampling_leaf_size,
+                        config->downsampling_leaf_size);
+    }
     vg.setDownsampleAllData(true);
     vg.setInputCloud (source);
     vg.filter (*dest);
@@ -172,7 +200,10 @@ BasicNode::segment_scene(const PTC::ConstPtr source, PTC::Ptr dest)
     seg.setModelType (pcl::SACMODEL_PLANE);
     seg.setMethodType (pcl::SAC_RANSAC);
     seg.setMaxIterations (100);
-    seg.setDistanceThreshold (config->plane_tolerance);
+    {
+        LOCK guard(mtx_config);
+        seg.setDistanceThreshold (config->plane_tolerance);
+    }
     seg.segment(*inliers, *coefficients);
     //extract what's on top of plane
     extract.setInputCloud(seg.getInputCloud());
@@ -204,6 +235,13 @@ BasicNode::segment_scene(const PTC::ConstPtr source, PTC::Ptr dest)
 void
 BasicNode::process_scene()
 {
+    bool crop, downsamp, segment;
+    {
+        LOCK guard (mtx_config);
+        crop = config->cropping;
+        downsamp = config->downsampling;
+        segment = config->segmenting;
+    }
     PTC::Ptr tmp;
     PTC::Ptr dest;
     PTC::Ptr source;
@@ -213,13 +251,14 @@ BasicNode::process_scene()
         return;
     if(source->empty())
         return;
-    if (config->cropping){
+    if (crop){
+        LOCK guard(mtx_config);
         crop_a_box(source, dest, config->limits, false, Eigen::Matrix4f::Identity(), config->keep_organized);
         if(dest->empty())
             return;
     }
     //check if we need to downsample scene
-    if (config->downsampling){
+    if (downsamp){
         if (dest){
             //means we have performed at least one filter before this
             pcl::copyPointCloud(*dest, *tmp);
@@ -230,7 +269,7 @@ BasicNode::process_scene()
         if(dest->empty())
             return;
     }
-    if (config->segmenting){
+    if (segment){
         if (dest){
             //means we have performed at least one filter before this
             pcl::copyPointCloud(*dest, *tmp);
@@ -314,6 +353,7 @@ BasicNode::update_markers()
 {
     //only update crop limits, plane always gets recomputed if active
     visualization_msgs::Marker mark;
+    LOCK guard(mtx_config);
     create_box_marker(config->limits, mark, false);
     //make it red
     mark.color.g = 0.0f;
@@ -327,6 +367,7 @@ BasicNode::update_markers()
 void
 BasicNode::publish_markers()
 {
+    LOCK guard(mtx_config);
     if (config->cropping && config->publish_limits && pub_markers.getNumSubscribers()>0){
         mark_lim.header.stamp = ros::Time();
         pub_markers.publish(mark_lim);

@@ -11,11 +11,16 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = gui
 TEMPLATE = app
 
+INCLUDEPATH += $$PWD/../../node/include/
 
-SOURCES += main.cpp\
-        mainwindow.cpp
+QMAKE_CXXFLAGS += -std=c++11
 
-HEADERS  += mainwindow.h
+SOURCES +=\
+        mainwindow.cpp \
+        dummy_test_main.cpp \
+        $$PWD/../../node/src/box.cpp
+
+HEADERS  += mainwindow.h module_config.h box.h
 
 FORMS    += mainwindow.ui
 

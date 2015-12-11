@@ -4,12 +4,14 @@
 Box&
 Box::operator= (const Box& other)
 {
-    x1=other.x1;
-    x2=other.x2;
-    y1=other.y1;
-    y2=other.y2;
-    z1=other.z1;
-    z2=other.z2;
+    if (this != &other){
+        x1=other.x1;
+        x2=other.x2;
+        y1=other.y1;
+        y2=other.y2;
+        z1=other.z1;
+        z2=other.z2;
+    }
     return *this;
 }
 Box&
@@ -37,4 +39,22 @@ Box::operator* (const float scale) const
     return (Box(x1s, y1s, z1s, x2s, y2s, z2s));
 }
 
+bool
+Box::operator == (const Box &other) const
+{
+    if (x1 == other.x1 &&
+        x2 == other.x2 &&
+        y1 == other.y1 &&
+        y2 == other.y2 &&
+        z1 == other.z1 &&
+        z1 == other.z2)
+        return true;
+    return false;
+}
+
+bool
+Box::operator != (const Box &other) const
+{
+    return !(*this == other);
+}
 

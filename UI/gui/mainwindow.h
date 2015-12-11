@@ -2,9 +2,11 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <pacman_vision/module_config.h>
 
-namespace Ui {
-class MainWindow;
+namespace Ui
+{
+    class MainWindow;
 }
 
 class MainWindow : public QMainWindow
@@ -14,6 +16,24 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+
+    //intial gui configuration
+    void configure(const BasicNodeConfig::Ptr b_conf);
+    void configure(const SensorProcessorConfig::Ptr s_conf);
+    void configure(const EstimatorConfig::Ptr e_config, const bool running);
+    //get configs
+    inline BasicNodeConfig::Ptr getBaseConfig()
+    {
+        return basic_conf;
+    }
+    inline SensorProcessorConfig::Ptr getSensorConfig()
+    {
+        return sensor_conf;
+    }
+    inline EstimatorConfig::Ptr getEstimatorConfig()
+    {
+        return estimator_conf;
+    }
 
 private slots:
     void on_MasterDisable_clicked(bool checked);
@@ -63,6 +83,9 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    BasicNodeConfig::Ptr basic_conf;
+    SensorProcessorConfig::Ptr sensor_conf;
+    EstimatorConfig::Ptr estimator_conf;
 };
 
 #endif // MAINWINDOW_H

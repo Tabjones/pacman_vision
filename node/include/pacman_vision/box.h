@@ -23,6 +23,8 @@ struct Box
     Box& operator= (const Box& other);
     Box& operator= (Box&& other);
     Box operator* (const float scale) const;
+    bool operator == (const Box &other) const;
+    bool operator != (const Box &other) const;
 };
 #endif
 

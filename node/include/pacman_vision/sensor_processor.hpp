@@ -180,12 +180,14 @@ class SensorProcessor: public Module<SensorProcessor>
         virtual ~SensorProcessor()=default;
         SensorProcessor(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
         typedef std::shared_ptr<SensorProcessorConfig> ConfigPtr;
-        void update (const SensorProcessor::ConfigPtr conf);
+        void updateIfNeeded (const SensorProcessor::ConfigPtr conf);
         inline SensorProcessor::ConfigPtr getConfig() const
         {
             return config;
         }
     private:
+        //config protection
+        std::mutex mtx_config;
         SensorProcessor::ConfigPtr config;
         //external subscriber to recieve a cloud
         ros::Subscriber sub_cloud;
@@ -207,13 +209,19 @@ SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, 
     config->topic = nh.resolveName("/camera/depth_registered/points");
 }
 
-void SensorProcessor::update(const SensorProcessor::ConfigPtr conf)
+void SensorProcessor::updateIfNeeded(const SensorProcessor::ConfigPtr conf)
 {
     if (conf){
-        config->internal = conf->internal;
-        if (config->internal){
+        if (config->internal != conf->internal){
+            LOCK guard(mtx_config);
+            config->internal = conf->internal;
+        }
+        if (conf->internal){
             //Use internal kinect2
-            config->name = conf->name;
+            if(config->name.compare(conf->name) !=0 ){
+                LOCK guard(mtx_config);
+                config->name = conf->name;
+            }
             //Use internal sensor processor, no subscriber needed
             sub_cloud.shutdown();
             if (!kinect2.isInitialized())
@@ -222,13 +230,14 @@ void SensorProcessor::update(const SensorProcessor::ConfigPtr conf)
                 kinect2.start();
             return;
         }
-        else if (!config->internal){
+        else if (!conf->internal){
             //stop the internal kinect2
             if (kinect2.isStarted() || kinect2.isInitialized()){
                 kinect2.stop();
                 kinect2.close();
             }
             if (config->topic.compare(conf->topic) != 0){
+                LOCK guard(mtx_config);
                 config->topic = conf->topic;
                 //fire the subscriber
                 sub_cloud = nh.subscribe(config->topic, 5, &SensorProcessor::cb_cloud, this);
@@ -241,13 +250,21 @@ void SensorProcessor::update(const SensorProcessor::ConfigPtr conf)
 void SensorProcessor::spinOnce()
 {
     queue_ptr->callAvailable(ros::WallDuration(0));
-    if (config->internal){
+    bool inter;
+    {
+        LOCK guard(mtx_config);
+        inter = config->internal;
+    }
+    if (inter){
         //get a cloud from  kinect2, we also need to publish a  tf of the sensor
         //and write also the ref frame inside the point cloud we send downstream
         kinect2.processData();
         PTC::Ptr scene;
         kinect2.computePointCloud(scene);
-        scene->header.frame_id = config->name;
+        {
+            LOCK guard(mtx_config);
+            scene->header.frame_id = config->name;
+        }
         pcl_conversions::toPCL(ros::Time::now(), scene->header.stamp);
         //Send it to good riddance downstream!
         storage->write_scene(scene);
