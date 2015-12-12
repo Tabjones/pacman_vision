@@ -1,5 +1,5 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef _MAINWINDOW_H_
+#define _MAINWINDOW_H_
 
 #include <QMainWindow>
 #include <pacman_vision/module_config.h>

@@ -16,6 +16,13 @@ ENDIF()
 ##Include a FindVCG if needed
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
+##Qt stuff
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+find_package(Qt4 4.8 REQUIRED QtGui QtXml)
+QT4_WRAP_UI(GENERATED_SRC ../UI/gui/mainwindow.ui)
+QT4_ADD_RESOURCES(GENERATED_SRC ../UI/resources/resources.qrc)
+
 ###########################
 ##Control build behaviour##
 ################################################
@@ -37,8 +44,12 @@ set(SOURCES
   src/common.cpp
   src/storage.cpp
   src/box.cpp
+  src/basic_node.cpp
+  src/sensor_processor.cpp
+  src/estimator.cpp
   # src/broadcaster.cpp TODO
-  src/main.cpp
+  ../UI/gui/mainwindow.cpp
+  ../UI/gui/application.cpp
   )
 
 
@@ -132,7 +143,7 @@ include_directories(${CATKIN_DEVEL_PREFIX}/include)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  dynamic_reconfigure
+  # dynamic_reconfigure
   geometry_msgs
   pcl_conversions
   pcl_ros
@@ -146,19 +157,19 @@ find_package(catkin REQUIRED COMPONENTS
 #############################################
 ## catkin generated for Dynamic Reconfigure##
 #############################################
-IF(PACMAN_VISION_WITH_KINECT2_SUPPORT)
-  IF(PACMAN_VISION_WITH_PEL_SUPPORT)
-    generate_dynamic_reconfigure_options( cfg/pacman_vision.complete.cfg )
-  ELSE(PACMAN_VISION_WITH_PEL_SUPPORT)
-    generate_dynamic_reconfigure_options( cfg/pacman_vision.nopel.cfg )
-  ENDIF(PACMAN_VISION_WITH_PEL_SUPPORT)
-ELSE(PACMAN_VISION_WITH_KINECT2_SUPPORT)
-  IF(PACMAN_VISION_WITH_PEL_SUPPORT)
-    generate_dynamic_reconfigure_options( cfg/pacman_vision.nokinect2.cfg )
-  ELSE(PACMAN_VISION_WITH_PEL_SUPPORT)
-    generate_dynamic_reconfigure_options( cfg/pacman_vision.barebone.cfg )
-  ENDIF(PACMAN_VISION_WITH_PEL_SUPPORT)
-ENDIF(PACMAN_VISION_WITH_KINECT2_SUPPORT)
+# IF(PACMAN_VISION_WITH_KINECT2_SUPPORT)
+#   IF(PACMAN_VISION_WITH_PEL_SUPPORT)
+#     generate_dynamic_reconfigure_options( cfg/pacman_vision.complete.cfg )
+#   ELSE(PACMAN_VISION_WITH_PEL_SUPPORT)
+#     generate_dynamic_reconfigure_options( cfg/pacman_vision.nopel.cfg )
+#   ENDIF(PACMAN_VISION_WITH_PEL_SUPPORT)
+# ELSE(PACMAN_VISION_WITH_KINECT2_SUPPORT)
+#   IF(PACMAN_VISION_WITH_PEL_SUPPORT)
+#     generate_dynamic_reconfigure_options( cfg/pacman_vision.nokinect2.cfg )
+#   ELSE(PACMAN_VISION_WITH_PEL_SUPPORT)
+#     generate_dynamic_reconfigure_options( cfg/pacman_vision.barebone.cfg )
+#   ENDIF(PACMAN_VISION_WITH_PEL_SUPPORT)
+# ENDIF(PACMAN_VISION_WITH_KINECT2_SUPPORT)
 
 ###################################
 ## catkin specific configuration ##
@@ -174,7 +185,7 @@ catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES vision_node
   CATKIN_DEPENDS
-    dynamic_reconfigure
+    # dynamic_reconfigure
     geometry_msgs
     pcl_conversions
     pcl_ros
@@ -193,6 +204,7 @@ catkin_package(
 ###########
 include_directories(
   include
+  ../UI/gui
   ${catkin_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIRS}
 )
@@ -202,7 +214,7 @@ link_directories(
   ${LINK_DIR}
   )
 
-add_executable(pacman_vision ${SOURCES})
+add_executable(pacman_vision ${SOURCES} ${GENERATED_SRC})
 
 add_dependencies(pacman_vision
   pacman_vision_comm_generate_messages_cpp
@@ -212,6 +224,7 @@ target_link_libraries(pacman_vision
    ${LIBRARIES}
    ${catkin_LIBRARIES}
    ${PCL_LIBRARIES}
+   Qt4::QtGui Qt4::QtXml
 )
 
 IF(PACMAN_VISION_BUILD_RECOGNITION)

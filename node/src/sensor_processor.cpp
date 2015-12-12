@@ -1,76 +1,4 @@
-#ifndef _SENSOR_PROCESSOR_HPP_
-#define _SENSOR_PROCESSOR_HPP_
-
-#include <pacman_vision/config.h>
-#include <pacman_vision/module_config.h>
-#include <pacman_vision/dynamic_modules.hpp>
-//libfreenect2
-#include <libfreenect2/libfreenect2.hpp>
-#include <libfreenect2/frame_listener_impl.h>
-#include <libfreenect2/config.h>
-#include <libfreenect2/registration.h>
-#include <libfreenect2/packet_pipeline.h>
-//ROS
-#include <sensor_msgs/PointCloud.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/point_cloud_conversion.h>
-#include <tf/transform_broadcaster.h>
-
-class Kinect2
-{
-    public:
-        Kinect2();
-        virtual ~Kinect2();
-        //init Kinect2 Device
-        bool initDevice();
-        //Start Kinect2
-        bool start()
-        {
-            device->start();
-            started = true;
-            return started;
-        }
-        //Stop Kinect2
-        bool stop()
-        {
-            device->stop();
-            started = false;
-            return started;
-        }
-        //close kinect2
-        bool close()
-        {
-            device->close();
-            initialized=false;
-            return initialized;
-        }
-        inline bool isStarted() const
-        {
-            return started;
-        }
-        inline bool isInitialized() const
-        {
-            return initialized;
-        }
-        //Recieve and process data
-        void processData();
-        //Compute a PointCloud from processed data
-        void computePointCloud(PTC::Ptr &out_cloud);
-    private:
-        //internal kinect2 handling
-        bool started, initialized;
-        libfreenect2::Freenect2 freenect2;
-        libfreenect2::Freenect2Device *device;
-        libfreenect2::PacketPipeline *packetPipeline;
-        libfreenect2::Registration *registration;
-        libfreenect2::SyncMultiFrameListener *listener_color;
-        libfreenect2::SyncMultiFrameListener *listener_depth;
-        libfreenect2::Freenect2Device::ColorCameraParams colorParams;
-        libfreenect2::Freenect2Device::IrCameraParams irParams;
-        libfreenect2::Frame *colorFrame, *irFrame, *depthFrame;
-        libfreenect2::Frame *undistorted, *registered;
-        libfreenect2::FrameMap frames_c, frames_d;
-};
+#include <pacman_vision/sensor_processor.h>
 
 Kinect2::Kinect2(): started(false), initialized(false), device(0), packetPipeline(0),
     registration(0), listener_color(0), listener_depth(0)
@@ -92,6 +20,32 @@ Kinect2::~Kinect2()
     delete device;
 }
 
+bool Kinect2::start()
+{
+    device->start();
+    started = true;
+    return started;
+}
+bool Kinect2::stop()
+{
+    device->stop();
+    started = false;
+    return started;
+}
+bool Kinect2::close()
+{
+    device->close();
+    initialized=false;
+    return initialized;
+}
+inline bool Kinect2::isStarted() const
+{
+    return started;
+}
+inline bool Kinect2::isInitialized() const
+{
+    return initialized;
+}
 bool
 Kinect2::initDevice()
 {
@@ -172,33 +126,6 @@ Kinect2::computePointCloud(PTC::Ptr& out_cloud)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-class SensorProcessor: public Module<SensorProcessor>
-{
-    friend class Module<SensorProcessor>;
-    public:
-        SensorProcessor()=delete;
-        virtual ~SensorProcessor()=default;
-        SensorProcessor(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
-        typedef std::shared_ptr<SensorProcessorConfig> ConfigPtr;
-        void updateIfNeeded (const SensorProcessor::ConfigPtr conf);
-        inline SensorProcessor::ConfigPtr getConfig() const
-        {
-            return config;
-        }
-    private:
-        //config protection
-        std::mutex mtx_config;
-        SensorProcessor::ConfigPtr config;
-        //external subscriber to recieve a cloud
-        ros::Subscriber sub_cloud;
-        //associated callback
-        void cb_cloud(const sensor_msgs::PointCloud2::ConstPtr &msg);
-        //internal kinect2 handler
-        Kinect2 kinect2;
-        tf::TransformBroadcaster kinect2_ref_brcaster;
-
-        void spinOnce();
-};
 
 SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate):
     Module<SensorProcessor>(n,ns,stor,rate)
@@ -207,6 +134,12 @@ SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, 
     config.reset(new SensorProcessorConfig);
     config->internal = false;
     config->topic = nh.resolveName("/camera/depth_registered/points");
+}
+
+inline SensorProcessor::ConfigPtr
+SensorProcessor::getConfig() const
+{
+    return config;
 }
 
 void SensorProcessor::updateIfNeeded(const SensorProcessor::ConfigPtr conf)
@@ -284,4 +217,3 @@ void SensorProcessor::cb_cloud(const sensor_msgs::PointCloud2::ConstPtr &msg)
     // Save untouched scene into storage bye bye
     storage->write_scene(scene);
 }
-#endif

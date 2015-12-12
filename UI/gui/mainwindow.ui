@@ -23,12 +23,6 @@
    <layout class="QGridLayout" name="gridLayout">
     <item row="1" column="0" colspan="2">
      <widget class="QPlainTextEdit" name="LoggingConsole">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
       <property name="minimumSize">
        <size>
         <width>256</width>
@@ -70,9 +64,6 @@
       </property>
       <property name="frameShadow">
        <enum>QFrame::Sunken</enum>
-      </property>
-      <property name="sizeAdjustPolicy">
-       <enum>QAbstractScrollArea::AdjustToContents</enum>
       </property>
       <property name="undoRedoEnabled">
        <bool>false</bool>
