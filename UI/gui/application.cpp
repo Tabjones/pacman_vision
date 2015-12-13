@@ -37,5 +37,23 @@ Application::init()
 void
 Application::update()
 {
-    std::cout<<"prova\n"<<std::flush;
+    if(gui->isDisabled()){
+        if(!node->isDisabled())
+            node->disable();
+        if(!sensor->isDisabled())
+            sensor->disable();
+        if(!estimator->isDisabled())
+            estimator->disable();
+    }
+    else{
+        if(node->isDisabled())
+            node->enable();
+        if(sensor->isDisabled())
+            sensor->enable();
+        if(estimator->isDisabled())
+            estimator->enable();
+        node->updateIfNeeded(gui->getBaseConfig());
+        sensor->updateIfNeeded(gui->getSensorConfig());
+        estimator->updateIfNeeded(gui->getEstimatorConfig());
+    }
 }

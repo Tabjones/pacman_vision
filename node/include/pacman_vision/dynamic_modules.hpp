@@ -58,6 +58,10 @@ class Module
         {
             return derived().is_running;
         }
+        bool inline isDisabled() const
+        {
+            return derived().disabled;
+        }
         inline const std::string getNamespace() const
         {
             return derived().name_space;

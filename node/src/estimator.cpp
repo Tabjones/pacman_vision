@@ -29,6 +29,12 @@ Estimator::getConfig() const
     return config;
 }
 
+void
+Estimator::updateIfNeeded(const Estimator::ConfigPtr conf)
+{
+    //TODO
+}
+
 int
 Estimator::extract_clusters()
 {

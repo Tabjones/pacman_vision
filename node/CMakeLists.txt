@@ -50,6 +50,7 @@ set(SOURCES
   # src/broadcaster.cpp TODO
   ../UI/gui/mainwindow.cpp
   ../UI/gui/application.cpp
+  src/main.cpp
   )
 
 

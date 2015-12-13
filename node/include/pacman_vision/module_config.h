@@ -28,6 +28,7 @@ struct SensorProcessorConfig
 
 struct EstimatorConfig
 {
+    bool spawned;
     //TODO
     typedef std::shared_ptr<EstimatorConfig> Ptr;
 };

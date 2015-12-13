@@ -22,67 +22,40 @@ public:
     void configure(const SensorProcessorConfig::Ptr s_conf);
     void configure(const EstimatorConfig::Ptr e_config, const bool running);
     //get configs
-    inline BasicNodeConfig::Ptr getBaseConfig()
-    {
-        return basic_conf;
-    }
-    inline SensorProcessorConfig::Ptr getSensorConfig()
-    {
-        return sensor_conf;
-    }
-    inline EstimatorConfig::Ptr getEstimatorConfig()
-    {
-        return estimator_conf;
-    }
+    BasicNodeConfig::Ptr getBaseConfig() const;
+    SensorProcessorConfig::Ptr getSensorConfig() const;
+    EstimatorConfig::Ptr getEstimatorConfig() const;
+    //get master disable
+    bool isDisabled() const;
 
 private slots:
     void on_MasterDisable_clicked(bool checked);
     void on_MasterReset_pressed();
-
     void on_CroppingButt_clicked(bool checked);
-
     void on_Xmax_valueChanged(double arg1);
-
     void on_Xmin_valueChanged(double arg1);
-
     void on_Ymin_valueChanged(double arg1);
-
     void on_Ymax_valueChanged(double arg1);
-
     void on_Zmin_valueChanged(double arg1);
-
     void on_Zmax_valueChanged(double arg1);
-
     void on_PublishLimitsButt_clicked(bool checked);
-
     void on_DownsamplingButt_clicked(bool checked);
-
     void on_Leaf_valueChanged(double arg1);
-
     void on_SegmentingButt_clicked(bool checked);
-
     void on_Plane_valueChanged(double arg1);
-
     void on_OrganizedButt_clicked(bool checked);
-
     void on_Internal_toggled(bool checked);
-
     void on_Asus_toggled(bool checked);
-
     void on_Kinect2SD_toggled(bool checked);
-
     void on_Kinect2QHD_toggled(bool checked);
-
     void on_Kinect2HD_toggled(bool checked);
-
     void on_External_toggled(bool checked);
-
     void on_RefreshN_clicked();
-
     void on_RefreshT_clicked();
 
 private:
     Ui::MainWindow *ui;
+    bool disabled;
     BasicNodeConfig::Ptr basic_conf;
     SensorProcessorConfig::Ptr sensor_conf;
     EstimatorConfig::Ptr estimator_conf;
