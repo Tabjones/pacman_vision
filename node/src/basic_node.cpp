@@ -25,7 +25,7 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor, const ros::R
     nh.param<double>("plane_tolerance", config->plane_tolerance, 0.004);
 }
 
-inline BasicNode::ConfigPtr
+BasicNode::ConfigPtr
 BasicNode::getConfig() const
 {
     return config;
@@ -76,20 +76,24 @@ bool
 BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res)
 {
     //This saves in home... possible todo improvement to let user specify location
-    if (this->scene_processed){
+    if (this->isDisabled()){
+        ROS_WARN("[PaCMaN Vision][%s]\tNode is globally disabled, this service is suspended!",__func__);
+        return false;
+    }
+    if (scene_processed){
         sensor_msgs::PointCloud2 msg;
         if (req.save.compare("false") != 0){
             std::string home = std::getenv("HOME");
             pcl::io::savePCDFile( (home + "/" + req.save + ".pcd").c_str(), *scene_processed);
-            ROS_INFO("[PaCMaN Vision][%s] Processed scene saved to %s", __func__, (home + "/" + req.save + ".pcd").c_str());
+            ROS_INFO("[PaCMaN Vision][%s]\tProcessed scene saved to %s", __func__, (home + "/" + req.save + ".pcd").c_str());
         }
         pcl::toROSMsg(*scene_processed, msg);
         res.scene = msg;
-        ROS_INFO("[PaCMaN Vision][%s] Sent processed scene to service response.", __func__);
+        ROS_INFO("[PaCMaN Vision][%s]\tSent processed scene to service response.", __func__);
         return true;
     }
     else{
-        ROS_WARN("[PaCMaN Vision][%s] No Processed Scene to send to Service!", __func__);
+        ROS_WARN("[PaCMaN Vision][%s]\tNo Processed Scene to send to Service!", __func__);
         return false;
     }
 }
@@ -277,7 +281,6 @@ BasicNode::update_markers()
 {
     //only update crop limits, plane always gets recomputed if active
     visualization_msgs::Marker mark;
-    LOCK guard(mtx_config);
     create_box_marker(config->limits, mark, false);
     //make it red
     mark.color.g = 0.0f;
@@ -318,7 +321,10 @@ BasicNode::spin()
 {
     while (nh.ok() && is_running)
     {
-        spinOnce();
+        if (this->isDisabled())
+            ros::spinOnce();
+        else
+            spinOnce();
         spin_rate.sleep();
     }
 }

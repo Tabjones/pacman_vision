@@ -6,8 +6,8 @@ Application::Application(int & argc, char **argv):
     storage(new Storage)
 {
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-    timer->start(500);
     init();
+    timer->start(500);
 }
 
 Application::~Application()
@@ -17,10 +17,22 @@ Application::~Application()
 }
 
 void
-Application::show_gui()
+Application::showGui()
 {
-    if (gui)
+    if (gui){
         gui->show();
+        gui->configure(node->getConfig());
+        gui->configure(sensor->getConfig());
+        gui->configure(estimator->getConfig(), false);
+    }
+}
+
+void
+Application::startUpdating(int msecs)
+{
+    timer->start(msecs);
+    node->spawn();
+    sensor->spawn();
 }
 
 void
@@ -29,9 +41,6 @@ Application::init()
     node.reset(new BasicNode("pacman_vision", storage, 50));
     sensor.reset(new SensorProcessor(node->getNodeHandle(),"sensor_processor",storage,50));
     estimator.reset(new Estimator(node->getNodeHandle(),"estimator",storage,2));
-
-    node->spawn();
-    sensor->spawn();
 }
 
 void

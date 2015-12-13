@@ -23,7 +23,7 @@ Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const Storag
     pe.loadAndSetDatabase(this->db_path);
 }
 
-inline Estimator::ConfigPtr
+Estimator::ConfigPtr
 Estimator::getConfig() const
 {
     return config;

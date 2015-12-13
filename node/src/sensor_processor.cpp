@@ -20,29 +20,34 @@ Kinect2::~Kinect2()
     delete device;
 }
 
-bool Kinect2::start()
+bool
+Kinect2::start()
 {
     device->start();
     started = true;
     return started;
 }
-bool Kinect2::stop()
+bool
+Kinect2::stop()
 {
     device->stop();
     started = false;
     return started;
 }
-bool Kinect2::close()
+bool
+Kinect2::close()
 {
     device->close();
     initialized=false;
     return initialized;
 }
-inline bool Kinect2::isStarted() const
+bool
+Kinect2::isStarted() const
 {
     return started;
 }
-inline bool Kinect2::isInitialized() const
+bool
+Kinect2::isInitialized() const
 {
     return initialized;
 }
@@ -136,7 +141,7 @@ SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, 
     config->topic = nh.resolveName("/camera/depth_registered/points");
 }
 
-inline SensorProcessor::ConfigPtr
+SensorProcessor::ConfigPtr
 SensorProcessor::getConfig() const
 {
     return config;
@@ -157,6 +162,7 @@ void SensorProcessor::updateIfNeeded(const SensorProcessor::ConfigPtr conf)
             }
             //Use internal sensor processor, no subscriber needed
             sub_cloud.shutdown();
+            //Add some error handling TODO
             if (!kinect2.isInitialized())
                 kinect2.initDevice();
             if (!kinect2.isStarted())
@@ -168,6 +174,10 @@ void SensorProcessor::updateIfNeeded(const SensorProcessor::ConfigPtr conf)
             if (kinect2.isStarted() || kinect2.isInitialized()){
                 kinect2.stop();
                 kinect2.close();
+            }
+            if (this->isDisabled()){
+                sub_cloud.shutdown();
+                return;
             }
             if (config->topic.compare(conf->topic) != 0){
                 LOCK guard(mtx_config);

@@ -17,7 +17,8 @@ class Application: public QApplication
     explicit Application(int & argc, char **argv);
     ~Application();
 
-    void show_gui();
+    void showGui();
+    void startUpdating(int msecs);
 private slots:
     void update();
 private:

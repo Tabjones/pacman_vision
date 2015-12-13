@@ -37,15 +37,20 @@ MainWindow::isDisabled() const
 }
 void MainWindow::configure(const BasicNodeConfig::Ptr b_conf)
 {
+    if (b_conf && basic_conf)
+        *basic_conf = *b_conf; //TMP update gui also
 
 }
 void MainWindow::configure(const SensorProcessorConfig::Ptr s_conf)
 {
+    if (s_conf && sensor_conf)
+        *sensor_conf = *s_conf;
 
 }
 void MainWindow::configure(const EstimatorConfig::Ptr e_config, const bool running)
 {
-
+    if (e_config && estimator_conf)
+        *estimator_conf = *e_config;
 }
 
 void MainWindow::on_MasterDisable_clicked(bool checked)

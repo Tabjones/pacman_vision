@@ -120,6 +120,8 @@ class Module
                 if(!derived().disabled){
                     derived().spinOnce();
                 }
+                else
+                    derived().queue_ptr->callAvailable(ros::WallDuration(0));
                 derived().spin_rate.sleep();
             }
         }

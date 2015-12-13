@@ -29,8 +29,8 @@ class Kinect2
         bool stop();
         //close kinect2
         bool close();
-        inline bool isStarted() const;
-        inline bool isInitialized() const;
+        bool isStarted() const;
+        bool isInitialized() const;
         //Recieve and process data
         void processData();
         //Compute a PointCloud from processed data
@@ -63,7 +63,7 @@ class SensorProcessor: public Module<SensorProcessor>
         typedef std::shared_ptr<SensorProcessorConfig> ConfigPtr;
         typedef std::shared_ptr<SensorProcessor> Ptr;
         void updateIfNeeded (const SensorProcessor::ConfigPtr conf);
-        inline SensorProcessor::ConfigPtr getConfig() const;
+        SensorProcessor::ConfigPtr getConfig() const;
     private:
         //config protection
         std::mutex mtx_config;

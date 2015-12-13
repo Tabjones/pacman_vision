@@ -33,7 +33,7 @@ class BasicNode: public Module<BasicNode>
         //update current configuration with new one
         void updateIfNeeded(const BasicNode::ConfigPtr conf);
         //Get current config
-        inline BasicNode::ConfigPtr getConfig() const;
+        BasicNode::ConfigPtr getConfig() const;
         //Takes care of Eigen Alignment on Fixed-Size Containers
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:

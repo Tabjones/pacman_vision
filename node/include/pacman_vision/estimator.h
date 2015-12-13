@@ -41,7 +41,7 @@ class Estimator : public Module<Estimator>
     typedef std::shared_ptr<EstimatorConfig> ConfigPtr;
     typedef std::shared_ptr<Estimator> Ptr;
     void updateIfNeeded(const Estimator::ConfigPtr conf);
-    inline Estimator::ConfigPtr getConfig() const;
+    Estimator::ConfigPtr getConfig() const;
     //Eigen alignment
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:
