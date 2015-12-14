@@ -40,13 +40,17 @@ class Estimator : public Module<Estimator>
     virtual ~Estimator()=default;
     typedef std::shared_ptr<EstimatorConfig> ConfigPtr;
     typedef std::shared_ptr<Estimator> Ptr;
-    void updateIfNeeded(const Estimator::ConfigPtr conf);
+    void updateIfNeeded(const Estimator::ConfigPtr conf, bool reset=false);
     Estimator::ConfigPtr getConfig() const;
     //Eigen alignment
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:
+        //mutex
+        std::mutex mtx_config;
         //Configuration
         Estimator::ConfigPtr config;
+        //init with ros param
+        void init();
         //Service Server
         ros::ServiceServer srv_estimate;
         //estimated transforms
@@ -59,11 +63,6 @@ class Estimator : public Module<Estimator>
         PXC::Ptr scene;
         //path to pel database
         boost::filesystem::path db_path;
-
-        //class behaviour
-        bool calibration, disabled;
-        int iterations, neighbors;
-        double clus_tol;
 
         //PEL object
         pel::interface::PEProgressiveBisection pe;

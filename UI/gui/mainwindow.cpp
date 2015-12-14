@@ -4,7 +4,7 @@
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    disabled(false),
+    disabled(false), reset(false),
     basic_conf(new BasicNodeConfig),
     sensor_conf(new SensorProcessorConfig),
     estimator_conf(new EstimatorConfig)
@@ -35,22 +35,69 @@ MainWindow::isDisabled() const
 {
     return disabled;
 }
+bool
+MainWindow::masterReset()
+{
+    if (reset){
+        reset = false;
+        return true;
+    }
+    return false;
+}
 void MainWindow::configure(const BasicNodeConfig::Ptr b_conf)
 {
-    if (b_conf && basic_conf)
-        *basic_conf = *b_conf; //TMP update gui also
-
+    if (b_conf && basic_conf){
+        *basic_conf = *b_conf;
+        if (basic_conf->cropping != ui->CroppingButt->isChecked())
+            ui->CroppingButt->click();
+        if (basic_conf->downsampling != ui->DownsamplingButt->isChecked())
+            ui->DownsamplingButt->click();
+        if (basic_conf->keep_organized != ui->OrganizedButt->isChecked())
+            ui->OrganizedButt->click();
+        if (basic_conf->publish_limits != ui->PublishLimitsButt->isChecked())
+            ui->PublishLimitsButt->click();
+        if (basic_conf->segmenting != ui->SegmentingButt->isChecked())
+            ui->SegmentingButt->click();
+        ui->Leaf->setValue(basic_conf->downsampling_leaf_size);
+        ui->Plane->setValue(basic_conf->plane_tolerance);
+        ui->Xmin->setValue(basic_conf->limits.x1);
+        ui->Xmax->setValue(basic_conf->limits.x2);
+        ui->Ymin->setValue(basic_conf->limits.y1);
+        ui->Ymax->setValue(basic_conf->limits.y2);
+        ui->Zmin->setValue(basic_conf->limits.z1);
+        ui->Zmax->setValue(basic_conf->limits.z2);
+    }
 }
 void MainWindow::configure(const SensorProcessorConfig::Ptr s_conf)
 {
-    if (s_conf && sensor_conf)
+    if (s_conf && sensor_conf){
         *sensor_conf = *s_conf;
-
+        if (sensor_conf->internal){
+            ui->Name->setText(QString(sensor_conf->name.c_str()));
+            ui->Internal->click();
+        }
+        else{
+            std::string t = sensor_conf->topic;
+            if (t.compare("/camera/depth_registered/points") == 0)
+                ui->Asus->click();
+            else if (t.compare("/kinect2/SD/points") == 0)
+                ui->Kinect2SD->click();
+            else if (t.compare("/kinect2/QHD/points") == 0)
+                ui->Kinect2QHD->click();
+            else if (t.compare("/kinect2/HD/points") == 0)
+                ui->Kinect2HD->click();
+            else{
+                ui->Topic->setText(QString(sensor_conf->topic.c_str()));
+                ui->External->click();
+            }
+        }
+    }
 }
 void MainWindow::configure(const EstimatorConfig::Ptr e_config, const bool running)
 {
     if (e_config && estimator_conf)
         *estimator_conf = *e_config;
+    //TODO
 }
 
 void MainWindow::on_MasterDisable_clicked(bool checked)
@@ -79,7 +126,7 @@ void MainWindow::on_MasterReset_pressed()
 {
    ui->LoggingConsole->appendPlainText("* Issued a MASTER RESET!");
    //Reset Everything
-   //TODO
+   reset = true; //application will handle this
 }
 
 void MainWindow::on_CroppingButt_clicked(bool checked)

@@ -7,7 +7,6 @@ Application::Application(int & argc, char **argv):
 {
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
     init();
-    timer->start(500);
 }
 
 Application::~Application()
@@ -23,7 +22,7 @@ Application::showGui()
         gui->show();
         gui->configure(node->getConfig());
         gui->configure(sensor->getConfig());
-        gui->configure(estimator->getConfig(), false);
+        gui->configure(estimator->getConfig(), estimator->isRunning());
     }
 }
 
@@ -46,6 +45,16 @@ Application::init()
 void
 Application::update()
 {
+    if (gui->masterReset())
+    {
+        node->updateIfNeeded(BasicNode::ConfigPtr(), true);
+        sensor->updateIfNeeded(SensorProcessor::ConfigPtr(), true);
+        estimator->updateIfNeeded(Estimator::ConfigPtr(), true);
+        gui->configure(node->getConfig());
+        gui->configure(sensor->getConfig());
+        gui->configure(estimator->getConfig(), estimator->isRunning());
+        return;
+    }
     if(gui->isDisabled()){
         if(!node->isDisabled())
             node->disable();

@@ -27,6 +27,8 @@ public:
     EstimatorConfig::Ptr getEstimatorConfig() const;
     //get master disable
     bool isDisabled() const;
+    //master reset issued
+    bool masterReset();
 
 private slots:
     void on_MasterDisable_clicked(bool checked);
@@ -56,9 +58,11 @@ private slots:
 private:
     Ui::MainWindow *ui;
     bool disabled;
+    bool reset;
     BasicNodeConfig::Ptr basic_conf;
     SensorProcessorConfig::Ptr sensor_conf;
     EstimatorConfig::Ptr estimator_conf;
+
 };
 
 #endif // MAINWINDOW_H

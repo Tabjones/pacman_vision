@@ -62,12 +62,14 @@ class SensorProcessor: public Module<SensorProcessor>
         SensorProcessor(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
         typedef std::shared_ptr<SensorProcessorConfig> ConfigPtr;
         typedef std::shared_ptr<SensorProcessor> Ptr;
-        void updateIfNeeded (const SensorProcessor::ConfigPtr conf);
+        void updateIfNeeded (const SensorProcessor::ConfigPtr conf, bool reset=false);
         SensorProcessor::ConfigPtr getConfig() const;
     private:
         //config protection
         std::mutex mtx_config;
         SensorProcessor::ConfigPtr config;
+        //init with ros param
+        void init();
         //external subscriber to recieve a cloud
         ros::Subscriber sub_cloud;
         //associated callback

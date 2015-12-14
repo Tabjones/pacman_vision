@@ -31,7 +31,7 @@ class BasicNode: public Module<BasicNode>
         typedef std::shared_ptr<BasicNodeConfig> ConfigPtr;
         typedef std::shared_ptr<BasicNode> Ptr;
         //update current configuration with new one
-        void updateIfNeeded(const BasicNode::ConfigPtr conf);
+        void updateIfNeeded(const BasicNode::ConfigPtr conf, bool reset=false);
         //Get current config
         BasicNode::ConfigPtr getConfig() const;
         //Takes care of Eigen Alignment on Fixed-Size Containers
@@ -52,7 +52,8 @@ class BasicNode: public Module<BasicNode>
         bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
         //protects config
         std::mutex mtx_config;
-
+        //init with ros params
+        void init();
         //Publish scene processed
         void publish_scene_processed() const;
         //Process scene method (read scene -> write scene_processed)

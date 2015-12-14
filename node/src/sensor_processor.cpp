@@ -137,8 +137,21 @@ SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, 
 {
     //default to asus xtion
     config.reset(new SensorProcessorConfig);
-    config->internal = false;
-    config->topic = nh.resolveName("/camera/depth_registered/points");
+    //tmp set param to dump into default
+    nh.setParam("internal", false);
+    nh.setParam("topic", "/camera/depth_registered/points");
+    nh.setParam("name", "kinect2_optical_frame");
+    ////////////////////////////////////
+    init();
+}
+
+void
+SensorProcessor::init()
+{
+    nh.param<bool>("internal", config->internal, false);
+    std::string t = nh.resolveName("/camera/depth_registered/points");
+    nh.param<std::string>("topic", config->topic, t);
+    nh.param<std::string>("name", config->name, "kinect2_optical_frame");
 }
 
 SensorProcessor::ConfigPtr
@@ -147,8 +160,12 @@ SensorProcessor::getConfig() const
     return config;
 }
 
-void SensorProcessor::updateIfNeeded(const SensorProcessor::ConfigPtr conf)
+void SensorProcessor::updateIfNeeded(const SensorProcessor::ConfigPtr conf, bool reset)
 {
+    if (reset){
+        init();
+        return;
+    }
     if (conf){
         if (config->internal != conf->internal){
             LOCK guard(mtx_config);

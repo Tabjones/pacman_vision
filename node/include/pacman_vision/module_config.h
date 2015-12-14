@@ -28,8 +28,10 @@ struct SensorProcessorConfig
 
 struct EstimatorConfig
 {
-    bool spawned;
-    //TODO
+    bool object_calibration; //old legacy param for kinect phase space calib
+    int iterations; //pel bisection iterations
+    int neighbors; //pel knn size, also lists size
+    double clus_tol; //euclidean clustering tolerance in m, to separate possible objects
     typedef std::shared_ptr<EstimatorConfig> Ptr;
 };
 

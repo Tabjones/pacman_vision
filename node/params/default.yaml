@@ -1,51 +1,15 @@
-pacman_vision: 
-  {
-    Master_Disable: false,
-    cluster_tol: 0.05,
-    color_importance: 0.3333,
-    crop_left_arm: false,
-    crop_left_hand: false,
-    crop_right_arm: false,
-    crop_right_hand: false,
-    downsample_leaf_size: 0.005,
-    downsampling: true,
-    enable_broadcaster: true,
-    enable_estimator: false,
-    enable_listener: false,
-    enable_supervoxels: false,
-    enable_tracker: false,
-    enable_scanner: false,
-    estimated_objects: true,
-    estimation_type: 0,
-    iterations: 5,
-    keep_organized: false,
-    external_kinect2_resolution: 1,
-    neighbors: 20,
-    normal_importance: 0.3333,
-    normals_search_radius: 0.01,
-    object_calibration: false,
-    pass_xmax: 0.5,
-    pass_xmin: -0.5,
-    pass_ymax: 0.5,
-    pass_ymin: -0.5,
-    pass_zmax: 2.0,
-    pass_zmin: 0.1,
-    passthrough: true,
-    passthrough_limits: true,
-    plane_segmentation: false,
-    plane_tolerance: 0.01,
-    publish_tf: true,
-    refinement_iterations: 2,
-    seed_resolution: 0.18,
-    spatial_importance: 0.3333,
-    tracker_bounding_box: false,
-    tracker_disturbance: false,
-    sensor_type: 2,
-    use_service: false,
-    use_table_transform: false,
-    voxel_resolution: 0.02,
-    ignore_clicked_point: false,
-    work_dir: "PoseScanner",
-    table_pass: 10,
-    geometry_scale: 1.0
-  }
+cropping: true
+downsampling: false
+downsampling_leaf_size: 0.01
+estimator: {cluster_tol: 0.05, iterations: 5, neighbors: 20, object_calibration: false}
+keep_organized: false
+limit_xmax: 0.5
+limit_xmin: -0.5
+limit_ymax: 0.5
+limit_ymin: -0.5
+limit_zmax: 1.5
+limit_zmin: 0.3
+plane_tolerance: 0.005
+publish_limits: true
+segmenting: false
+sensor_processor: {internal: false, name: kinect2_optical_frame, topic: /camera/depth_registered/points}

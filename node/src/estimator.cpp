@@ -4,21 +4,33 @@
 Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate)
     :Module<Estimator>(n,ns,stor,rate)
 {
-    //TODO config creation
     scene.reset(new PXC);
+    config.reset(new EstimatorConfig);
     db_path = (ros::package::getPath("pacman_vision") + "/database" );
     if (!boost::filesystem::exists(db_path) || !boost::filesystem::is_directory(db_path))
         ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
     srv_estimate = nh.advertiseService("estimate", &Estimator::cb_estimate, this);
+    //tmp set params to dump into default
+    nh.setParam("object_calibration", false);
+    nh.setParam("iterations", 5);
+    nh.setParam("neighbors", 20);
+    nh.setParam("cluster_tol", 0.05);
+    ////////////////////////////////////////////////////////
+    init();
+}
+
+void
+Estimator::init()
+{
     //init params
-    nh.param<bool>("object_calibration", calibration, false); //legacy param for phase space star-object calibration
-    nh.param<int>("iterations", iterations, 5);
-    nh.param<int>("neighbors", neighbors, 20);
-    nh.param<double>("cluster_tol", clus_tol, 0.05);
+    nh.param<bool>("object_calibration", config->object_calibration, false); //legacy param for phase space star-object calibration
+    nh.param<int>("iterations", config->iterations, 5);
+    nh.param<int>("neighbors", config->neighbors, 20);
+    nh.param<double>("cluster_tol", config->clus_tol, 0.05);
     pe.setParam("verbosity",2);
     pe.setRMSEThreshold(0.003);
-    pe.setStepIterations(iterations);
-    pe.setParam("lists_size",neighbors);
+    pe.setStepIterations(config->iterations);
+    pe.setParam("lists_size",config->neighbors);
     pe.setParam("downsamp",0);
     pe.loadAndSetDatabase(this->db_path);
 }
@@ -30,9 +42,32 @@ Estimator::getConfig() const
 }
 
 void
-Estimator::updateIfNeeded(const Estimator::ConfigPtr conf)
+Estimator::updateIfNeeded(const Estimator::ConfigPtr conf, bool reset)
 {
-    //TODO
+    if (reset){
+        init();
+        return;
+    }
+    if (conf){
+        if (config->object_calibration != conf->object_calibration){
+            LOCK guard(mtx_config);
+            config->object_calibration = conf->object_calibration;
+        }
+        if (config->clus_tol != conf->clus_tol){
+            LOCK guard(mtx_config);
+            config->clus_tol = conf->clus_tol;
+        }
+        if (config->iterations != conf->iterations){
+            LOCK guard(mtx_config);
+            config->iterations = conf->iterations;
+            pe.setStepIterations(config->iterations);
+        }
+        if (config->neighbors != conf->neighbors){
+            LOCK guard(mtx_config);
+            config->neighbors = conf->neighbors;
+            pe.setParam("lists_size", config->neighbors);
+        }
+    }
 }
 
 int
@@ -40,10 +75,13 @@ Estimator::extract_clusters()
 {
     storage->read_scene_processed(scene);
     if (scene->empty()){
-        ROS_WARN("[Estimator][%s] Processed scene is empty, cannot continue...",__func__);
+        ROS_WARN("[Estimator][%s]\tProcessed scene is empty, cannot continue...",__func__);
         return -1;
     }
-    ROS_INFO("[Estimator][%s] Extracting object clusters with cluster tolerance of %g",__func__, clus_tol);
+    {
+        LOCK guard(mtx_config);
+        ROS_INFO("[Estimator][%s]\tExtracting object clusters with cluster tolerance of %g",__func__, config->clus_tol);
+    }
     //objects
     pcl::ExtractIndices<PX> extract;
     pcl::EuclideanClusterExtraction<PX> ec;
@@ -53,7 +91,10 @@ Estimator::extract_clusters()
     tree->setInputCloud(scene);
     ec.setInputCloud(scene);
     ec.setSearchMethod(tree);
-    ec.setClusterTolerance(clus_tol);
+    {
+        LOCK guard(mtx_config);
+        ec.setClusterTolerance(config->clus_tol);
+    }
     ec.setMinClusterSize(100);
     ec.setMaxClusterSize(scene->points.size());
     ec.extract(cluster_indices);
@@ -73,16 +114,16 @@ Estimator::extract_clusters()
         extract.setNegative(false);
         extract.filter(clusters->at(j));
     }
-    ROS_INFO("[Estimator][%s] Found %d clusters of possible objects.",__func__,size);
+    ROS_INFO("[Estimator][%s]\tFound %d clusters of possible objects.",__func__,size);
     return size;
 }
 
 bool
 Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res)
 {
-    if (this->disabled){
+    if (this->isDisabled()){
         //Module was temporary disabled, notify the sad user, then exit
-        ROS_ERROR("[Estimator][%s] Estimator module is temporary disabled, exiting...",__func__);
+        ROS_ERROR("[Estimator][%s]\tNode is globally disabled, this service is suspended!",__func__);
         return false;
     }
     if (this->estimate()){
@@ -95,14 +136,14 @@ Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision
             pose_est.pose = pose;
             pose_est.name = names->at(i).first;
             pose_est.id = names->at(i).second;
-            pose_est.parent_frame = "/kinect2_rgb_optical_frame";
+            pose_est.parent_frame = scene->header.frame_id;
             res.estimated.poses.push_back(pose_est);
         }
-        ROS_INFO("[Estimator][%s] Pose Estimation complete!", __func__);
+        ROS_INFO("[Estimator][%s]\tPose Estimation complete!", __func__);
         return true;
     }
     else{
-        ROS_WARN("[Estimator][%s] Pose Estimation failed!", __func__);
+        ROS_WARN("[Estimator][%s]\tPose Estimation failed!", __func__);
         return false;
     }
 }
@@ -112,7 +153,7 @@ Estimator::estimate()
 {
     int size = this->extract_clusters();
     if (size < 1){
-        ROS_ERROR("[Estimator][%s] No object clusters found in scene, aborting pose estimation...",__func__);
+        ROS_ERROR("[Estimator][%s]\tNo object clusters found in scene, aborting pose estimation...",__func__);
         return false;
     }
     for (int i=0; i<size; ++i)
@@ -123,13 +164,13 @@ Estimator::estimate()
         std::string name = pest.getName();
         std::vector<std::string> vst;
         boost::split (vst, name, boost::is_any_of("_"), boost::token_compress_on);
-        if (this->calibration)
+        if (config->object_calibration)
             names->at(i).first = "object";
         else
             names->at(i).first = vst.at(0);
         estimations->at(i) = pest.getTransformation();
         names->at(i).second = vst.at(0);
-        ROS_INFO("[Estimator][%s] Found %s.",__func__,name.c_str());
+        ROS_INFO("[Estimator][%s]\tFound %s.",__func__,name.c_str());
     }
     //first check if we have more copy of the same object in names
     for (int i=0; i<names->size(); ++i)
@@ -155,12 +196,10 @@ Estimator::estimate()
 
 void Estimator::spin()
 {
-    ROS_INFO("[Estimator] Estimator module extract euclidean clusters from current scene and tries to identify each of them by matching with provided database. For the Estimator to work properly please enable at least plane segmentation during scene processing.");
+    ROS_INFO("[Estimator]\tEstimator module extract euclidean clusters from current scene and tries to identify each of them by matching with provided database. For the Estimator to work properly please enable at least plane segmentation during scene processing.");
     while(nh.ok() && is_running)
     {
-        if(!disabled){
-            spinOnce();
-            spin_rate.sleep();
-        }
+        spinOnce();
+        spin_rate.sleep();
     }
 }
