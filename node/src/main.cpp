@@ -10,5 +10,8 @@ int main (int argc, char *argv[])
     Application pacman_vision(argc,argv);
     pacman_vision.showGui();
     pacman_vision.startUpdating(500);
-    return pacman_vision.exec();
+    //loop
+    pacman_vision.exec();
+    //
+    ros::shutdown();
 }

@@ -20,7 +20,7 @@ public:
     //intial gui configuration
     void configure(const BasicNodeConfig::Ptr b_conf);
     void configure(const SensorProcessorConfig::Ptr s_conf);
-    void configure(const EstimatorConfig::Ptr e_config, const bool running);
+    void configure(const EstimatorConfig::Ptr e_config);
     //get configs
     BasicNodeConfig::Ptr getBaseConfig() const;
     SensorProcessorConfig::Ptr getSensorConfig() const;
@@ -55,6 +55,8 @@ private slots:
     void on_RefreshN_clicked();
     void on_RefreshT_clicked();
 
+    void on_SpawnEstim_clicked(bool checked);
+
 private:
     Ui::MainWindow *ui;
     bool disabled;
@@ -62,7 +64,6 @@ private:
     BasicNodeConfig::Ptr basic_conf;
     SensorProcessorConfig::Ptr sensor_conf;
     EstimatorConfig::Ptr estimator_conf;
-
 };
 
 #endif // MAINWINDOW_H

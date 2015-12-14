@@ -22,7 +22,7 @@ Application::showGui()
         gui->show();
         gui->configure(node->getConfig());
         gui->configure(sensor->getConfig());
-        gui->configure(estimator->getConfig(), estimator->isRunning());
+        gui->configure(estimator->getConfig());
     }
 }
 
@@ -45,6 +45,8 @@ Application::init()
 void
 Application::update()
 {
+    if (!node->isRunning())
+        qApp->quit();
     if (gui->masterReset())
     {
         node->updateIfNeeded(BasicNode::ConfigPtr(), true);
@@ -52,7 +54,7 @@ Application::update()
         estimator->updateIfNeeded(Estimator::ConfigPtr(), true);
         gui->configure(node->getConfig());
         gui->configure(sensor->getConfig());
-        gui->configure(estimator->getConfig(), estimator->isRunning());
+        gui->configure(estimator->getConfig());
         return;
     }
     if(gui->isDisabled()){
@@ -62,16 +64,19 @@ Application::update()
             sensor->disable();
         if(!estimator->isDisabled())
             estimator->disable();
+        return;
     }
-    else{
-        if(node->isDisabled())
-            node->enable();
-        if(sensor->isDisabled())
-            sensor->enable();
-        if(estimator->isDisabled())
-            estimator->enable();
-        node->updateIfNeeded(gui->getBaseConfig());
-        sensor->updateIfNeeded(gui->getSensorConfig());
-        estimator->updateIfNeeded(gui->getEstimatorConfig());
-    }
+    if(node->isDisabled())
+        node->enable();
+    if(sensor->isDisabled())
+        sensor->enable();
+    if(estimator->isDisabled())
+        estimator->enable();
+    node->updateIfNeeded(gui->getBaseConfig());
+    sensor->updateIfNeeded(gui->getSensorConfig());
+    estimator->updateIfNeeded(gui->getEstimatorConfig());
+    if (estimator->isRunning() && !gui->getEstimatorConfig()->spawn)
+        estimator->kill();
+    else if (!estimator->isRunning() && gui->getEstimatorConfig()->spawn)
+        estimator->spawn();
 }

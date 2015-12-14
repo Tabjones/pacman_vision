@@ -9,19 +9,19 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor, const ros::R
     pub_scene = nh.advertise<PTC> ("scene_processed", 5);
     pub_markers = nh.advertise<visualization_msgs::Marker>("markers", 1);
     //tmp set param to dump into default
-    nh.setParam("cropping", false);
-    nh.setParam("downsampling", false);
-    nh.setParam("segmenting", false);
-    nh.setParam("keep_organized", false);
-    nh.setParam("publish_limits", false);
-    nh.setParam("limit_xmax", 0.5);
-    nh.setParam("limit_xmin", -0.5);
-    nh.setParam("limit_ymax", 0.5);
-    nh.setParam("limit_ymin", -0.5);
-    nh.setParam("limit_zmax", 1.5);
-    nh.setParam("limit_zmin", 0.3);
-    nh.setParam("downsampling_leaf_size", 0.01);
-    nh.setParam("plane_tolerance", 0.005);
+    // nh.setParam("cropping", false);
+    // nh.setParam("downsampling", false);
+    // nh.setParam("segmenting", false);
+    // nh.setParam("keep_organized", false);
+    // nh.setParam("publish_limits", false);
+    // nh.setParam("limit_xmax", 0.5);
+    // nh.setParam("limit_xmin", -0.5);
+    // nh.setParam("limit_ymax", 0.5);
+    // nh.setParam("limit_ymin", -0.5);
+    // nh.setParam("limit_zmax", 1.5);
+    // nh.setParam("limit_zmin", 0.3);
+    // nh.setParam("downsampling_leaf_size", 0.01);
+    // nh.setParam("plane_tolerance", 0.005);
     /////////////////////////////////////////
     init();
 }
@@ -352,4 +352,5 @@ BasicNode::spin()
             spinOnce();
         spin_rate.sleep();
     }
+    ros::shutdown();
 }

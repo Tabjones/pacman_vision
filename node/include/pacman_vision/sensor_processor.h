@@ -58,7 +58,6 @@ class SensorProcessor: public Module<SensorProcessor>
     friend class Module<SensorProcessor>;
     public:
         SensorProcessor()=delete;
-        virtual ~SensorProcessor()=default;
         SensorProcessor(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
         typedef std::shared_ptr<SensorProcessorConfig> ConfigPtr;
         typedef std::shared_ptr<SensorProcessor> Ptr;

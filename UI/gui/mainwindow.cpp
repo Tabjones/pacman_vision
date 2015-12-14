@@ -10,6 +10,7 @@ MainWindow::MainWindow(QWidget *parent) :
     estimator_conf(new EstimatorConfig)
 {
     ui->setupUi(this);
+    estimator_conf->spawn = false;
 }
 MainWindow::~MainWindow()
 {
@@ -93,7 +94,7 @@ void MainWindow::configure(const SensorProcessorConfig::Ptr s_conf)
         }
     }
 }
-void MainWindow::configure(const EstimatorConfig::Ptr e_config, const bool running)
+void MainWindow::configure(const EstimatorConfig::Ptr e_config)
 {
     if (e_config && estimator_conf)
         *estimator_conf = *e_config;
@@ -107,6 +108,7 @@ void MainWindow::on_MasterDisable_clicked(bool checked)
         ui->MasterReset->setDisabled(false);
         ui->BaseTab->setDisabled(false);
         ui->SensorTab->setDisabled(false);
+        ui->EstimatorTab->setDisabled(false);
         ui->LoggingConsole->appendPlainText("* Functionality is globally resumed.");
         // re-enable everything
         disabled = false;
@@ -117,6 +119,7 @@ void MainWindow::on_MasterDisable_clicked(bool checked)
         ui->MasterReset->setDisabled(true);
         ui->BaseTab->setDisabled(true);
         ui->SensorTab->setDisabled(true);
+        ui->EstimatorTab->setDisabled(true);
         // disable everything
         disabled = true;
     }
@@ -352,4 +355,22 @@ void MainWindow::on_RefreshT_clicked()
     ui->LoggingConsole->appendPlainText(msg.prepend("* External subscriber topic updated: "));
     //topic =
     sensor_conf->topic = topic;
+}
+
+void MainWindow::on_SpawnEstim_clicked(bool checked)
+{
+    if (checked == false){
+        ui->SpawnEstim->setText("    Enable Estimator Module");
+        ui->Estimator->setDisabled(true);
+        ui->LoggingConsole->appendPlainText("* Killing Estimator Module.");
+        //kill estimator
+        estimator_conf->spawn = false;
+    }
+    else if (checked == true){
+        ui->SpawnEstim->setText("    Disable Estimator Module");
+        ui->LoggingConsole->appendPlainText("* Spawning Estimator Module.");
+        ui->Estimator->setDisabled(false);
+        //spawn estimator
+        estimator_conf->spawn = true;
+    }
 }

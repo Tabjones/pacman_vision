@@ -6,5 +6,6 @@
         <file>off.png</file>
         <file>on.png</file>
         <file>refresh.png</file>
+        <file>stop.png</file>
     </qresource>
 </RCC>

@@ -32,6 +32,7 @@ struct EstimatorConfig
     int iterations; //pel bisection iterations
     int neighbors; //pel knn size, also lists size
     double clus_tol; //euclidean clustering tolerance in m, to separate possible objects
+    bool spawn;
     typedef std::shared_ptr<EstimatorConfig> Ptr;
 };
 

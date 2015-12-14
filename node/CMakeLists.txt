@@ -226,6 +226,7 @@ target_link_libraries(pacman_vision
    ${catkin_LIBRARIES}
    ${PCL_LIBRARIES}
    Qt4::QtGui Qt4::QtXml
+   pthread
 )
 
 IF(PACMAN_VISION_BUILD_RECOGNITION)

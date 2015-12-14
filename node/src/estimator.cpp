@@ -11,10 +11,10 @@ Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const Storag
         ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
     srv_estimate = nh.advertiseService("estimate", &Estimator::cb_estimate, this);
     //tmp set params to dump into default
-    nh.setParam("object_calibration", false);
-    nh.setParam("iterations", 5);
-    nh.setParam("neighbors", 20);
-    nh.setParam("cluster_tol", 0.05);
+    // nh.setParam("object_calibration", false);
+    // nh.setParam("iterations", 5);
+    // nh.setParam("neighbors", 20);
+    // nh.setParam("cluster_tol", 0.05);
     ////////////////////////////////////////////////////////
     init();
 }
@@ -33,6 +33,8 @@ Estimator::init()
     pe.setParam("lists_size",config->neighbors);
     pe.setParam("downsamp",0);
     pe.loadAndSetDatabase(this->db_path);
+    //this is only used by gui can remain false forever
+    config->spawn = false;
 }
 
 Estimator::ConfigPtr

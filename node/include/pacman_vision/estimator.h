@@ -37,7 +37,6 @@ class Estimator : public Module<Estimator>
     public:
     Estimator()=delete;
     Estimator(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor, const ros::Rate rate);
-    virtual ~Estimator()=default;
     typedef std::shared_ptr<EstimatorConfig> ConfigPtr;
     typedef std::shared_ptr<Estimator> Ptr;
     void updateIfNeeded(const Estimator::ConfigPtr conf, bool reset=false);

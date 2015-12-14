@@ -138,9 +138,9 @@ SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, 
     //default to asus xtion
     config.reset(new SensorProcessorConfig);
     //tmp set param to dump into default
-    nh.setParam("internal", false);
-    nh.setParam("topic", "/camera/depth_registered/points");
-    nh.setParam("name", "kinect2_optical_frame");
+    // nh.setParam("internal", false);
+    // nh.setParam("topic", "/camera/depth_registered/points");
+    // nh.setParam("name", "kinect2_optical_frame");
     ////////////////////////////////////
     init();
 }
