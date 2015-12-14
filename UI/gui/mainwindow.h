@@ -54,7 +54,6 @@ private slots:
     void on_External_toggled(bool checked);
     void on_RefreshN_clicked();
     void on_RefreshT_clicked();
-
     void on_SpawnEstim_clicked(bool checked);
 
 private:
