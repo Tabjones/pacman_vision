@@ -1,3 +1,5 @@
+//this dummy file is to test the gui in QtCreator without letting him know
+//it is part of a bigger project !!
 #include <mainwindow.h>
 #include <QApplication>
 
