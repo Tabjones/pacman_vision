@@ -35,10 +35,10 @@ PacmanVision::init(int argc, char** argv)
         storage = std::make_shared<pacv::Storage>();
         basic_node = std::make_shared<pacv::BasicNode>("pacman_vision", storage);
         basic_node->setRate(40.0); //40Hz
+        basic_node->spawn();
         sensor = std::make_shared<pacv::SensorProcessor>(basic_node->getNodeHandle(), "sensor", storage);
         sensor->setRate(40.0); //40hz
         sensor->spawn();
-        basic_node->spawn();
         //todo
     }
     catch(...)

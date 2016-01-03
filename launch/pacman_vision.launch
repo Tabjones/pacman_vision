@@ -66,14 +66,14 @@
     <include file="$(find vito_description)/launch/display.launch"/>
   </group>
 
-  <rosparam command="load" file="$(find pacman_vision)/params/$(arg load).yaml" ns="pacman_vision"/>
+  <rosparam command="load" file="$(find pacman_vision)/config/$(arg load).yaml"/>
 
   <!-- pacman vision node  -->
   <node if="$(arg separate_term)" name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" launch-prefix="gnome-terminal --title='PaCMan Vision' --hide-menubar --command"/>
   <node unless="$(arg separate_term)" name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" />
 
   <!-- rviz -->
-  <node if="$(arg run_rviz)" name="rviz_pacman_vision" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/cfg/config.rviz" output="screen"/>
+  <node if="$(arg run_rviz)" name="rviz_pacman_vision" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/config/pacmanvision.rviz" output="screen"/>
 
   <!-- rqt_service_caller -->
   <node if="$(arg run_service_caller)" name="service_caller_pacman_vision" pkg="rqt_service_caller" type="rqt_service_caller" respawn="false"/>

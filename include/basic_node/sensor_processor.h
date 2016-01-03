@@ -33,8 +33,8 @@ class SensorProcessor: public Module<SensorProcessor>
         void init();
         //external subscriber to recieve a cloud
         ros::Subscriber sub_cloud;
-        //keep topic name for comparison
-        std::string actual_topic;
+        //subscribed topic
+        std::string topic;
         //and track when we were disableb
         bool was_disabled;
         //associated callback

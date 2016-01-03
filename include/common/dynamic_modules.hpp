@@ -46,7 +46,7 @@ class Module
             storage=stor;
             name_space = nh.getNamespace();
             father_name_space=n.getNamespace();
-            queue_ptr.reset(new ros::CallbackQueue);
+            queue_ptr=std::make_shared<ros::CallbackQueue>();
             nh.setCallbackQueue(&(*queue_ptr));
         }
         virtual ~Module()
@@ -113,10 +113,7 @@ class Module
                 return;
             }
             if(!derived().spin_rate)
-            {
-                ROS_WARN("[%s]\tTried to spawn %s without a defined spin rate, call setRate() first!",__func__,derived().name_space.c_str());
-                return;
-            }
+                ROS_WARN("[%s]\tTried to spawn %s without a defined spin rate, this node will spin at maximum speed! Call setRate() if you don't want this!",__func__,derived().name_space.c_str());
             derived().is_running = true;
             derived().worker = std::thread(&Derived::spin, derived_ptr());
         }

@@ -13,8 +13,8 @@ SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, 
     Module<SensorProcessor>(n,ns,stor), was_disabled(false)
 {
     //default to asus xtion
-    actual_topic = nh.resolveName("/camera/depth_registered/points");
     config = std::make_shared<SensorConfig>();
+    topic = "/camera/depth_registered/points";
     //tmp set param to dump into default
     // nh.setParam("internal", false);
     // nh.setParam("topic", "/camera/depth_registered/points");
@@ -29,15 +29,14 @@ SensorProcessor::init()
     //init node params
 #ifndef PACV_KINECT2_SUPPORT
     //we just need to read which topic to subscribe
-    std::string tp;
-    if(nh.getParam("topic",tp)){
-            if(!config->set("topic", tp))
+    if(nh.getParam("topic",topic)){
+            if(!config->set("topic", topic))
                 ROS_WARN("[%s]\tFailed to set key:topic into Config",__func__);
     }
     else
         ROS_WARN("[%s]\tKey:topic not found on parameter server",__func__);
-    return;
 #endif
+#ifdef PACV_KINECT2_SUPPORT
     for (auto key: config->valid_keys)
     {
         XmlRpc::XmlRpcValue val;
@@ -49,6 +48,19 @@ SensorProcessor::init()
         else
             ROS_WARN("[%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
+    //Fire subscriber or kinect2
+    bool internal;
+    config->get("internal", internal);
+    if(internal)
+    {
+        kinect2.initDevice();
+        kinect2.start();
+        return;
+    }
+#endif
+    config->get("topic", topic);
+    //fire the subscriber
+    sub_cloud = nh.subscribe(nh.resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
 }
 
 SensorConfig::Ptr
@@ -92,18 +104,16 @@ void SensorProcessor::update()
     }
 #endif
     if (was_disabled){
-        config->get("topic", actual_topic);
+        config->get("topic", topic);
         //fire the subscriber
-        sub_cloud = nh.subscribe(actual_topic, 5, &SensorProcessor::cb_cloud, this);
+        sub_cloud = nh.subscribe(nh.resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
         was_disabled = false;
         return;
     }
-    std::string topic;
     config->get("topic", topic);
-    if (topic.compare(actual_topic) != 0){
-        //we need to change subscriber
-        sub_cloud = nh.subscribe(topic, 5, &SensorProcessor::cb_cloud, this);
-        actual_topic = topic;
+    if (topic.compare(sub_cloud.getTopic()) != 0){
+        //we need to change subscriber, topic changed
+        sub_cloud = nh.subscribe(nh.resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
         return;
     }
 }
@@ -136,7 +146,7 @@ void SensorProcessor::spinOnce()
 
 void SensorProcessor::cb_cloud(const sensor_msgs::PointCloud2::ConstPtr &msg)
 {
-    PTC::Ptr scene;
+    PTC::Ptr scene = boost::make_shared<PTC>();
     pcl::fromROSMsg (*msg, *scene);
     // Save untouched scene into storage bye bye
     storage->write_scene(scene);

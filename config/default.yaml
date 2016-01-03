@@ -1,15 +1,24 @@
-cropping: true
-downsampling: false
-downsampling_leaf_size: 0.01
-estimator: {cluster_tol: 0.05, iterations: 5, neighbors: 20, object_calibration: false}
-keep_organized: false
-limit_xmax: 0.5
-limit_xmin: -0.5
-limit_ymax: 0.5
-limit_ymin: -0.5
-limit_zmax: 1.5
-limit_zmin: 0.3
-plane_tolerance: 0.005
-publish_limits: true
-segmenting: false
-sensor_processor: {internal: false, name: kinect2_optical_frame, topic: /camera/depth_registered/points}
+pacman_vision: {
+    cropping: true,
+    downsampling: false,
+    downsampling_leaf_size: 0.01,
+    estimator: {
+        cluster_tol: 0.05,
+        iterations: 5,
+        neighbors: 20,
+        object_calibration: false},
+    keep_organized: false,
+    limit_xmax: 0.5,
+    limit_xmin: -0.5,
+    limit_ymax: 0.5,
+    limit_ymin: -0.5,
+    limit_zmax: 1.5,
+    limit_zmin: 0.3,
+    plane_tolerance: 0.005,
+    publish_limits: true,
+    segmenting: false,
+    sensor: {
+        internal: false,
+        name: "kinect2_optical_frame",
+        topic: "/camera/depth_registered/points"}
+}
