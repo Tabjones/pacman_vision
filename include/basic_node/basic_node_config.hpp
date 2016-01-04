@@ -3,7 +3,6 @@
 
 #include <common/modules_config.hpp>
 #include <array>
-#include <common/box.h>
 
 namespace pacv
 {
@@ -29,34 +28,6 @@ class BasicConfig: public Config<BasicConfig>
         map_double["plane_tolerance"] = 0.01;
         map_box["filter_limits"] = filter_limits;
     }
-    bool set(std::string key, Box value)
-    {
-        LOCK lock(mtx_config);
-        size_t size =map_box.size();
-        map_box[key] = value;
-        if (size !=map_box.size()){
-            //key did not exist
-            map_box.erase(key);
-            return false;
-        }
-        return true;
-    }
-    bool get(std::string key, Box& value)
-    {
-        LOCK lock(mtx_config);
-        try
-        {
-            value = map_box.at(key);
-        }
-        catch (std::out_of_range)
-        {
-            return false;
-        }
-        return true;
-    }
-    protected:
-    //parameters map of boxes
-    std::unordered_map<std::string, Box> map_box;
 };
 }
 #endif

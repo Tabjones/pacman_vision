@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include <common/common_std.h>
+#include <common/box.h>
 
 #include <XmlRpcValue.h>
 
@@ -62,6 +63,18 @@ class Config
         }
         return true;
     }
+    bool set(std::string key, Box value)
+    {
+        LOCK lock(mtx_config);
+        size_t size = derived().map_box.size();
+        derived().map_box[key] = value;
+        if (size != derived().map_box.size()){
+            //key did not exist
+            derived().map_box.erase(key);
+            return false;
+        }
+        return true;
+    }
     bool get(std::string key, bool& value)
     {
         LOCK lock(mtx_config);
@@ -114,6 +127,19 @@ class Config
         }
         return true;
     }
+    bool get(std::string key, Box& value)
+    {
+        LOCK lock(mtx_config);
+        try
+        {
+            value = derived().map_box.at(key);
+        }
+        catch (std::out_of_range)
+        {
+            return false;
+        }
+        return true;
+    }
     bool set(std::string key, XmlRpc::XmlRpcValue val)
     {
         try
@@ -151,6 +177,8 @@ class Config
     std::unordered_map<std::string, std::string> map_string;
     //parameters map of int
     std::unordered_map<std::string, int> map_int;
+    //parameters map of boxes
+    std::unordered_map<std::string, Box> map_box;
     private:
     //return derived ref
     Derived& derived() { return *static_cast<Derived*>(this); }

@@ -18,6 +18,8 @@ class Listener;
 class InHandModeler;
 }
 
+class BasicNodeGui;
+
 class PacmanVision: public QObject
 {
     Q_OBJECT
@@ -41,6 +43,7 @@ private:
     std::shared_ptr<pacv::BasicNode> basic_node;
     std::shared_ptr<pacv::Storage> storage;
     std::shared_ptr<pacv::SensorProcessor> sensor;
+    std::shared_ptr<BasicNodeGui> basic_gui;
     // std::shared_ptr<Estimator> estimator;
     //todo other modules
 };

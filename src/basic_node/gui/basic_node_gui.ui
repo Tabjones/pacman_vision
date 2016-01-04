@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>BasicNodeGui</class>
+ <widget class="QMainWindow" name="BasicNodeGui">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>532</width>
-    <height>765</height>
+    <width>577</width>
+    <height>810</height>
    </rect>
   </property>
   <property name="font">
@@ -37,7 +37,7 @@
        <string>    Master Reset</string>
       </property>
       <property name="icon">
-       <iconset resource="../resources/resources.qrc">
+       <iconset resource="../../../resources/resources.qrc">
         <normaloff>:/icons/reset.png</normaloff>:/icons/reset.png</iconset>
       </property>
       <property name="iconSize">
@@ -45,6 +45,38 @@
         <width>32</width>
         <height>32</height>
        </size>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QPushButton" name="MasterDisable">
+      <property name="font">
+       <font>
+        <family>Oxygen-Sans</family>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>Enable / Disable all functionality.</string>
+      </property>
+      <property name="text">
+       <string>    Master Disable</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../../resources/resources.qrc">
+        <normaloff>:/icons/pause.png</normaloff>
+        <normalon>:/icons/play.png</normalon>:/icons/pause.png</iconset>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>32</width>
+        <height>32</height>
+       </size>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
       </property>
      </widget>
     </item>
@@ -112,40 +144,8 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="0">
-     <widget class="QPushButton" name="MasterDisable">
-      <property name="font">
-       <font>
-        <family>Oxygen-Sans</family>
-        <pointsize>12</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="toolTip">
-       <string>Enable / Disable all functionality.</string>
-      </property>
-      <property name="text">
-       <string>    Master Disable</string>
-      </property>
-      <property name="icon">
-       <iconset resource="../resources/resources.qrc">
-        <normaloff>:/icons/pause.png</normaloff>
-        <normalon>:/icons/play.png</normalon>:/icons/pause.png</iconset>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>32</width>
-        <height>32</height>
-       </size>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
     <item row="0" column="0" colspan="2">
-     <widget class="QTabWidget" name="Tabs">
+     <widget class="QToolBox" name="Tabs">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
         <horstretch>0</horstretch>
@@ -154,19 +154,24 @@
       </property>
       <property name="minimumSize">
        <size>
-        <width>508</width>
-        <height>495</height>
+        <width>560</width>
+        <height>520</height>
        </size>
       </property>
-      <property name="tabPosition">
-       <enum>QTabWidget::North</enum>
-      </property>
-      <property name="currentIndex">
-       <number>2</number>
+      <property name="tabSpacing">
+       <number>3</number>
       </property>
       <widget class="QWidget" name="BaseTab">
-       <attribute name="title">
-        <string>Basic Node</string>
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>560</width>
+         <height>448</height>
+        </rect>
+       </property>
+       <attribute name="label">
+        <string>Basic Node Filters</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_3">
         <item row="0" column="0">
@@ -190,7 +195,7 @@
            <string>    Cropping</string>
           </property>
           <property name="icon">
-           <iconset resource="../resources/resources.qrc">
+           <iconset resource="../../../resources/resources.qrc">
             <normaloff>:/icons/off.png</normaloff>
             <normalon>:/icons/on.png</normalon>:/icons/off.png</iconset>
           </property>
@@ -895,7 +900,7 @@
               <string>    Publish Filter Limits</string>
              </property>
              <property name="icon">
-              <iconset resource="../resources/resources.qrc">
+              <iconset resource="../../../resources/resources.qrc">
                <normaloff>:/icons/off.png</normaloff>
                <normalon>:/icons/on.png</normalon>:/icons/off.png</iconset>
              </property>
@@ -934,7 +939,7 @@
            <string>    Downsampling</string>
           </property>
           <property name="icon">
-           <iconset resource="../resources/resources.qrc">
+           <iconset resource="../../../resources/resources.qrc">
             <normaloff>:/icons/off.png</normaloff>
             <normalon>:/icons/on.png</normalon>:/icons/off.png</iconset>
           </property>
@@ -970,7 +975,7 @@
            <string>    Plane Segmenting</string>
           </property>
           <property name="icon">
-           <iconset resource="../resources/resources.qrc">
+           <iconset resource="../../../resources/resources.qrc">
             <normaloff>:/icons/off.png</normaloff>
             <normalon>:/icons/on.png</normalon>:/icons/off.png</iconset>
           </property>
@@ -1006,7 +1011,7 @@
            <string>    Keep Organized</string>
           </property>
           <property name="icon">
-           <iconset resource="../resources/resources.qrc">
+           <iconset resource="../../../resources/resources.qrc">
             <normaloff>:/icons/off.png</normaloff>
             <normalon>:/icons/on.png</normalon>:/icons/off.png</iconset>
           </property>
@@ -1232,8 +1237,16 @@
        </layout>
       </widget>
       <widget class="QWidget" name="SensorTab">
-       <attribute name="title">
-        <string>Sensor</string>
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>560</width>
+         <height>451</height>
+        </rect>
+       </property>
+       <attribute name="label">
+        <string>Point Cloud Acquisition</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_5">
         <item row="0" column="0" colspan="2">
@@ -1415,7 +1428,7 @@
            <string notr="true"/>
           </property>
           <property name="icon">
-           <iconset resource="../resources/resources.qrc">
+           <iconset resource="../../../resources/resources.qrc">
             <normaloff>:/icons/refresh.png</normaloff>:/icons/refresh.png</iconset>
           </property>
           <property name="iconSize">
@@ -1475,7 +1488,7 @@
            <string notr="true"/>
           </property>
           <property name="icon">
-           <iconset resource="../resources/resources.qrc">
+           <iconset resource="../../../resources/resources.qrc">
             <normaloff>:/icons/refresh.png</normaloff>:/icons/refresh.png</iconset>
           </property>
           <property name="iconSize">
@@ -1491,77 +1504,6 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="EstimatorTab">
-       <attribute name="title">
-        <string>Estimator</string>
-       </attribute>
-       <layout class="QGridLayout" name="gridLayout_6">
-        <item row="0" column="0">
-         <widget class="QPushButton" name="SpawnEstim">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="font">
-           <font>
-            <family>Oxygen-Sans</family>
-            <pointsize>12</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="toolTip">
-           <string>Enable / Disable all functionality.</string>
-          </property>
-          <property name="text">
-           <string>    Enable</string>
-          </property>
-          <property name="icon">
-           <iconset resource="../resources/resources.qrc">
-            <normaloff>:/icons/play.png</normaloff>
-            <normalon>:/icons/stop.png</normalon>:/icons/play.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>32</width>
-            <height>32</height>
-           </size>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QFrame" name="Estimator">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
-          </property>
-          <property name="frameShadow">
-           <enum>QFrame::Raised</enum>
-          </property>
-          <widget class="QLabel" name="label">
-           <property name="geometry">
-            <rect>
-             <x>170</x>
-             <y>120</y>
-             <width>68</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TODO</string>
-           </property>
-          </widget>
-         </widget>
-        </item>
-       </layout>
-      </widget>
      </widget>
     </item>
    </layout>
@@ -1569,7 +1511,7 @@
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="../resources/resources.qrc"/>
+  <include location="../../../resources/resources.qrc"/>
  </resources>
  <connections/>
 </ui>

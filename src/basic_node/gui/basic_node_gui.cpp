@@ -1,117 +1,90 @@
-#include <mainwindow.h>
-#include <ui_mainwindow.h>
+#include <basic_node_gui.h>
+#include <ui_basic_node_gui.h>
+//For modular build macros
+#include <pacv_config.h>
 
-MainWindow::MainWindow(QWidget *parent) :
+BasicNodeGui::BasicNodeGui(const pacv::BasicConfig::Ptr conf,
+                           const pacv::SensorConfig::Ptr s_conf, QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    disabled(false), reset(false),
-    basic_conf(new BasicNodeConfig),
-    sensor_conf(new SensorProcessorConfig),
-    estimator_conf(new EstimatorConfig)
+    ui(new Ui::BasicNodeGui)
 {
+    config = conf;
+    s_config = s_conf;
     ui->setupUi(this);
-    estimator_conf->spawn = false;
+    init();
 }
-MainWindow::~MainWindow()
+BasicNodeGui::~BasicNodeGui()
 {
     delete ui;
 }
-BasicNodeConfig::Ptr
-MainWindow::getBaseConfig() const
+
+void BasicNodeGui::init()
 {
-    return basic_conf;
-}
-SensorProcessorConfig::Ptr
-MainWindow::getSensorConfig() const
-{
-    return sensor_conf;
-}
-EstimatorConfig::Ptr
-MainWindow::getEstimatorConfig() const
-{
-    return estimator_conf;
-}
-bool
-MainWindow::isDisabled() const
-{
-    return disabled;
-}
-bool
-MainWindow::masterReset()
-{
-    if (reset){
-        reset = false;
-        return true;
+    bool value;
+    config->get("cropping", value);
+    if (value != ui->CroppingButt->isChecked())
+        ui->CroppingButt->click();
+    config->get("downsampling", value);
+    if (value != ui->DownsamplingButt->isChecked())
+        ui->DownsamplingButt->click();
+    config->get("segmenting", value);
+    if (value != ui->SegmentingButt->isChecked())
+        ui->SegmentingButt->click();
+    config->get("publish_limits", value);
+    if (value != ui->PublishLimitsButt->isChecked())
+        ui->PublishLimitsButt->click();
+    config->get("keep_organized", value);
+    if (value != ui->OrganizedButt->isChecked())
+        ui->OrganizedButt->click();
+    double ls,pt;
+    config->get("downsampling_leaf_size", ls);
+    config->get("plane_tolerance", pt);
+    ui->Leaf->setValue(ls);
+    ui->Plane->setValue(pt);
+    config->get("filter_limits", lim);
+    ui->Xmin->setValue(lim.x1);
+    ui->Xmax->setValue(lim.x2);
+    ui->Ymin->setValue(lim.y1);
+    ui->Ymax->setValue(lim.y2);
+    ui->Zmin->setValue(lim.z1);
+    ui->Zmax->setValue(lim.z2);
+    std::string name, t;
+    s_config->get("topic",t);
+    ui->Topic->setText(QString(t.c_str()));
+#ifndef PACV_KINECT2_SUPPORT
+    value = false;
+    ui->Internal->setDisabled(true);
+#endif
+#ifdef PACV_KINECT2_SUPPORT
+    s_config->get("name", name);
+    s_config->get("internal", value);
+    ui->Name->setText(QString(name.c_str()));
+    if (value)
+        ui->Internal->click();
+#endif
+    if (!value){
+        if (t.compare("/camera/depth_registered/points") == 0)
+            ui->Asus->click();
+        else if (t.compare("/kinect2/SD/points") == 0)
+            ui->Kinect2SD->click();
+        else if (t.compare("/kinect2/QHD/points") == 0)
+            ui->Kinect2QHD->click();
+        else if (t.compare("/kinect2/HD/points") == 0)
+            ui->Kinect2HD->click();
+        else
+            ui->External->click();
     }
-    return false;
-}
-void MainWindow::configure(const BasicNodeConfig::Ptr b_conf)
-{
-    if (b_conf && basic_conf){
-        *basic_conf = *b_conf;
-        if (basic_conf->cropping != ui->CroppingButt->isChecked())
-            ui->CroppingButt->click();
-        if (basic_conf->downsampling != ui->DownsamplingButt->isChecked())
-            ui->DownsamplingButt->click();
-        if (basic_conf->keep_organized != ui->OrganizedButt->isChecked())
-            ui->OrganizedButt->click();
-        if (basic_conf->publish_limits != ui->PublishLimitsButt->isChecked())
-            ui->PublishLimitsButt->click();
-        if (basic_conf->segmenting != ui->SegmentingButt->isChecked())
-            ui->SegmentingButt->click();
-        ui->Leaf->setValue(basic_conf->downsampling_leaf_size);
-        ui->Plane->setValue(basic_conf->plane_tolerance);
-        ui->Xmin->setValue(basic_conf->limits.x1);
-        ui->Xmax->setValue(basic_conf->limits.x2);
-        ui->Ymin->setValue(basic_conf->limits.y1);
-        ui->Ymax->setValue(basic_conf->limits.y2);
-        ui->Zmin->setValue(basic_conf->limits.z1);
-        ui->Zmax->setValue(basic_conf->limits.z2);
-    }
-}
-void MainWindow::configure(const SensorProcessorConfig::Ptr s_conf)
-{
-    if (s_conf && sensor_conf){
-        *sensor_conf = *s_conf;
-        if (sensor_conf->internal){
-            ui->Name->setText(QString(sensor_conf->name.c_str()));
-            ui->Internal->click();
-        }
-        else{
-            std::string t = sensor_conf->topic;
-            if (t.compare("/camera/depth_registered/points") == 0)
-                ui->Asus->click();
-            else if (t.compare("/kinect2/SD/points") == 0)
-                ui->Kinect2SD->click();
-            else if (t.compare("/kinect2/QHD/points") == 0)
-                ui->Kinect2QHD->click();
-            else if (t.compare("/kinect2/HD/points") == 0)
-                ui->Kinect2HD->click();
-            else{
-                ui->Topic->setText(QString(sensor_conf->topic.c_str()));
-                ui->External->click();
-            }
-        }
-    }
-}
-void MainWindow::configure(const EstimatorConfig::Ptr e_config)
-{
-    if (e_config && estimator_conf)
-        *estimator_conf = *e_config;
-    //TODO
 }
 
-void MainWindow::on_MasterDisable_clicked(bool checked)
+void BasicNodeGui::on_MasterDisable_clicked(bool checked)
 {
     if (checked == false){
         ui->MasterDisable->setText("    Master Disable");
         ui->MasterReset->setDisabled(false);
         ui->BaseTab->setDisabled(false);
         ui->SensorTab->setDisabled(false);
-        ui->EstimatorTab->setDisabled(false);
         ui->LoggingConsole->appendPlainText("* Functionality is globally resumed.");
-        // re-enable everything
-        disabled = false;
+        // re-enable everything TODO
     }
     else if (checked == true){
         ui->MasterDisable->setText("    Master Enable");
@@ -119,152 +92,159 @@ void MainWindow::on_MasterDisable_clicked(bool checked)
         ui->MasterReset->setDisabled(true);
         ui->BaseTab->setDisabled(true);
         ui->SensorTab->setDisabled(true);
-        ui->EstimatorTab->setDisabled(true);
-        // disable everything
-        disabled = true;
+        // disable everything TODO
     }
 }
 
-void MainWindow::on_MasterReset_pressed()
+void BasicNodeGui::on_MasterReset_pressed()
 {
    ui->LoggingConsole->appendPlainText("* Issued a MASTER RESET!");
-   //Reset Everything
-   reset = true; //application will handle this
+   //Reset Everything TODO
 }
 
-void MainWindow::on_CroppingButt_clicked(bool checked)
+void BasicNodeGui::on_CroppingButt_clicked(bool checked)
 {
     if(checked){
         ui->LoggingConsole->appendPlainText("* Enabling Cropping Filter");
         ui->CroppingG->setDisabled(false);
         //cropping=true
-        basic_conf->cropping = true;
+        config->set("cropping", true);
     }
     if(!checked){
         ui->LoggingConsole->appendPlainText("* Disabling Cropping Filter");
         ui->CroppingG->setDisabled(true);
         //cropping=false
-        basic_conf->cropping = false;
+        config->set("cropping", false);
     }
 }
 
-void MainWindow::on_Xmin_valueChanged(double arg1)
+void BasicNodeGui::on_Xmin_valueChanged(double arg1)
 {
-   //limx1 = arg1
-   basic_conf->limits.x1 = arg1;
+    //limx1 = arg1
+    lim.x1 = arg1;
+    config->set("filter_limits", lim);
 }
 
-void MainWindow::on_Xmax_valueChanged(double arg1)
+void BasicNodeGui::on_Xmax_valueChanged(double arg1)
 {
    //limx2 = arg1
-   basic_conf->limits.x2 = arg1;
+    lim.x2 = arg1;
+    config->set("filter_limits", lim);
 }
 
-void MainWindow::on_Ymin_valueChanged(double arg1)
+void BasicNodeGui::on_Ymin_valueChanged(double arg1)
 {
    //limy1 = arg1
-   basic_conf->limits.y1 = arg1;
+    lim.y1 = arg1;
+    config->set("filter_limits", lim);
 }
 
-void MainWindow::on_Ymax_valueChanged(double arg1)
+void BasicNodeGui::on_Ymax_valueChanged(double arg1)
 {
    //limy2 = arg1
-   basic_conf->limits.y2 = arg1;
+    lim.y2 = arg1;
+    config->set("filter_limits", lim);
 }
 
-void MainWindow::on_Zmin_valueChanged(double arg1)
+void BasicNodeGui::on_Zmin_valueChanged(double arg1)
 {
    //limz1 = arg1
-   basic_conf->limits.z1 = arg1;
+    lim.z1 = arg1;
+    config->set("filter_limits", lim);
 }
 
-void MainWindow::on_Zmax_valueChanged(double arg1)
+void BasicNodeGui::on_Zmax_valueChanged(double arg1)
 {
    //limz2 = arg1
-   basic_conf->limits.z2 = arg1;
+    lim.z2 = arg1;
+    config->set("filter_limits", lim);
 }
 
-void MainWindow::on_PublishLimitsButt_clicked(bool checked)
+void BasicNodeGui::on_PublishLimitsButt_clicked(bool checked)
 {
    if(checked){
        //publishlimits = true
-       basic_conf->publish_limits = true;
+       config->set("publish_limits", true);
    }
    if(!checked){
        //publishlimits = false
-       basic_conf->publish_limits = false;
+       config->set("publish_limits", false);
    }
 }
 
-void MainWindow::on_DownsamplingButt_clicked(bool checked)
+void BasicNodeGui::on_DownsamplingButt_clicked(bool checked)
 {
     if(checked){
         ui->LoggingConsole->appendPlainText("* Enabling Downsampling");
         ui->LeafF->setDisabled(false);
         //downsampling=true
-        basic_conf->downsampling = true;
+       config->set("downsampling", true);
     }
     if(!checked){
         ui->LoggingConsole->appendPlainText("* Disabling Downsampling");
         ui->LeafF->setDisabled(true);
         //downsampling=false
-        basic_conf->downsampling = false;
+       config->set("downsampling", false);
     }
 }
 
-void MainWindow::on_Leaf_valueChanged(double arg1)
+void BasicNodeGui::on_Leaf_valueChanged(double arg1)
 {
    //leaf_size = arg1
-   basic_conf->downsampling_leaf_size = arg1;
+   config->set("downsampling_leaf_size", arg1);
 }
 
-void MainWindow::on_SegmentingButt_clicked(bool checked)
+void BasicNodeGui::on_SegmentingButt_clicked(bool checked)
 {
     if(checked){
         ui->LoggingConsole->appendPlainText("* Enabling Plane Segmentation");
         ui->PlaneF->setDisabled(false);
         //segmenting=true
-        basic_conf->segmenting = true;
+        config->set("segmenting", true);
     }
     if(!checked){
         ui->LoggingConsole->appendPlainText("* Disabling Plane Segmentation");
         ui->PlaneF->setDisabled(true);
         //segmenting=false
-        basic_conf->segmenting = false;
+        config->set("segmenting", false);
     }
 }
 
-void MainWindow::on_Plane_valueChanged(double arg1)
+void BasicNodeGui::on_Plane_valueChanged(double arg1)
 {
     //tolerance=arg1
-    basic_conf->plane_tolerance = arg1;
+    config->set("plane_tolerance", arg1);
 }
 
-void MainWindow::on_OrganizedButt_clicked(bool checked)
+void BasicNodeGui::on_OrganizedButt_clicked(bool checked)
 {
     if(checked){
         ui->LoggingConsole->appendPlainText("* Enabling Keep PointCloud organized, if possible. Note that downsampling and plane segmentation, break organized cloud structure.");
         //organized=true
-        basic_conf->keep_organized = true;
+        config->set("keep_organized", true);
     }
     if(!checked){
         ui->LoggingConsole->appendPlainText("* Disabling Keep PointCloud organized.");
         //organized=false
-        basic_conf->keep_organized = false;
+        config->set("keep_organized", false);
     }
 }
 
-void MainWindow::on_Internal_toggled(bool checked)
+void BasicNodeGui::on_Internal_toggled(bool checked)
 {
     if(checked){
         ui->LoggingConsole->appendPlainText("* Switching to internal kinect2 processor as main source of point clouds. Using the reference frame specified.");
         std::string name = ui->Name->text().toStdString();
+        std::string c_name;
+        s_config->get("name", c_name);
+        if (c_name.compare(name) !=0){
+            ui->LoggingConsole->appendPlainText("* Updating displayed kinect2 name...");
+            ui->Name->setText(c_name.c_str());
+        }
         ui->NameG->setDisabled(false);
         ui->RefreshN->setDisabled(false);
         //internal=true
-        //name = name
-        sensor_conf->internal = true;
-        sensor_conf->name = name;
+        s_config->set("internal", true);
     }
     if(!checked){
         ui->NameG->setDisabled(true);
@@ -272,66 +252,71 @@ void MainWindow::on_Internal_toggled(bool checked)
     }
 }
 
-void MainWindow::on_Asus_toggled(bool checked)
+void BasicNodeGui::on_Asus_toggled(bool checked)
 {
     if(checked){
         ui->LoggingConsole->appendPlainText("* Switching to external Asus Xtion subscriber as main source of point clouds. (/camera/depth_registered/points)");
         ui->Topic->setText("/camera/depth_registered/points");
         //internal=false
         //topic =
-        sensor_conf->internal = false;
-        sensor_conf->topic = "/camera/depth_registered/points";
+        s_config->set("internal", false);
+        s_config->set("topic", "/camera/depth_registered/points");
     }
 }
 
-void MainWindow::on_Kinect2SD_toggled(bool checked)
+void BasicNodeGui::on_Kinect2SD_toggled(bool checked)
 {
     if(checked){
         ui->LoggingConsole->appendPlainText("* Switching to external Kinect2 Bridge subscriber as main source of point clouds. Using SD topic (512x424) (/kinect2/SD/points)");
         ui->Topic->setText("/kinect2/SD/points");
         //internal=false
         //topic =
-        sensor_conf->internal = false;
-        sensor_conf->topic = "/kinect2/SD/points";
+        s_config->set("internal", false);
+        s_config->set("topic", "/kinect2/SD/points");
     }
 }
 
-void MainWindow::on_Kinect2QHD_toggled(bool checked)
+void BasicNodeGui::on_Kinect2QHD_toggled(bool checked)
 {
     if(checked){
         ui->LoggingConsole->appendPlainText("* Switching to external Kinect2 Bridge subscriber as main source of point clouds. Using QHD topic (960x540) (/kinect2/QHD/points)");
         ui->Topic->setText("/kinect2/QHD/points");
         //internal=false
         //topic =
-        sensor_conf->internal = false;
-        sensor_conf->topic = "/kinect2/QHD/points";
+        s_config->set("internal", false);
+        s_config->set("topic", "/kinect2/QHD/points");
     }
 }
 
-void MainWindow::on_Kinect2HD_toggled(bool checked)
+void BasicNodeGui::on_Kinect2HD_toggled(bool checked)
 {
     if(checked){
         ui->LoggingConsole->appendPlainText("* Switching to external Kinect2 Bridge subscriber as main source of point clouds. Using HD topic (1920x1080) (/kinect2/HD/points)");
         ui->Topic->setText("/kinect2/HD/points");
         //internal=false
         //topic =
-        sensor_conf->internal = false;
-        sensor_conf->topic = "/kinect2/HD/points";
+        s_config->set("internal", false);
+        s_config->set("topic", "/kinect2/HD/points");
     }
 }
 
-void MainWindow::on_External_toggled(bool checked)
+void BasicNodeGui::on_External_toggled(bool checked)
 {
     if(checked){
         QString msg = ui->Topic->text();
         std::string topic = msg.toStdString();
+        std::string c_topic;
+        s_config->get("topic", c_topic);
+        if (c_topic.compare(topic) !=0){
+            ui->LoggingConsole->appendPlainText("* Updating displayed topic...");
+            ui->Topic->setText(c_topic.c_str());
+            msg = ui->Topic->text();
+        }
         ui->LoggingConsole->appendPlainText(msg.prepend("* Switching to a custom external subscriber, specified by topic name: "));
         ui->TopicG->setDisabled(false);
         ui->RefreshT->setDisabled(false);
         //internal=false
-        //topic =
-        sensor_conf->internal = false;
-        sensor_conf->topic = topic;
+        s_config->set("internal", false);
     }
     if(!checked){
         ui->TopicG->setDisabled(true);
@@ -339,38 +324,20 @@ void MainWindow::on_External_toggled(bool checked)
     }
 }
 
-void MainWindow::on_RefreshN_clicked()
+void BasicNodeGui::on_RefreshN_clicked()
 {
     QString msg = ui->Name->text();
     std::string name = msg.toStdString();
     ui->LoggingConsole->appendPlainText(msg.prepend("* Internal Kinect2 reference frame updated: "));
     //name =
-    sensor_conf->name = name;
+    s_config->set("name", name);
 }
 
-void MainWindow::on_RefreshT_clicked()
+void BasicNodeGui::on_RefreshT_clicked()
 {
     QString msg = ui->Topic->text();
     std::string topic = msg.toStdString();
     ui->LoggingConsole->appendPlainText(msg.prepend("* External subscriber topic updated: "));
     //topic =
-    sensor_conf->topic = topic;
-}
-
-void MainWindow::on_SpawnEstim_clicked(bool checked)
-{
-    if (checked == false){
-        ui->SpawnEstim->setText("    Enable Estimator Module");
-        ui->Estimator->setDisabled(true);
-        ui->LoggingConsole->appendPlainText("* Killing Estimator Module.");
-        //kill estimator
-        estimator_conf->spawn = false;
-    }
-    else if (checked == true){
-        ui->SpawnEstim->setText("    Disable Estimator Module");
-        ui->LoggingConsole->appendPlainText("* Spawning Estimator Module.");
-        ui->Estimator->setDisabled(false);
-        //spawn estimator
-        estimator_conf->spawn = true;
-    }
+    s_config->set("topic", topic);
 }

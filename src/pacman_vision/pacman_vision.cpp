@@ -6,6 +6,8 @@
 #include <common/common_std.h>
 #include <common/common_pcl.h>
 #include <common/common_ros.h>
+#include <basic_node_gui.h>
+
 #include <ros/ros.h>
 
 PacmanVision::PacmanVision():
@@ -31,7 +33,7 @@ PacmanVision::init(int argc, char** argv)
     try
     {
         ros::init(argc, argv, "pacman_vision");
-        ROS_INFO("PaCMan Vision Initializing...");
+        ROS_INFO("[PaCMan Vision]\tInitializing...");
         storage = std::make_shared<pacv::Storage>();
         basic_node = std::make_shared<pacv::BasicNode>("pacman_vision", storage);
         basic_node->setRate(40.0); //40Hz
@@ -39,11 +41,15 @@ PacmanVision::init(int argc, char** argv)
         sensor = std::make_shared<pacv::SensorProcessor>(basic_node->getNodeHandle(), "sensor", storage);
         sensor->setRate(40.0); //40hz
         sensor->spawn();
-        //todo
+        basic_gui = std::make_shared<BasicNodeGui>(basic_node->getConfig(), sensor->getConfig());
+        //...
+
+        ROS_INFO("[PaCMan Vision]\tShowing Gui(s)...");
+        basic_gui->show();
     }
     catch(...)
     {
-        ROS_ERROR("Error while initializing...");
+        ROS_ERROR("[PaCMan Vision]\tError while initializing...");
         return false;
     }
     return true;
