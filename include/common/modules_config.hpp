@@ -4,7 +4,6 @@
 #include <unordered_map>
 
 #include <common/common_std.h>
-#include <common/box.h>
 
 #include <XmlRpcValue.h>
 
@@ -35,18 +34,6 @@ class Config
         if (size != derived().map_double.size()){
             //key did not exist
             derived().map_double.erase(key);
-            return false;
-        }
-        return true;
-    }
-    bool set(std::string key, Box value)
-    {
-        LOCK lock(mtx_config);
-        size_t size =derived().map_box.size();
-        derived().map_box[key] = value;
-        if (size !=derived().map_box.size()){
-            //key did not exist
-            derived().map_box.erase(key);
             return false;
         }
         return true;
@@ -94,19 +81,6 @@ class Config
         try
         {
             value =derived().map_double.at(key);
-        }
-        catch (std::out_of_range)
-        {
-            return false;
-        }
-        return true;
-    }
-    bool get(std::string key, Box& value)
-    {
-        LOCK lock(mtx_config);
-        try
-        {
-            value =derived().map_box.at(key);
         }
         catch (std::out_of_range)
         {
@@ -171,8 +145,6 @@ class Config
     std::mutex mtx_config;
     //parameters map of bools
     std::unordered_map<std::string, bool> map_bool;
-    //parameters map of boxes
-    std::unordered_map<std::string, Box> map_box;
     //parameters map of doubles
     std::unordered_map<std::string, double> map_double;
     //parameters map of strings
