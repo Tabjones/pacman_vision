@@ -139,6 +139,7 @@ void SensorProcessor::spinOnce()
         q.setRPY(0,0,0);
         tf::Transform T(q,t);
         kinect2_ref_brcaster.sendTransform(tf::StampedTransform(T, ros::Time::now(),"kinect2_anchor", ref_name.c_str()));
+        storage->write_sensor_ref_frame(ref_name);
     }
 #endif
     //nothing to do if we dont use internal kinect2, callback takes care of it all
@@ -150,5 +151,6 @@ void SensorProcessor::cb_cloud(const sensor_msgs::PointCloud2::ConstPtr &msg)
     pcl::fromROSMsg (*msg, *scene);
     // Save untouched scene into storage bye bye
     storage->write_scene(scene);
+    storage->write_sensor_ref_frame(scene->header.frame_id);
 }
 }

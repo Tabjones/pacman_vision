@@ -77,6 +77,10 @@ class Module
         {
             return derived().name_space;
         }
+        inline const std::string getFatherNamespace() const
+        {
+            return derived().father_name_space;
+        }
         ///wait for rate
         inline void sleep()
         {

@@ -118,6 +118,7 @@ set(SOURCES
 #set some variables to be filled by subdirectories with external libs and incls
 set(MORE_INCLUDE_DIRS )
 set(MORE_LIBRARIES )
+set(MORE_LINK_DIRS )
 ################################################################################
 ########### Start doing things. Add the always built common lib ################
 ################################################################################
@@ -140,6 +141,8 @@ LIST(APPEND LIBRARIES
 
 IF(PACV_BUILD_RECOGNITION)
     add_subdirectory(src/recognition)
+    LIST(APPEND LIBRARIES
+        ${PACV_RECOGNITION_LIB})
 ENDIF(PACV_BUILD_RECOGNITION)
 
 IF(PACV_BUILD_LISTENER)
@@ -152,51 +155,6 @@ ENDIF(PACV_BUILD_MODELER)
 
 include_directories(${MORE_INCLUDE_DIRS})
 
-# IF(PACMAN_VISION_BUILD_RECOGNITION) tobe moved into recognition cmakelists
-#     ########################
-#     ## Find pel in system ##
-#     find_package(pel 0.6)
-#     IF(pel_FOUND)
-#         set(PACMAN_VISION_WITH_PEL_SUPPORT 1)
-#         include_directories(${pel_INCLUDE_DIRS})
-#         LIST(APPEND SOURCES
-#             # src/estimator.cpp TODO remove hpp from main
-#             # src/tracker.cpp
-#         )
-#         LIST(APPEND LIBRARIES
-#             ${pel_LIBRARIES}
-#         )
-#         LIST(APPEND LINK_DIR
-#             ${pel_LIBRARY_DIRS}
-#         )
-#         LIST(APPEND EXT_DEPS
-#             pel)
-#     ELSE(pel_FOUND)
-#         unset(PACMAN_VISION_WITH_PEL_SUPPORT)
-#         unset(PACMAN_VISION_BUILD_RECOGNITION)
-#         message(WARNING "=============================================================")
-#         message(WARNING "== Pel NOT found, disabling estimator and tracker modules. ==")
-#         message(WARNING "=============================================================")
-#     ENDIF(pel_FOUND)
-# ENDIF(PACMAN_VISION_BUILD_RECOGNITION)
-# IF(PACV_RECOGNITION_SUPPORT)
-#     ##POST BUILD COMMAND to fetch PEL database
-#     set(wget_arg "-OpelDB.tar.gz")
-#     set(wget_url "https://www.dropbox.com/s/79vy38432vv80gu/PELdatabase.tar.gz?dl=0")
-#     set(tar_arg "-zxvf")
-#     set(tar_tgt "pelDB.tar.gz")
-#     set(rm_comm "pelDB.tar.gz")
-#     set(rm_arg "-rf")
-#     set(rm_db "database")
-#     add_custom_command(TARGET pacman_vision  <-- make it to estimator lib
-#         POST_BUILD
-#         COMMAND rm ${rm_db} ${rm_arg}
-#         COMMAND wget ${wget_arg} ${wget_url}
-#         COMMAND tar ${tar_arg} ${tar_tgt}
-#         COMMAND rm ${rm_comm}
-#         WORKING_DIRECTORY ${pacman_vision_SOURCE_DIR}
-#         )
-# ENDIF(PACV_RECOGNITION_SUPPORT)
 
 ################################################################################
 ####### Create a Config File with the results of our modular build #############
