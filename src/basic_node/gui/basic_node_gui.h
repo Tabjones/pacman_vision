@@ -18,6 +18,9 @@ public:
                           const pacv::SensorConfig::Ptr s_conf, QWidget *parent = 0) ;
     ~BasicNodeGui();
 
+signals:
+    void boxChanged();
+    void sensorChanged();
 private slots:
     void on_MasterDisable_clicked(bool checked);
     void on_MasterReset_pressed();

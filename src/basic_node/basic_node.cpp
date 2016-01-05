@@ -63,6 +63,7 @@ BasicNode::init()
         else
             ROS_WARN("[%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
+    update_markers(); //one time call
 }
 
 BasicConfig::Ptr
@@ -143,10 +144,10 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
 }
 
 void
-BasicNode::downsamp_scene(const PTC::ConstPtr source, PTC::Ptr dest){
+BasicNode::downsamp_scene(const PTC::ConstPtr source, PTC::Ptr &dest){
     //cannot keep organized cloud after voxelgrid
     if (!dest)
-        dest.reset(new PTC);
+        dest=boost::make_shared<PTC>();
     pcl::VoxelGrid<PT> vg;
     double leaf;
     config->get("downsampling_leaf_size", leaf);
@@ -156,8 +157,10 @@ BasicNode::downsamp_scene(const PTC::ConstPtr source, PTC::Ptr dest){
     vg.filter (*dest);
 }
 void
-BasicNode::segment_scene(const PTC::ConstPtr source, PTC::Ptr dest)
+BasicNode::segment_scene(const PTC::ConstPtr source, PTC::Ptr &dest)
 {
+    if (!dest)
+        dest=boost::make_shared<PTC>();
     pcl::SACSegmentation<PT> seg;
     pcl::ExtractIndices<PT> extract;
     //coefficients
@@ -207,7 +210,7 @@ BasicNode::process_scene()
     config->get("cropping", crop);
     config->get("downsampling", downsamp);
     config->get("segmenting", segment);
-    PTC::Ptr tmp;
+    PTC::Ptr tmp = boost::make_shared<PTC>();
     PTC::Ptr dest;
     PTC::Ptr source;
     storage->read_scene(source);
@@ -306,6 +309,10 @@ BasicNode::process_scene()
             storage->write_scene_processed(this->scene_processed);
         }
     }
+    else{
+        pcl::copyPointCloud(*source, *scene_processed);
+        storage->write_scene_processed(this->scene_processed);
+    }
 }
 void
 BasicNode::publish_scene_processed() const
@@ -319,20 +326,23 @@ BasicNode::publish_scene_processed() const
 void
 BasicNode::update_markers()
 {
-    //TODO trigger this when a config for limits changes
+    //This is triggered when a config for limits changes
     //only update crop limits, plane always gets recomputed if active
-    visualization_msgs::Marker mark;
+    mark_lim=std::make_shared<visualization_msgs::Marker>();
     Box lim;
     config->get("filter_limits", lim);
-    create_box_marker(lim, mark, false);
+    create_box_marker(lim, *mark_lim, false);
     //make it red
-    mark.color.g = 0.0f;
-    mark.color.b = 0.0f;
+    mark_lim->color.g = 0.0f;
+    mark_lim->color.b = 0.0f;
     //name it
-    mark.ns="Cropping Limits";
-    mark.id=1;
-    mark.header.frame_id = scene_processed->header.frame_id;
-    mark_lim = mark;
+    mark_lim->ns="Cropping Limits";
+    mark_lim->id=0;
+    if (scene_processed->header.frame_id.empty())
+        //no scene processed yet... guess the frame id.
+        mark_lim->header.frame_id = "/camera_rgb_optical_frame";
+    else
+        mark_lim->header.frame_id = scene_processed->header.frame_id;
 }
 void
 BasicNode::publish_markers()
@@ -340,9 +350,9 @@ BasicNode::publish_markers()
     bool crop, plim;
     config->get("cropping", crop);
     config->get("publish_limits", plim);
-    if (crop && plim && pub_markers.getNumSubscribers()>0){
-        mark_lim.header.stamp = ros::Time();
-        pub_markers.publish(mark_lim);
+    if (crop && plim && pub_markers.getNumSubscribers()>0 && mark_lim){
+        mark_lim->header.stamp = ros::Time();
+        pub_markers.publish(*mark_lim);
     }
     /*
      * if (config->publish_plane && pub_markers.getNumSubscribers()>0){

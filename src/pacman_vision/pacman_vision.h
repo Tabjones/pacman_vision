@@ -36,6 +36,10 @@ class PacmanVision: public QObject
 private slots:
     /** Check if ros::ok() is false, if it is, just quit. */
     void checkROS();
+    ///when box changes
+    void onBoxChanged();
+    ///when sensor changes
+    void onSensorChanged();
 private:
     void startChecker();
 

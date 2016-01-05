@@ -17,6 +17,10 @@ PacmanVision::PacmanVision():
 PacmanVision::~PacmanVision()
 {
     delete check_timer;
+    sensor->kill();
+    basic_node->kill();
+    //...
+    ros::shutdown();
 }
 
 void
@@ -25,6 +29,18 @@ PacmanVision::startChecker()
     check_timer = new QTimer(this);
     connect (check_timer, SIGNAL( timeout() ), this, SLOT( checkROS() ));
     check_timer->start(200); //check every 200ms
+    connect (&(*basic_gui), SIGNAL( boxChanged()), this, SLOT( onBoxChanged() ));
+    connect (&(*basic_gui), SIGNAL( sensorChanged()), this, SLOT( onSensorChanged() ));
+}
+
+void PacmanVision::onBoxChanged()
+{
+    basic_node->update_markers();
+}
+
+void PacmanVision::onSensorChanged()
+{
+    sensor->update();
 }
 
 bool
@@ -44,6 +60,7 @@ PacmanVision::init(int argc, char** argv)
         basic_gui = std::make_shared<BasicNodeGui>(basic_node->getConfig(), sensor->getConfig());
         //...
 
+        startChecker();
         ROS_INFO("[PaCMan Vision]\tShowing Gui(s)...");
         basic_gui->show();
     }

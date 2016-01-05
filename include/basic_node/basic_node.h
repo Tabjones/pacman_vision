@@ -43,6 +43,8 @@ class BasicNode: public Module<BasicNode>
         BasicConfig::Ptr getConfig() const;
         //Takes care of Eigen Alignment on Fixed-Size Containers
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+        ///Updates marker to publish, when changed from gui
+        void update_markers();
     private:
         //Configuration
         BasicConfig::Ptr config;
@@ -51,7 +53,7 @@ class BasicNode: public Module<BasicNode>
         //publisher for markers
         ros::Publisher pub_markers;
         //marker to publish
-        visualization_msgs::Marker mark_lim; //,mark_plane;
+        std::shared_ptr<visualization_msgs::Marker> mark_lim; //,mark_plane;
         //server for get_scene_processed
         ros::ServiceServer srv_get_scene;
         PTC::Ptr scene_processed;
@@ -66,9 +68,8 @@ class BasicNode: public Module<BasicNode>
         //redefine spin and spinOnce
         void spin();
         void spinOnce();
-        void downsamp_scene(const PTC::ConstPtr source, PTC::Ptr dest);
-        void segment_scene(const PTC::ConstPtr source, PTC::Ptr dest);
-        void update_markers();
+        void downsamp_scene(const PTC::ConstPtr source, PTC::Ptr &dest);
+        void segment_scene(const PTC::ConstPtr source, PTC::Ptr &dest);
         void publish_markers();
         //Create a box marker
         /* TODO move into listener, handle realtime cropping with services OR conditional variable

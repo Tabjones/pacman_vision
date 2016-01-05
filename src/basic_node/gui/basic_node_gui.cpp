@@ -123,6 +123,7 @@ void BasicNodeGui::on_Xmin_valueChanged(double arg1)
     //limx1 = arg1
     lim.x1 = arg1;
     config->set("filter_limits", lim);
+    emit boxChanged();
 }
 
 void BasicNodeGui::on_Xmax_valueChanged(double arg1)
@@ -130,6 +131,7 @@ void BasicNodeGui::on_Xmax_valueChanged(double arg1)
    //limx2 = arg1
     lim.x2 = arg1;
     config->set("filter_limits", lim);
+    emit boxChanged();
 }
 
 void BasicNodeGui::on_Ymin_valueChanged(double arg1)
@@ -137,6 +139,7 @@ void BasicNodeGui::on_Ymin_valueChanged(double arg1)
    //limy1 = arg1
     lim.y1 = arg1;
     config->set("filter_limits", lim);
+    emit boxChanged();
 }
 
 void BasicNodeGui::on_Ymax_valueChanged(double arg1)
@@ -144,6 +147,7 @@ void BasicNodeGui::on_Ymax_valueChanged(double arg1)
    //limy2 = arg1
     lim.y2 = arg1;
     config->set("filter_limits", lim);
+    emit boxChanged();
 }
 
 void BasicNodeGui::on_Zmin_valueChanged(double arg1)
@@ -151,6 +155,7 @@ void BasicNodeGui::on_Zmin_valueChanged(double arg1)
    //limz1 = arg1
     lim.z1 = arg1;
     config->set("filter_limits", lim);
+    emit boxChanged();
 }
 
 void BasicNodeGui::on_Zmax_valueChanged(double arg1)
@@ -158,6 +163,7 @@ void BasicNodeGui::on_Zmax_valueChanged(double arg1)
    //limz2 = arg1
     lim.z2 = arg1;
     config->set("filter_limits", lim);
+    emit boxChanged();
 }
 
 void BasicNodeGui::on_PublishLimitsButt_clicked(bool checked)
@@ -245,6 +251,7 @@ void BasicNodeGui::on_Internal_toggled(bool checked)
         ui->RefreshN->setDisabled(false);
         //internal=true
         s_config->set("internal", true);
+        emit sensorChanged();
     }
     if(!checked){
         ui->NameG->setDisabled(true);
@@ -260,7 +267,9 @@ void BasicNodeGui::on_Asus_toggled(bool checked)
         //internal=false
         //topic =
         s_config->set("internal", false);
-        s_config->set("topic", "/camera/depth_registered/points");
+        std::string t ("/camera/depth_registered/points");
+        s_config->set("topic", t);
+        emit sensorChanged();
     }
 }
 
@@ -272,7 +281,9 @@ void BasicNodeGui::on_Kinect2SD_toggled(bool checked)
         //internal=false
         //topic =
         s_config->set("internal", false);
-        s_config->set("topic", "/kinect2/SD/points");
+        std::string t("/kinect2/SD/points");
+        s_config->set("topic", t);
+        emit sensorChanged();
     }
 }
 
@@ -284,7 +295,9 @@ void BasicNodeGui::on_Kinect2QHD_toggled(bool checked)
         //internal=false
         //topic =
         s_config->set("internal", false);
-        s_config->set("topic", "/kinect2/QHD/points");
+        std::string t( "/kinect2/QHD/points");
+        s_config->set("topic", t);
+        emit sensorChanged();
     }
 }
 
@@ -296,7 +309,9 @@ void BasicNodeGui::on_Kinect2HD_toggled(bool checked)
         //internal=false
         //topic =
         s_config->set("internal", false);
-        s_config->set("topic", "/kinect2/HD/points");
+        std::string t("/kinect2/HD/points");
+        s_config->set("topic", t);
+        emit sensorChanged();
     }
 }
 
@@ -317,6 +332,7 @@ void BasicNodeGui::on_External_toggled(bool checked)
         ui->RefreshT->setDisabled(false);
         //internal=false
         s_config->set("internal", false);
+        emit sensorChanged();
     }
     if(!checked){
         ui->TopicG->setDisabled(true);
@@ -331,6 +347,7 @@ void BasicNodeGui::on_RefreshN_clicked()
     ui->LoggingConsole->appendPlainText(msg.prepend("* Internal Kinect2 reference frame updated: "));
     //name =
     s_config->set("name", name);
+    emit sensorChanged();
 }
 
 void BasicNodeGui::on_RefreshT_clicked()
@@ -340,4 +357,5 @@ void BasicNodeGui::on_RefreshT_clicked()
     ui->LoggingConsole->appendPlainText(msg.prepend("* External subscriber topic updated: "));
     //topic =
     s_config->set("topic", topic);
+    emit sensorChanged();
 }
