@@ -13,16 +13,19 @@ TEMPLATE = app
 QMAKE_CXXFLAGS += -std=c++11
 
 INCLUDEPATH += ../../include\
-               ../../src/basic_node/gui\
+               ../../src/recognition/gui\
                 /opt/ros/indigo/include\
                ../../../../devel/include #For this to work, pacman vision has to be built with catkin at least once.
 
-SOURCES += ../../src/basic_node/gui/dummy_qtcreator_main.cpp\
-           ../../src/basic_node/gui/basic_node_gui.cpp\
+SOURCES += ../../src/recognition/gui/dummy_qtcreator_main.cpp\
+           ../../src/recognition/gui/estimator_gui.cpp\
+           ../../src/recognition/gui/tracker_gui.cpp\
            ../../src/common/box.cpp
 
-HEADERS  += ../../src/basic_node/gui/basic_node_gui.h\
+HEADERS  += ../../src/recognition/gui/estimator_gui.h\
+            ../../src/recognition/gui/tracker_gui.h
 
-FORMS    += ../../src/basic_node/gui/basic_node_gui.ui
+FORMS    += ../../src/recognition/gui/estimator_gui.ui\
+            ../../src/recognition/gui/tracker_gui.ui
 
 RESOURCES += ../../resources/resources.qrc

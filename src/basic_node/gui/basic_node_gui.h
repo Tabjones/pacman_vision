@@ -17,6 +17,7 @@ public:
     explicit BasicNodeGui(const pacv::BasicConfig::Ptr conf,
                           const pacv::SensorConfig::Ptr s_conf, QWidget *parent = 0) ;
     ~BasicNodeGui();
+    void addTab(QWidget* tab, const QString title);
 
 signals:
     void boxChanged();

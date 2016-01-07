@@ -10,10 +10,12 @@ set(SRC
 find_package(pel 0.6)
 IF(pel_FOUND)
     set(PACV_RECOGNITION_SUPPORT 1 PARENT_SCOPE)
+    set(PACV_RECOGNITION_SUPPORT 1 )
     include_directories(${pel_INCLUDE_DIRS})
+    link_directories(${pel_LIBRARY_DIRS})
     LIST(APPEND PELLIB
-             ${pel_LIBRARIES}
-             ${MORE_LIBRARIES}
+        ${pel_LIBRARIES}
+        ${MORE_LIBRARIES}
         )
     LIST(APPEND PELINC
         ${MORE_INCLUDE_DIRS}
@@ -23,20 +25,21 @@ IF(pel_FOUND)
         ${MORE_LINK_DIRS}
         ${pel_LIBRARY_DIRS}
         )
+    set(MORE_LIBRARIES ${PELLIB} PARENT_SCOPE)
+    set(MORE_INCLUDE_DIRS ${PELINC} PARENT_SCOPE)
+    set(MORE_LINK_DIRS ${PELDIR} PARENT_SCOPE)
 ELSE(pel_FOUND)
-         set(PACV_RECOGNITION_SUPPORT 0)
-         message(WARNING "=============================================================")
-         message(WARNING "== Pel NOT found, disabling estimator and tracker modules. ==")
-         message(WARNING "=============================================================")
+    set(PACV_RECOGNITION_SUPPORT 0 PARENT_SCOPE)
+    set(PACV_RECOGNITION_SUPPORT 0 )
+    message(WARNING "=============================================================")
+    message(WARNING "== Pel NOT found, disabling estimator and tracker modules. ==")
+    message(WARNING "=============================================================")
 ENDIF(pel_FOUND)
 
+#set library name
+set(PACV_RECOGNITION_LIB pacv_librecognition PARENT_SCOPE)
+
 IF(PACV_RECOGNITION_SUPPORT)
-
-    include_directories(${PEL_INCLUDE_DIRS})
-    link_directories(${PEL_LIBRARY_DIRS})
-
-    #set library name
-    set(PACV_RECOGNITION_LIB pacv_librecognition PARENT_SCOPE)
 
     add_library(pacv_librecognition SHARED
         ${SRC})

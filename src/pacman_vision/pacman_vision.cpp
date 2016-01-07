@@ -7,6 +7,16 @@
 #include <common/common_pcl.h>
 #include <common/common_ros.h>
 #include <basic_node_gui.h>
+#include <QPushButton>
+
+//Add recognition support
+#ifdef PACV_RECOGNITION_SUPPORT
+#include <recognition/estimator.h>
+// #include <recognition/tracker.h>
+#include <estimator_gui.h>
+// #include <tracker_gui.h>
+#include <pacman_vision_comm/estimate.h>
+#endif
 
 #include <ros/ros.h>
 
@@ -31,6 +41,10 @@ PacmanVision::startChecker()
     check_timer->start(200); //check every 200ms
     connect (&(*basic_gui), SIGNAL( boxChanged()), this, SLOT( onBoxChanged() ));
     connect (&(*basic_gui), SIGNAL( sensorChanged()), this, SLOT( onSensorChanged() ));
+#ifdef PACV_RECOGNITION_SUPPORT
+    connect (estimator_gui->getRunButt(), SIGNAL( clicked()), this, SLOT( onSpawnKillEstimator() ));
+    connect (estimator_gui->getEstButt(), SIGNAL( clicked()), this, SLOT( onPoseEstimation() ));
+#endif
 }
 
 void PacmanVision::onBoxChanged()
@@ -41,6 +55,24 @@ void PacmanVision::onBoxChanged()
 void PacmanVision::onSensorChanged()
 {
     sensor->update();
+}
+
+void PacmanVision::onSpawnKillEstimator()
+{
+#ifdef PACV_RECOGNITION_SUPPORT
+    if (estimator->isRunning()){
+        estimator->kill();
+        estimator_gui->setRunning(false);
+        ROS_INFO("[PaCMan Vision]\tKilled Estimator Module.");
+        return;
+    }
+    else{
+        estimator->spawn();
+        estimator_gui->setRunning(true);
+        ROS_INFO("[PaCMan Vision]\tSpawned Estimator Module.");
+        return;
+    }
+#endif
 }
 
 bool
@@ -58,6 +90,13 @@ PacmanVision::init(int argc, char** argv)
         sensor->setRate(40.0); //40hz
         sensor->spawn();
         basic_gui = std::make_shared<BasicNodeGui>(basic_node->getConfig(), sensor->getConfig());
+#ifdef PACV_RECOGNITION_SUPPORT
+        ROS_INFO("[PaCMan Vision]\tAdding Estimator Module");
+        estimator = std::make_shared<pacv::Estimator>(basic_node->getNodeHandle(), "estimator", storage);
+        estimator->setRate(2.0); //2Hz is enough
+        estimator_gui = std::make_shared<EstimatorGui>(estimator->getConfig());
+        basic_gui->addTab(estimator_gui->getWidget(), "Estimator Module");
+#endif
         //...
 
         startChecker();
@@ -80,42 +119,16 @@ PacmanVision::checkROS()
         QApplication::closeAllWindows();
     }
 }
-//
-// void
-// Application::update()
-// {
-//     if (!node->isRunning())
-//         qApp->quit();
-//     if (gui->masterReset())
-//     {
-//         node->updateIfNeeded(BasicNode::ConfigPtr(), true);
-//         sensor->updateIfNeeded(SensorProcessor::ConfigPtr(), true);
-//         estimator->updateIfNeeded(Estimator::ConfigPtr(), true);
-//         gui->configure(node->getConfig());
-//         gui->configure(sensor->getConfig());
-//         gui->configure(estimator->getConfig());
-//         return;
-//     }
-//     if(gui->isDisabled()){
-//         if(!node->isDisabled())
-//             node->disable();
-//         if(!sensor->isDisabled())
-//             sensor->disable();
-//         if(!estimator->isDisabled())
-//             estimator->disable();
-//         return;
-//     }
-//     if(node->isDisabled())
-//         node->enable();
-//     if(sensor->isDisabled())
-//         sensor->enable();
-//     if(estimator->isDisabled())
-//         estimator->enable();
-//     node->updateIfNeeded(gui->getBaseConfig());
-//     sensor->updateIfNeeded(gui->getSensorConfig());
-//     estimator->updateIfNeeded(gui->getEstimatorConfig());
-//     if (estimator->isRunning() && !gui->getEstimatorConfig()->spawn)
-//         estimator->kill();
-//     else if (!estimator->isRunning() && gui->getEstimatorConfig()->spawn)
-//         estimator->spawn();
-// }
+
+void
+PacmanVision::onPoseEstimation()
+{
+#ifdef PACV_RECOGNITION_SUPPORT
+    pacman_vision_comm::estimate::Request req;
+    pacman_vision_comm::estimate::Response res;
+    std::string name(estimator->getNamespace());
+    name += "/estimate";
+    ros::service::call(name, req, res);
+    estimator_gui->getEstButt()->setDisabled(false);
+#endif
+}

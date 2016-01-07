@@ -7,6 +7,8 @@
 
 #include <memory>
 
+//forward declare used classes to ease MOC work and
+//to not pollute the header with ifdefs
 namespace pacv
 {
 class Storage;
@@ -17,13 +19,14 @@ class Tracker;
 class Listener;
 class InHandModeler;
 }
-
 class BasicNodeGui;
+class EstimatorGui;
+class TrackerGui;
 
 class PacmanVision: public QObject
 {
     Q_OBJECT
-    //this file must contain only declarations (cause of Q_OBJECT macro)
+    //this file should contain only declarations (cause of Q_OBJECT macro)
     public:
     explicit PacmanVision();
     ~PacmanVision();
@@ -40,6 +43,10 @@ private slots:
     void onBoxChanged();
     ///when sensor changes
     void onSensorChanged();
+    ///when spawnkill estimator is presed
+    void onSpawnKillEstimator();
+    ///when pose estimation is clicked
+    void onPoseEstimation();
 private:
     void startChecker();
 
@@ -47,8 +54,9 @@ private:
     std::shared_ptr<pacv::BasicNode> basic_node;
     std::shared_ptr<pacv::Storage> storage;
     std::shared_ptr<pacv::SensorProcessor> sensor;
+    std::shared_ptr<pacv::Estimator> estimator;
     std::shared_ptr<BasicNodeGui> basic_gui;
-    // std::shared_ptr<Estimator> estimator;
+    std::shared_ptr<EstimatorGui> estimator_gui;
     //todo other modules
 };
 #endif

@@ -1,6 +1,7 @@
 #include <recognition/estimator.h>
 #include <ros/package.h>
 #include <boost/algorithm/string.hpp>
+#include <pel/pe_progressive_bisection.h>
 
 namespace pacv
 {
@@ -11,11 +12,11 @@ Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const Storag
     scene=boost::make_shared<PXC>();
     config=std::make_shared<EstimatorConfig>();
     db_path = (ros::package::getPath("pacman_vision") + "/database" );
+    pe = std::make_shared<pel::interface::PEProgressiveBisection>();
     if (!boost::filesystem::exists(db_path) || !boost::filesystem::is_directory(db_path))
         ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
     srv_estimate = nh.advertiseService("estimate", &Estimator::cb_estimate, this);
-    std::string mark_topic("/"+getFatherNamespace()+"/markers");
-    ROS_WARN("%s  TODO REMOVE ME!!",mark_topic.c_str());
+    std::string mark_topic(getFatherNamespace()+"/markers");
     pub_markers = nh.advertise<visualization_msgs::Marker>(mark_topic, 1);
     //tmp set params to dump into default
     // nh.setParam("object_calibration", false);
@@ -41,14 +42,14 @@ Estimator::init()
         else
             ROS_WARN("[%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
-    pe.setParam("verbosity",1);
-    pe.setRMSEThreshold(0.003);
+    pe->setParam("verbosity",2);
+    pe->setRMSEThreshold(0.003);
     config->get("iterations", iter);
-    pe.setStepIterations(iter);
+    pe->setStepIterations(iter);
     config->get("neighbors", neigh);
-    pe.setParam("lists_size",neigh);
-    pe.setParam("downsamp",0);
-    pe.loadAndSetDatabase(this->db_path);
+    pe->setParam("lists_size",neigh);
+    pe->setParam("downsamp",0);
+    pe->loadAndSetDatabase(this->db_path);
 }
 
 EstimatorConfig::Ptr
@@ -56,67 +57,16 @@ Estimator::getConfig() const
 {
     return config;
 }
-// void
-// BasicNode::updateIfNeeded(const BasicNode::ConfigPtr conf, bool reset)
-// {
-//     if (reset){
-//         init();
-//         return;
-//     }
-//     if (conf){
-//         if (config->cropping != conf->cropping){
-//             LOCK guard(mtx_config);
-//             config->cropping = conf->cropping;
-//         }
-//         if (config->downsampling != conf->downsampling){
-//             LOCK guard(mtx_config);
-//             config->downsampling = conf->downsampling;
-//         }
-//         if (config->segmenting != conf->segmenting){
-//             LOCK guard(mtx_config);
-//             config->segmenting = conf->segmenting;
-//         }
-//         if (config->keep_organized != conf->keep_organized){
-//             LOCK guard(mtx_config);
-//             config->keep_organized = conf->keep_organized;
-//         }
-//         if (config->publish_limits != conf->publish_limits){
-//             LOCK guard(mtx_config);
-//             config->publish_limits = conf->publish_limits;
-//         }
-//         // config->publish_plane = conf->publish_plane;
-//         if (config->limits != conf->limits){
-//             LOCK guard(mtx_config);
-//             config->limits = conf->limits;
-//             update_markers();
-//         }
-//         if (config->downsampling_leaf_size != conf->downsampling_leaf_size){
-//             LOCK guard(mtx_config);
-//             config->downsampling_leaf_size = conf->downsampling_leaf_size;
-//         }
-//         if (config->plane_tolerance != conf->plane_tolerance){
-//             LOCK guard(mtx_config);
-//             config->plane_tolerance = conf->plane_tolerance;
-//         }
-//     }
-// }
-//
 void
 Estimator::publish_markers()
 {
     if (marks && pub_markers.getNumSubscribers()>0){
-        for(const auto& m: marks->markers)
+        for(auto& m: marks->markers)
         {
             m.header.stamp = ros::Time();
             pub_markers.publish(m);
         }
     }
-    /*
-     * if (config->publish_plane && pub_markers.getNumSubscribers()>0){
-     *     mark_plane.header.stamp = ros::Time();
-     *     pub_markers.publish(mark_plane);
-     * }
-     */
 }
 int
 Estimator::extract_clusters()
@@ -204,19 +154,19 @@ Estimator::estimate()
     config->get("iterations", it);
     if (it!=iter){
         iter = it;
-        pe.setStepIterations(iter);
+        pe->setStepIterations(iter);
     }
     config->get("neighbors", k);
     if (k!= neigh){
         neigh = k;
-        pe.setParam("lists_size", neigh);
+        pe->setParam("lists_size", neigh);
     }
     config->get("object_calibration", calib);
     for (int i=0; i<size; ++i)
     {
-        pe.setTarget(clusters->at(i).makeShared(), "object");
+        pe->setTarget(clusters->at(i).makeShared(), "object");
         pel::Candidate pest;
-        pe.estimate(pest);
+        pe->estimate(pest);
         std::string name = pest.getName();
         std::vector<std::string> vst;
         boost::split (vst, name, boost::is_any_of("_"), boost::token_compress_on);
@@ -257,6 +207,14 @@ Estimator::create_markers()
 {
     std::string ref_frame;
     storage->read_sensor_ref_frame(ref_frame);
+    if(marks){
+        //remove old markers
+        for (auto &x: marks->markers){
+            x.action = 2;
+            x.header.stamp = ros::Time();
+            pub_markers.publish(x);
+        }
+    }
     marks = std::make_shared<visualization_msgs::MarkerArray>();
     for (int i=0; i<estimations->size(); ++i) //if size is zero dont do anything
     {

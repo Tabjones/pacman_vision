@@ -20,12 +20,18 @@
 #include <pacman_vision_comm/estimate.h>
 #include <pacman_vision_comm/pe.h>
 #include <pacman_vision_comm/peArray.h>
-//PEL
-#include <pel/pe_progressive_bisection.h>
 //Boost
 #include <boost/filesystem.hpp>
 //ROS
 #include <visualization_msgs/MarkerArray.h>
+
+namespace pel
+{
+    namespace interface
+    {
+        class PEProgressiveBisection;
+    }
+}
 
 namespace pacv
 {
@@ -62,7 +68,7 @@ class Estimator: public Module<Estimator>
         boost::filesystem::path db_path;
 
         //PEL object
-        pel::interface::PEProgressiveBisection pe;
+        std::shared_ptr<pel::interface::PEProgressiveBisection> pe;
         //its parameters
         int iter, neigh;
 

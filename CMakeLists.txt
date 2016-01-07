@@ -8,7 +8,7 @@ project(pacman_vision)
 ###########   Change these according to your will ##############################
 ################################################################################
 ## This will build estimator and tracker modules
-set (PACV_BUILD_RECOGNITION        0 )
+set (PACV_BUILD_RECOGNITION        1 )
 ## This will build vito listener module
 set (PACV_BUILD_LISTENER           0 )
 ## This will build in hand modeler module
@@ -138,11 +138,18 @@ add_subdirectory(src/basic_node/gui)
 LIST(APPEND LIBRARIES
     ${PACV_BASICGUI_LIB})
 
-
+################################################################################
+################  Try to build recognition libraries, if specified #############
+################################################################################
 IF(PACV_BUILD_RECOGNITION)
     add_subdirectory(src/recognition)
     LIST(APPEND LIBRARIES
         ${PACV_RECOGNITION_LIB})
+    #add GUI too
+    add_subdirectory(src/recognition/gui)
+    LIST(APPEND LIBRARIES
+        ${PACV_RECOGNITIONGUI_LIB})
+    include_directories(src/recognition/gui)
 ENDIF(PACV_BUILD_RECOGNITION)
 
 IF(PACV_BUILD_LISTENER)
@@ -154,6 +161,7 @@ IF(PACV_BUILD_MODELER)
 ENDIF(PACV_BUILD_MODELER)
 
 include_directories(${MORE_INCLUDE_DIRS})
+link_directories(${MORE_LINK_DIRS})
 
 
 ################################################################################
@@ -178,15 +186,15 @@ target_link_libraries(pacman_vision
     ${LIBRARIES}
     ${MORE_LIBRARIES}
     ${catkin_LIBRARIES}
-    ${PCL_COMMON_LIBRARIES}
-    ${PCL_FILTERS_LIBRARIES}
-    ${PCL_SEGMENTATION_LIBRARIES}
-    ${PCL_SAMPLE_CONSENSUS_LIBRARIES}
-    ${PCL_SEARCH_LIBRARIES}
-    ${PCL_IO_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${HDF5_LIBRARIES}
-    # ${EIGEN_LIBRARIES}
+    # ${PCL_COMMON_LIBRARIES}
+    # ${PCL_FILTERS_LIBRARIES}
+    # ${PCL_SEGMENTATION_LIBRARIES}
+    # ${PCL_SAMPLE_CONSENSUS_LIBRARIES}
+    # ${PCL_SEARCH_LIBRARIES}
+    # ${PCL_IO_LIBRARIES}
+    # ${Boost_LIBRARIES}
+    # ${HDF5_LIBRARIES}
+    # # ${EIGEN_LIBRARIES}
     Qt4::QtGui Qt4::QtXml
 )
 ########################################################################## DONE!

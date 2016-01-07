@@ -18,6 +18,12 @@ BasicNodeGui::~BasicNodeGui()
     delete ui;
 }
 
+void
+BasicNodeGui::addTab(QWidget* tab, const QString title)
+{
+    ui->Tabs->addItem(tab, title);
+}
+
 void BasicNodeGui::init()
 {
     bool value;
