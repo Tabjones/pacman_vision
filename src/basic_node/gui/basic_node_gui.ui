@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>577</width>
+    <width>578</width>
     <height>810</height>
    </rect>
   </property>
@@ -170,6 +170,9 @@
          <height>448</height>
         </rect>
        </property>
+       <property name="toolTip">
+        <string>Control the basic node filtering process.</string>
+       </property>
        <attribute name="label">
         <string>Basic Node Filters</string>
        </attribute>
@@ -187,6 +190,9 @@
           </property>
           <property name="acceptDrops">
            <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>Enable/Disable cropbox filter applied to incoming point clouds.</string>
           </property>
           <property name="styleSheet">
            <string notr="true">Text-align:left</string>
@@ -251,6 +257,9 @@
           <property name="contextMenuPolicy">
            <enum>Qt::NoContextMenu</enum>
           </property>
+          <property name="toolTip">
+           <string>Cropbox filter parameters.</string>
+          </property>
           <property name="title">
            <string>Cropping Filter Limits:</string>
           </property>
@@ -279,6 +288,9 @@
               <font>
                <pointsize>11</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Cropbox filter maximum z parameter.</string>
              </property>
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
@@ -381,6 +393,9 @@
                <pointsize>11</pointsize>
               </font>
              </property>
+             <property name="toolTip">
+              <string>Cropbox filter minimum y parameter.</string>
+             </property>
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
              </property>
@@ -481,6 +496,9 @@
               <font>
                <pointsize>11</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Cropbox filter maximum y parameter.</string>
              </property>
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
@@ -583,6 +601,9 @@
                <pointsize>11</pointsize>
               </font>
              </property>
+             <property name="toolTip">
+              <string>Cropbox filter maximum x parameter.</string>
+             </property>
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
              </property>
@@ -684,6 +705,9 @@
                <pointsize>11</pointsize>
               </font>
              </property>
+             <property name="toolTip">
+              <string>Cropbox filter minimum x parameter.</string>
+             </property>
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
              </property>
@@ -784,6 +808,9 @@
               <font>
                <pointsize>11</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>Cropbox filter minimum z parameter.</string>
              </property>
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
@@ -893,6 +920,9 @@
              <property name="acceptDrops">
               <bool>false</bool>
              </property>
+             <property name="toolTip">
+              <string>Publish a marker in rviz with a graphical representation of the cropbox filter.</string>
+             </property>
              <property name="styleSheet">
               <string notr="true">Text-align:left</string>
              </property>
@@ -932,6 +962,9 @@
           <property name="acceptDrops">
            <bool>false</bool>
           </property>
+          <property name="toolTip">
+           <string>Enable/Disable Voxel grid filtering applied to incoming point cloud. (applied after cropping if active)</string>
+          </property>
           <property name="styleSheet">
            <string notr="true">Text-align:left</string>
           </property>
@@ -968,6 +1001,9 @@
           <property name="acceptDrops">
            <bool>false</bool>
           </property>
+          <property name="toolTip">
+           <string>Enable/Disable RANSAC plane model search and consequent removal from the point cloud. (Applied after downsampling if active)</string>
+          </property>
           <property name="styleSheet">
            <string notr="true">Text-align:left</string>
           </property>
@@ -1003,6 +1039,9 @@
           </property>
           <property name="acceptDrops">
            <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>Keep the point cloud organized structure if possible. (Note that downsampling and plane segmentation break this structure, so if either one is active, this button is ignored.)</string>
           </property>
           <property name="styleSheet">
            <string notr="true">Text-align:left</string>
@@ -1047,6 +1086,9 @@
            <font>
             <pointsize>11</pointsize>
            </font>
+          </property>
+          <property name="toolTip">
+           <string>Voxel grid downsampling leaf size. Increasing this number will reduce the total number of points.</string>
           </property>
           <property name="frameShape">
            <enum>QFrame::StyledPanel</enum>
@@ -1151,6 +1193,9 @@
            <font>
             <pointsize>11</pointsize>
            </font>
+          </property>
+          <property name="toolTip">
+           <string>RANSAC algorithm tolerance. Points within this distance are considered in the plane model to be removed.</string>
           </property>
           <property name="frameShape">
            <enum>QFrame::StyledPanel</enum>
@@ -1264,7 +1309,7 @@
            </size>
           </property>
           <property name="toolTip">
-           <string>Chose the method to recieve point clouds</string>
+           <string>Chose the method to recieve point clouds.</string>
           </property>
           <property name="frameShape">
            <enum>QFrame::StyledPanel</enum>
@@ -1424,6 +1469,9 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="toolTip">
+           <string>Update the internal processor reference name. I.e. the reference frame into which created point clouds are referenced. It also change the relative TF transform.</string>
+          </property>
           <property name="text">
            <string notr="true"/>
           </property>
@@ -1483,6 +1531,9 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>Update the topic to listen to. No existance check is performed.</string>
           </property>
           <property name="text">
            <string notr="true"/>
