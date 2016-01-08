@@ -93,7 +93,7 @@ PacmanVision::init(int argc, char** argv)
 #ifdef PACV_RECOGNITION_SUPPORT
         ROS_INFO("[PaCMan Vision]\tAdding Estimator Module");
         estimator = std::make_shared<pacv::Estimator>(basic_node->getNodeHandle(), "estimator", storage);
-        estimator->setRate(2.0); //2Hz is enough
+        estimator->setRate(5.0); //5Hz is enough
         estimator_gui = std::make_shared<EstimatorGui>(estimator->getConfig());
         basic_gui->addTab(estimator_gui->getWidget(), "Estimator Module");
 #endif

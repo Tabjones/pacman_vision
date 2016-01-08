@@ -50,6 +50,8 @@ class Estimator: public Module<Estimator>
         EstimatorConfig::Ptr config;
         //init with ros param
         void init();
+        //deinit to free memory
+        void deInit();
         //Service Server
         ros::ServiceServer srv_estimate;
         //marker broadcaster

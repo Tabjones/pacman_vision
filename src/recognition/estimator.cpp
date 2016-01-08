@@ -9,32 +9,35 @@ namespace pacv
 Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor)
     :Module<Estimator>(n,ns,stor)
 {
-    scene=boost::make_shared<PXC>();
     config=std::make_shared<EstimatorConfig>();
     db_path = (ros::package::getPath("pacman_vision") + "/database" );
     pe = std::make_shared<pel::interface::PEProgressiveBisection>();
     if (!boost::filesystem::exists(db_path) || !boost::filesystem::is_directory(db_path))
         ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
-    srv_estimate = nh.advertiseService("estimate", &Estimator::cb_estimate, this);
-    std::string mark_topic(getFatherNamespace()+"/markers");
-    pub_markers = nh.advertise<visualization_msgs::Marker>(mark_topic, 1);
     //tmp set params to dump into default
     // nh.setParam("object_calibration", false);
     // nh.setParam("iterations", 5);
     // nh.setParam("neighbors", 20);
     // nh.setParam("cluster_tol", 0.05);
     ////////////////////////////////////////////////////////
-    init();
 }
 
 void
 Estimator::init()
 {
+    if(!nh){
+        ROS_ERROR("[Estimator::%s]\tNode Handle not initialized, Module must call spawn() first!",__func__);
+        return;
+    }
+    srv_estimate = nh->advertiseService("estimate", &Estimator::cb_estimate, this);
+    std::string mark_topic(getFatherNamespace()+"/markers");
+    pub_markers = nh->advertise<visualization_msgs::Marker>(mark_topic, 1);
+    scene=boost::make_shared<PXC>();
     //init node params
     for (auto key: config->valid_keys)
     {
         XmlRpc::XmlRpcValue val;
-        if(nh.getParam(key, val))
+        if(nh->getParam(key, val))
         {
             if(!config->set(key, val))
                 ROS_WARN("[%s]\tFailed to set key:%s into Config",__func__,key.c_str());
@@ -50,6 +53,15 @@ Estimator::init()
     pe->setParam("lists_size",neigh);
     pe->setParam("downsamp",0);
     pe->loadAndSetDatabase(this->db_path);
+}
+
+void Estimator::deInit()
+{
+    marks.reset();
+    estimations.reset();
+    clusters.reset();
+    names.reset();
+    scene.reset();
 }
 
 EstimatorConfig::Ptr
@@ -93,11 +105,11 @@ Estimator::extract_clusters()
     ec.setMaxClusterSize(scene->points.size());
     ec.extract(cluster_indices);
     int size = (int)cluster_indices.size();
-    clusters.reset (new std::vector<PXC> );
+    clusters = std::make_shared<std::vector<PXC> >();
     clusters->resize(size);
-    names.reset(new std::vector<std::pair<std::string, std::string>>);
+    names= std::make_shared<std::vector<std::pair<std::string, std::string>>>();
     names->resize(size);
-    estimations.reset(new std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>);
+    estimations = std::make_shared<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>();
     estimations->resize(size);
     int j=0;
     for (std::vector<pcl::PointIndices>::const_iterator it=cluster_indices.begin(); it != cluster_indices.end(); ++it, ++j)

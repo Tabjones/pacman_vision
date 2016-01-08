@@ -20,16 +20,24 @@ SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, 
     // nh.setParam("topic", "/camera/depth_registered/points");
     // nh.setParam("name", "kinect2_optical_frame");
     ////////////////////////////////////
-    init();
+}
+void
+SensorProcessor::deInit()
+{
+    //nothing to do actually this is to suppress annoying warning
 }
 
 void
 SensorProcessor::init()
 {
+    if(!nh){
+        ROS_ERROR("[SensorProcessor::%s]\tNode Handle not initialized, Module must call spawn() first",__func__);
+        return;
+    }
     //init node params
 #ifndef PACV_KINECT2_SUPPORT
     //we just need to read which topic to subscribe
-    if(nh.getParam("topic",topic)){
+    if(nh->getParam("topic",topic)){
             if(!config->set("topic", topic))
                 ROS_WARN("[%s]\tFailed to set key:topic into Config",__func__);
     }
@@ -60,7 +68,7 @@ SensorProcessor::init()
 #endif
     config->get("topic", topic);
     //fire the subscriber
-    sub_cloud = nh.subscribe(nh.resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
+    sub_cloud = nh->subscribe(nh->resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
 }
 
 SensorConfig::Ptr
@@ -106,14 +114,14 @@ void SensorProcessor::update()
     if (was_disabled){
         config->get("topic", topic);
         //fire the subscriber
-        sub_cloud = nh.subscribe(nh.resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
+        sub_cloud = nh->subscribe(nh->resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
         was_disabled = false;
         return;
     }
     config->get("topic", topic);
     if (topic.compare(sub_cloud.getTopic()) != 0){
         //we need to change subscriber, topic changed
-        sub_cloud = nh.subscribe(nh.resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
+        sub_cloud = nh->subscribe(nh->resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
         return;
     }
 }

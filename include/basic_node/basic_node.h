@@ -61,6 +61,7 @@ class BasicNode: public Module<BasicNode>
         bool cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res);
         //init with ros params
         void init();
+        void deInit();
         //Publish scene processed
         void publish_scene_processed() const;
         //Process scene method (read scene -> write scene_processed)

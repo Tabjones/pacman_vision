@@ -31,6 +31,7 @@ class SensorProcessor: public Module<SensorProcessor>
         SensorConfig::Ptr config;
         //init with ros param
         void init();
+        void deInit();
         //external subscriber to recieve a cloud
         ros::Subscriber sub_cloud;
         //subscribed topic

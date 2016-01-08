@@ -7,9 +7,6 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor):
 {
     scene_processed = boost::make_shared<PTC>();
     config = std::make_shared<BasicConfig>();
-    srv_get_scene = nh.advertiseService("get_scene_processed", &BasicNode::cb_get_scene, this);
-    pub_scene = nh.advertise<PTC> ("scene_processed", 5);
-    pub_markers = nh.advertise<visualization_msgs::Marker>("markers", 1);
     //tmp set param to dump into default
     // nh.setParam("cropping", false);
     // nh.setParam("downsampling", false);
@@ -25,12 +22,23 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor):
     // nh.setParam("downsampling_leaf_size", 0.01);
     // nh.setParam("plane_tolerance", 0.005);
     /////////////////////////////////////////
-    init();
+}
+void
+BasicNode::deInit()
+{
+    //nothing to do actually this is suppress annoying warning
 }
 
 void
 BasicNode::init()
 {
+    if(!nh){
+        ROS_ERROR("[BasicNode::%s]\tNode Handle not initialized, Module must call spawn() first!",__func__);
+        return;
+    }
+    srv_get_scene = nh->advertiseService("get_scene_processed", &BasicNode::cb_get_scene, this);
+    pub_scene = nh->advertise<PTC> ("scene_processed", 5);
+    pub_markers = nh->advertise<visualization_msgs::Marker>("markers", 1);
     //init node params
     for (auto key: config->valid_keys)
     {
@@ -38,24 +46,24 @@ BasicNode::init()
         if (key.compare("filter_limits")==0)
         {
             Box lim(-0.5,-0.5,0.3,0.5,0.5,2);
-            if(!nh.getParam("limit_xmax", lim.x2))
+            if(!nh->getParam("limit_xmax", lim.x2))
                 ROS_WARN("[%s]\tKey:limit_xmax not found on parameter server",__func__);
-            if(!nh.getParam("limit_xmin", lim.x1))
+            if(!nh->getParam("limit_xmin", lim.x1))
                 ROS_WARN("[%s]\tKey:limit_xmin not found on parameter server",__func__);
-            if(!nh.getParam("limit_ymax", lim.y2))
+            if(!nh->getParam("limit_ymax", lim.y2))
                 ROS_WARN("[%s]\tKey:limit_ymax not found on parameter server",__func__);
-            if(!nh.getParam("limit_ymin", lim.y1))
+            if(!nh->getParam("limit_ymin", lim.y1))
                 ROS_WARN("[%s]\tKey:limit_ymin not found on parameter server",__func__);
-            if(!nh.getParam("limit_zmax", lim.z2))
+            if(!nh->getParam("limit_zmax", lim.z2))
                 ROS_WARN("[%s]\tKey:limit_zmax not found on parameter server",__func__);
-            if(!nh.getParam("limit_zmin", lim.z1))
+            if(!nh->getParam("limit_zmin", lim.z1))
                 ROS_WARN("[%s]\tKey:limit_zmin not found on parameter server",__func__);
 
             if(!config->set(key, lim))
                 ROS_WARN("[%s]\tFailed to set key:%s into Config",__func__,key.c_str());
             continue;
         }
-        if(nh.getParam(key, val))
+        if(nh->getParam(key, val))
         {
             if(!config->set(key, val))
                 ROS_WARN("[%s]\tFailed to set key:%s into Config",__func__,key.c_str());
@@ -374,7 +382,7 @@ BasicNode::spinOnce()
 void
 BasicNode::spin()
 {
-    while (nh.ok() && is_running)
+    while (isOk() && is_running)
     {
         if (this->isDisabled())
             ros::spinOnce();

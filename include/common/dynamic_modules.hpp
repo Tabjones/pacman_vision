@@ -28,37 +28,37 @@ class Module
         //no empty module creation allowed
         Module()=delete;
         //ctor with  node handle to  create named namespace, pointer  to storage
-        //and desired rate. This is for master node
+        //This is for master node
         Module(const std::string ns, const Storage::Ptr stor):
             is_running(false), disabled(false)
         {
-            nh = ros::NodeHandle (ns);
-            storage=stor;
-            name_space = nh.getNamespace();
-            father_name_space = nh.getNamespace();
+            derived().storage=stor;
+            derived().name = ns;
+            //father top level node version
+            derived().nh = std::make_shared<ros::NodeHandle>(name);
         }
         //ctor with  node handle of  masternode, namespace, pointer  to storagee
-        //and desired rate. This is for modules, dependant of master node
+        //This is for modules, dependant of master node
         Module(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor):
             is_running(false), disabled(false)
         {
-            nh = ros::NodeHandle (n, ns);
-            storage=stor;
-            name_space = nh.getNamespace();
-            father_name_space=n.getNamespace();
-            queue_ptr=std::make_shared<ros::CallbackQueue>();
-            nh.setCallbackQueue(&(*queue_ptr));
+            // nh = std::make_shared<ros::NodeHandle>(n, ns);
+            derived().storage=stor;
+            derived().name = ns;
+            //copy construct father node handle
+            derived().father_nh = std::make_shared<ros::NodeHandle>(n);
+            // nh->setCallbackQueue(&(*queue_ptr));
         }
         virtual ~Module()
         {
             derived().is_running=false;
             derived().worker.join();
-            derived().nh.shutdown();
+            derived().nh->shutdown();
         }
         //set desired spin rate (mandatory call)
         void setRate(const double freq)
         {
-            spin_rate = std::make_shared<ros::Rate>(freq);
+            derived().spin_rate = std::make_shared<ros::Rate>(freq);
         }
         //general spinOnce
         void spinOnce()
@@ -75,11 +75,21 @@ class Module
         }
         inline const std::string getNamespace() const
         {
-            return derived().name_space;
+            if(nh)
+                return derived().nh->getNamespace();
+            else{
+                ROS_WARN("[Module::%s]\tModule has no namespace, it is not spawned yet...",__func__);
+                return std::string();
+            }
         }
         inline const std::string getFatherNamespace() const
         {
-            return derived().father_name_space;
+            if(derived().father_nh)
+                return derived().father_nh->getNamespace();
+            else{
+                ROS_WARN("[Module::%s]\tModule has no father namespace, most likely it's the top level one...",__func__);
+                return std::string();
+            }
         }
         ///wait for rate
         inline void sleep()
@@ -90,7 +100,12 @@ class Module
         //Check OK-ness
         inline bool isOk() const
         {
-            return derived().nh.ok();
+            if (derived().nh)
+                return derived().nh->ok();
+            else{
+                ROS_WARN("[Module::%s]\tModule has no namespace, it is not spawned yet...",__func__);
+                return false;
+            }
         }
         inline Storage::Ptr getStorage() const
         {
@@ -98,26 +113,58 @@ class Module
         }
         inline ros::NodeHandle getNodeHandle() const
         {
-            return derived().nh;
+            if (derived().nh)
+                return *(derived().nh);
+            else{
+                ROS_WARN("[Module::%s]\tModule has no defined node handle, it is not spawned yet...",__func__);
+                return ros::NodeHandle();
+            }
+        }
+        inline ros::NodeHandle getFatherNodeHandle() const
+        {
+            if (derived().father_nh)
+                return *(derived().father_nh);
+            else{
+                ROS_WARN("[Module::%s]\tModule has no father node handle, most likely it is the top level one...",__func__);
+                return ros::NodeHandle();
+            }
         }
         void kill()
         {
             if (!derived().isRunning()){
-                ROS_WARN("[%s]\tTried to kill %s, but it is not running.",__func__,derived().name_space.c_str());
+                ROS_WARN("[Module::%s]\tTried to kill %s, but it is not running.",__func__,derived().name.c_str());
                 return;
             }
             derived().is_running = false;
             derived().worker.join();
+            derived().nh->shutdown();
+            derived().nh.reset();
+            derived().queue_ptr.reset();
+            derived().deInit();
+            if (!derived().father_nh)
+                //This is the master node, killing it means goodbye
+                ros::shutdown();
         }
         //spawn with spin implemented in Derived, or if it doesnt exist use this spin
         void spawn ()
         {
             if(derived().isRunning()){
-                ROS_WARN("[%s]\tTried to spawn %s, but it is already spawned and running.",__func__,derived().name_space.c_str());
+                ROS_WARN("[Module::%s]\tTried to spawn %s, but it is already spawned and running.",__func__,derived().name.c_str());
                 return;
             }
             if(!derived().spin_rate)
-                ROS_WARN("[%s]\tTried to spawn %s without a defined spin rate, this node will spin at maximum speed! Call setRate() if you don't want this!",__func__,derived().name_space.c_str());
+                ROS_WARN("[Module::%s]\tSpawning %s without a defined spin rate, thus this node will spin at maximum speed! Call setRate() if you don't want this!",__func__,derived().name.c_str());
+            if(derived().father_nh){
+                //module version
+                derived().nh = std::make_shared<ros::NodeHandle>(*derived().father_nh, name);
+                derived().queue_ptr = std::make_shared<ros::CallbackQueue>();
+                derived().nh->setCallbackQueue(&(*queue_ptr));
+            }
+            else if(!derived().nh){
+                ROS_ERROR("[Module::%s]\t%s doesn't have neither a node handle nor a father nodehandle to depend onto, thus this module is not validly constructed. Cannor spawn it...",__func__,derived().name.c_str());
+            }
+            //Derived MUST implement init()
+            derived().init();
             derived().is_running = true;
             derived().worker = std::thread(&Derived::spin, derived_ptr());
         }
@@ -133,7 +180,7 @@ class Module
         //general spin, cannot be called from outside, only via spawn
         void spin()
         {
-            while(derived().nh.ok() && derived().is_running)
+            while(derived().nh->ok() && derived().is_running)
             {
                 if(!derived().disabled){
                     derived().spinOnce();
@@ -143,14 +190,22 @@ class Module
                 derived().sleep();
             }
         }
+        void init()
+        {
+            ROS_WARN("[Module::%s]\tLooks like this module does not implement an init() function. The one provided does nothing. Please implement one to suppress this warning!",__func__);
+        }
+        void deInit()
+        {
+            ROS_WARN("[Module::%s]\tLooks like this module does not implement a deInit() function. The one provided does nothing. Please implement one to suppress this warning!",__func__);
+        }
     ///////Members
     protected:
         bool is_running;
         bool disabled;
-        ros::NodeHandle nh;
+        std::shared_ptr<ros::NodeHandle> nh;
+        std::shared_ptr<ros::NodeHandle> father_nh;
         std::shared_ptr<ros::Rate> spin_rate;
-        std::string name_space;
-        std::string father_name_space;
+        std::string name;
         Storage::Ptr storage;
         std::shared_ptr<ros::CallbackQueue> queue_ptr;
         std::thread worker;
