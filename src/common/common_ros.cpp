@@ -316,4 +316,32 @@ create_box_marker(const Box lim, visualization_msgs::Marker &marker, const bool 
         marker.lifetime = ros::Duration(1);
     }
 }
+void
+create_object_marker(geometry_msgs::Pose pose, std::pair<std::string,std::string> name, visualization_msgs::Marker &marker)
+{
+    marker.header.stamp = ros::Time();
+    marker.ns= name.second.c_str();
+    if (name.second.compare(name.first) != 0){
+        std::vector<std::string> vst;
+        boost::split(vst, name.first, boost::is_any_of("_"), boost::token_compress_on);
+        int id = std::stoi(vst.at(vst.size()-1));
+        marker.id = id;
+    }
+    else{
+        marker.id = 1;
+    }
+    marker.scale.x=1;
+    marker.scale.y=1;
+    marker.scale.z=1;
+    marker.type = visualization_msgs::Marker::MESH_RESOURCE;
+    std::string mesh_path ("package://asus_scanner_models/" + name.second + "/" + name.second + ".stl");
+    marker.mesh_resource = mesh_path.c_str();
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose = pose;
+    marker.lifetime = ros::Duration(1);
+    marker.color.r = 1.0f;
+    marker.color.g = 1.0f;
+    marker.color.b = 1.0f;
+    marker.color.a = 1.0f;
 }
+} //namespace

@@ -10,7 +10,7 @@
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud_conversion.h>
-#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 #include <tf/transform_broadcaster.h>
 // #include <pcl_ros/transforms.h>
 // #include <pcl_ros/point_cloud.h>
@@ -53,7 +53,7 @@ class BasicNode: public Module<BasicNode>
         //publisher for markers
         ros::Publisher pub_markers;
         //marker to publish
-        std::shared_ptr<visualization_msgs::Marker> mark_lim; //,mark_plane;
+        std::shared_ptr<visualization_msgs::MarkerArray> marks; //,mark_plane;
         //server for get_scene_processed
         ros::ServiceServer srv_get_scene;
         PTC::Ptr scene_processed;

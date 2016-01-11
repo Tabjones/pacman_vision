@@ -38,7 +38,7 @@ BasicNode::init()
     }
     srv_get_scene = nh->advertiseService("get_scene_processed", &BasicNode::cb_get_scene, this);
     pub_scene = nh->advertise<PTC> ("scene_processed", 5);
-    pub_markers = nh->advertise<visualization_msgs::Marker>("markers", 1);
+    pub_markers = nh->advertise<visualization_msgs::MarkerArray>("markers", 1);
     //init node params
     for (auto key: config->valid_keys)
     {
@@ -336,21 +336,24 @@ BasicNode::update_markers()
 {
     //This is triggered when a config for limits changes
     //only update crop limits, plane always gets recomputed if active
-    mark_lim=std::make_shared<visualization_msgs::Marker>();
+    marks=std::make_shared<visualization_msgs::MarkerArray>();
     Box lim;
+    visualization_msgs::Marker mark_lim;
+    std::string ref_frame;
+    storage->read_sensor_ref_frame(ref_frame);
     config->get("filter_limits", lim);
-    create_box_marker(lim, *mark_lim, false);
+    create_box_marker(lim, mark_lim, false);
     //make it red
-    mark_lim->color.g = 0.0f;
-    mark_lim->color.b = 0.0f;
+    mark_lim.color.g = 0.0f;
+    mark_lim.color.b = 0.0f;
     //name it
-    mark_lim->ns="Cropping Limits";
-    mark_lim->id=0;
-    if (scene_processed->header.frame_id.empty())
-        //no scene processed yet... guess the frame id.
-        mark_lim->header.frame_id = "/camera_rgb_optical_frame";
-    else
-        mark_lim->header.frame_id = scene_processed->header.frame_id;
+    mark_lim.ns="Cropping Limits";
+    mark_lim.id=0;
+    if (ref_frame.empty())
+        //fallback to asus
+        ref_frame = "/camera_rgb_optical_frame";
+    mark_lim.header.frame_id = ref_frame;
+    marks->markers.push_back(mark_lim);
 }
 void
 BasicNode::publish_markers()
@@ -358,9 +361,8 @@ BasicNode::publish_markers()
     bool crop, plim;
     config->get("cropping", crop);
     config->get("publish_limits", plim);
-    if (crop && plim && pub_markers.getNumSubscribers()>0 && mark_lim){
-        mark_lim->header.stamp = ros::Time();
-        pub_markers.publish(*mark_lim);
+    if (crop && plim && pub_markers.getNumSubscribers()>0 && marks){
+        pub_markers.publish(*marks);
     }
     /*
      * if (config->publish_plane && pub_markers.getNumSubscribers()>0){
@@ -384,7 +386,7 @@ BasicNode::spin()
 {
     while (isOk() && is_running)
     {
-        if (this->isDisabled())
+        if (isDisabled())
             ros::spinOnce();
         else
             spinOnce();

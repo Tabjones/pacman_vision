@@ -9,8 +9,6 @@ Panels:
         - /Processed Scene1
         - /Original Scene1
         - /Transformations1/Frames1
-        - /Markers1
-        - /Markers1/Status1
       Splitter Ratio: 0.5
     Tree Height: 812
   - Class: rviz/Selection
@@ -152,12 +150,12 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
-    - Class: rviz/Marker
+    - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /pacman_vision/markers
       Name: Markers
       Namespaces:
-        {}
+        Cropping Limits: true
       Queue Size: 100
       Value: true
   Enabled: true

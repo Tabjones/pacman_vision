@@ -31,7 +31,7 @@ Estimator::init()
     }
     srv_estimate = nh->advertiseService("estimate", &Estimator::cb_estimate, this);
     std::string mark_topic(getFatherNamespace()+"/markers");
-    pub_markers = nh->advertise<visualization_msgs::Marker>(mark_topic, 1);
+    pub_markers = nh->advertise<visualization_msgs::MarkerArray>(mark_topic, 1);
     scene=boost::make_shared<PXC>();
     //init node params
     for (auto key: config->valid_keys)
@@ -45,7 +45,7 @@ Estimator::init()
         else
             ROS_WARN("[%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
-    pe->setParam("verbosity",2);
+    pe->setParam("verbosity",1);
     pe->setRMSEThreshold(0.003);
     config->get("iterations", iter);
     pe->setStepIterations(iter);
@@ -53,10 +53,15 @@ Estimator::init()
     pe->setParam("lists_size",neigh);
     pe->setParam("downsamp",0);
     pe->loadAndSetDatabase(this->db_path);
+    config->get("always_success", all_success);
+    pe->setConsiderSuccessOnListSizeOne(all_success);
+    config->get("rmse_thresh", rmse_thresh);
+    pe->setRMSEThreshold(rmse_thresh);
 }
 
 void Estimator::deInit()
 {
+    //this frees memory when module is killed
     marks.reset();
     estimations.reset();
     clusters.reset();
@@ -73,11 +78,7 @@ void
 Estimator::publish_markers()
 {
     if (marks && pub_markers.getNumSubscribers()>0){
-        for(auto& m: marks->markers)
-        {
-            m.header.stamp = ros::Time();
-            pub_markers.publish(m);
-        }
+        pub_markers.publish(*marks);
     }
 }
 int
@@ -107,10 +108,6 @@ Estimator::extract_clusters()
     int size = (int)cluster_indices.size();
     clusters = std::make_shared<std::vector<PXC> >();
     clusters->resize(size);
-    names= std::make_shared<std::vector<std::pair<std::string, std::string>>>();
-    names->resize(size);
-    estimations = std::make_shared<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>();
-    estimations->resize(size);
     int j=0;
     for (std::vector<pcl::PointIndices>::const_iterator it=cluster_indices.begin(); it != cluster_indices.end(); ++it, ++j)
     {
@@ -136,6 +133,7 @@ Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision
         geometry_msgs::Pose pose;
         for (int i=0; i<estimations->size(); ++i)
         {
+            //assemble service response
             fromEigen(estimations->at(i), pose);
             pacman_vision_comm::pe pose_est;
             pose_est.pose = pose;
@@ -161,8 +159,9 @@ Estimator::estimate()
         ROS_ERROR("[Estimator][%s]\tNo object clusters found in scene, aborting pose estimation...",__func__);
         return false;
     }
-    bool calib;
+    bool calib, succ;
     int it,k;
+    double thresh;
     config->get("iterations", it);
     if (it!=iter){
         iter = it;
@@ -173,22 +172,50 @@ Estimator::estimate()
         neigh = k;
         pe->setParam("lists_size", neigh);
     }
+    config->get("always_success", succ);
+    if (succ != all_success){
+        all_success = succ;
+        pe->setConsiderSuccessOnListSizeOne(all_success);
+    }
+    config->get("rmse_thresh", thresh);
+    if (thresh != rmse_thresh){
+        rmse_thresh = thresh;
+        pe->setRMSEThreshold(rmse_thresh);
+    }
     config->get("object_calibration", calib);
+    names= std::make_shared<std::vector<std::pair<std::string, std::string>>>();
+    estimations = std::make_shared<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>();
     for (int i=0; i<size; ++i)
     {
         pe->setTarget(clusters->at(i).makeShared(), "object");
         pel::Candidate pest;
         pe->estimate(pest);
-        std::string name = pest.getName();
+        std::pair<std::string, std::string> name;
+        if (pest.getName().empty()){
+            //failed move on the next cluster
+            continue;
+        }
         std::vector<std::string> vst;
-        boost::split (vst, name, boost::is_any_of("_"), boost::token_compress_on);
+        std::string n = pest.getName();
+        boost::split(vst, n, boost::is_any_of("_"), boost::token_compress_on);
         if (calib)
-            names->at(i).first = "object";
+            name.first = "object";
         else
-            names->at(i).first = vst.at(0);
-        estimations->at(i) = pest.getTransformation();
-        names->at(i).second = vst.at(0);
-        ROS_INFO("[Estimator][%s]\tFound %s.",__func__,name.c_str());
+            name.first = vst.at(0);
+        estimations->push_back(pest.getTransformation());
+        name.second = vst.at(0);
+        names->push_back(name);
+        ROS_INFO("[Estimator][%s]\tFound %s.",__func__,name.first.c_str());
+    }
+    if (names->empty()){
+        //pose estimation failed no cluster could be recognized
+        names.reset();
+        estimations.reset();
+        marks.reset();
+        if (size !=0 && clusters)
+            //still write clusters even if unused
+            storage->write_obj_clusters(clusters);
+        return false;
     }
     //first check if we have more copy of the same object in names
     for (int i=0; i<names->size(); ++i)
@@ -219,45 +246,25 @@ Estimator::create_markers()
 {
     std::string ref_frame;
     storage->read_sensor_ref_frame(ref_frame);
-    if(marks){
-        //remove old markers
-        for (auto &x: marks->markers){
-            x.action = 2;
-            x.header.stamp = ros::Time();
-            pub_markers.publish(x);
-        }
-    }
+    // if(marks){
+    //     //remove old markers
+    //     for (auto &x: marks->markers){
+    //         x.action = 2;
+    //         x.header.stamp = ros::Time();
+    //         pub_markers.publish(x);
+    //     }
+    // }
     marks = std::make_shared<visualization_msgs::MarkerArray>();
     for (int i=0; i<estimations->size(); ++i) //if size is zero dont do anything
     {
         geometry_msgs::Pose pose;
-        tf::Transform trans;
-        fromEigen(estimations->at(i), pose, trans);
+        fromEigen(estimations->at(i), pose);
         visualization_msgs::Marker marker;
+        create_object_marker(pose, names->at(i), marker);
         marker.header.frame_id = ref_frame.c_str();
-        marker.header.stamp = ros::Time();
-        marker.ns=names->at(i).second.c_str();
-        if (names->at(i).second.compare(names->at(i).first) != 0){
-            std::vector<std::string> vst;
-            boost::split(vst, names->at(i).first, boost::is_any_of("_"), boost::token_compress_on);
-            int id = std::stoi(vst.at(vst.size()-1));
-            marker.id = id;
-        }
-        else{
-            marker.id = 1;
-        }
-        marker.scale.x=1;
-        marker.scale.y=1;
-        marker.scale.z=1;
-        marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-        std::string mesh_path ("package://asus_scanner_models/" + names->at(i).second + "/" + names->at(i).second + ".stl");
-        marker.mesh_resource = mesh_path.c_str();
-        marker.action = visualization_msgs::Marker::ADD;
-        marker.pose = pose;
-        marker.lifetime = ros::Duration(1);
         marker.color.r = 0.0f;
         marker.color.g = 1.0f;
-        marker.color.b = 0.3f;
+        marker.color.b = 0.0f;
         marker.color.a = 1.0f;
         marks->markers.push_back(marker);
     }

@@ -14,6 +14,7 @@
 #include <Eigen/Dense>
 
 #include <common/box.h>
+#include <common/common_std.h>
 /*! \file common_ros.h
     \brief Bunch of global functions and typedefs from ROS, used within Pacman Vision
 */
@@ -44,8 +45,18 @@ void fromTF(const tf::Transform &source, geometry_msgs::Pose &dest);
  * \param[in] lim Box object containing the limits the marker will have.
  * \param[out] marker Corresponding marker created from lim.
  * \param[in] cube_type if true create a semitransparent cube instead of a collection of lines.
+ * \note Does not set frame_id.
  */
 void create_box_marker(const Box lim, visualization_msgs::Marker &marker, const bool cube_type=false);
-}
-#endif
 
+/*! \brief Create an object marker with its mesh,
+ *
+ * \param[in] pose Pose of the object with respect to the camera
+ * \param[in] name Pair of string containing name and id of the object
+ * \param[out] marker The resultant marker
+ * \note Does not set frame_id
+ */
+void create_object_marker(geometry_msgs::Pose pose, std::pair<std::string, std::string> name, visualization_msgs::Marker &marker);
+
+}//namespace
+#endif

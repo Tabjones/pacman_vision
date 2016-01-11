@@ -73,6 +73,8 @@ class Estimator: public Module<Estimator>
         std::shared_ptr<pel::interface::PEProgressiveBisection> pe;
         //its parameters
         int iter, neigh;
+        bool all_success;
+        double rmse_thresh;
 
          // method to extract  clusters of objects in a table  top scenario with
          // table already removed

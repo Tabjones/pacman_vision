@@ -43,8 +43,7 @@ void EstimatorGui::init()
 {
     bool value;
     config->get("object_calibration", value);
-    if (value != ui->CalibButt->isChecked())
-        ui->CalibButt->click();
+    ui->CalibButt->setChecked(value);
     double val;
     config->get("cluster_tol", val);
     ui->Cluster->setValue(val);
@@ -53,6 +52,10 @@ void EstimatorGui::init()
     ui->Iter->setValue(v);
     config->get("neighbors", v);
     ui->Neigh->setValue(v);
+    config->get("always_success", value);
+    ui->SuccessButt->setChecked(value);
+    config->get("rmse_thresh", val);
+    ui->rmse->setValue(val);
     ui->status->setStyleSheet("QLabel {color : red}");
 }
 
@@ -67,6 +70,7 @@ void EstimatorGui::on_RunningButt_clicked()
         ui->ClusterF->setDisabled(true);
         ui->IterF->setDisabled(true);
         ui->NeighF->setDisabled(true);
+        ui->rmseF->setDisabled(true);
         return;
     }
     else{
@@ -78,6 +82,7 @@ void EstimatorGui::on_RunningButt_clicked()
         ui->ClusterF->setDisabled(false);
         ui->IterF->setDisabled(false);
         ui->NeighF->setDisabled(false);
+        ui->rmseF->setDisabled(false);
         return;
     }
 }
@@ -105,4 +110,14 @@ void EstimatorGui::on_Neigh_valueChanged(int arg1)
 void EstimatorGui::on_EstimationButt_clicked()
 {
     ui->EstimationButt->setDisabled(true);//doesnt disable !!
+}
+
+void EstimatorGui::on_SuccessButt_clicked(bool checked)
+{
+   config->set("always_success", checked);
+}
+
+void EstimatorGui::on_rmse_valueChanged(double arg1)
+{
+   config->set("rmse_thresh", arg1);
 }

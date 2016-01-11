@@ -29,6 +29,10 @@ private slots:
     void on_Neigh_valueChanged(int arg1);
     void on_EstimationButt_clicked();
 
+    void on_SuccessButt_clicked(bool checked);
+
+    void on_rmse_valueChanged(double arg1);
+
 private:
     void init();
     Ui::EstimatorGui *ui;

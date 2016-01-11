@@ -85,10 +85,11 @@ PacmanVision::init(int argc, char** argv)
         storage = std::make_shared<pacv::Storage>();
         basic_node = std::make_shared<pacv::BasicNode>("pacman_vision", storage);
         basic_node->setRate(40.0); //40Hz
-        basic_node->spawn();
         sensor = std::make_shared<pacv::SensorProcessor>(basic_node->getNodeHandle(), "sensor", storage);
         sensor->setRate(40.0); //40hz
         sensor->spawn();
+        //spawn basic node for last since it needs SensorProcessor
+        basic_node->spawn();
         basic_gui = std::make_shared<BasicNodeGui>(basic_node->getConfig(), sensor->getConfig());
 #ifdef PACV_RECOGNITION_SUPPORT
         ROS_INFO("[PaCMan Vision]\tAdding Estimator Module");
