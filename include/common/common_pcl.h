@@ -44,6 +44,10 @@ void crop_a_box(const PTC::ConstPtr source, PTC::Ptr &dest, const Box lim,
         const Eigen::Matrix4f& trans=Eigen::Matrix4f::Identity(),
         const bool keep_organized=false);
 
+void crop_a_box(const PXC::ConstPtr source, PXC::Ptr &dest, const Box lim,
+        const bool remove_inside=false,
+        const Eigen::Matrix4f& trans=Eigen::Matrix4f::Identity(),
+        const bool keep_organized=false);
 }
 #endif
 

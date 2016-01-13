@@ -13,7 +13,7 @@ Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const Storag
     db_path = (ros::package::getPath("pacman_vision") + "/database" );
     pe = std::make_shared<pel::interface::PEProgressiveBisection>();
     if (!boost::filesystem::exists(db_path) || !boost::filesystem::is_directory(db_path))
-        ROS_WARN("[Estimator][%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
+        ROS_WARN("[Estimator::%s] Database for pose estimation does not exists!! Plese put one in /database folder, before trying to perform a pose estimation.",__func__);
     //tmp set params to dump into default
     // nh.setParam("object_calibration", false);
     // nh.setParam("iterations", 5);
@@ -40,10 +40,10 @@ Estimator::init()
         if(nh->getParam(key, val))
         {
             if(!config->set(key, val))
-                ROS_WARN("[%s]\tFailed to set key:%s into Config",__func__,key.c_str());
+                ROS_WARN("[Estimator::%s]\tFailed to set key:%s into Config",__func__,key.c_str());
         }
         else
-            ROS_WARN("[%s]\tKey:%s not found on parameter server",__func__,key.c_str());
+            ROS_WARN("[Estimator::%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
     pe->setParam("verbosity",1);
     pe->setRMSEThreshold(0.003);
@@ -86,12 +86,12 @@ Estimator::extract_clusters()
 {
     storage->read_scene_processed(scene);
     if (scene->empty()){
-        ROS_WARN("[Estimator][%s]\tProcessed scene is empty, cannot continue...",__func__);
+        ROS_WARN("[Estimator::%s]\tProcessed scene is empty, cannot continue...",__func__);
         return -1;
     }
     double tol;
     config->get("cluster_tol", tol);
-    ROS_INFO("[Estimator][%s]\tExtracting object clusters with cluster tolerance of %g",__func__, tol);
+    ROS_INFO("[Estimator::%s]\tExtracting object clusters with cluster tolerance of %g",__func__, tol);
     //objects
     pcl::ExtractIndices<PX> extract;
     pcl::EuclideanClusterExtraction<PX> ec;
@@ -117,7 +117,7 @@ Estimator::extract_clusters()
         extract.setNegative(false);
         extract.filter(clusters->at(j));
     }
-    ROS_INFO("[Estimator][%s]\tFound %d clusters of possible objects.",__func__,size);
+    ROS_INFO("[Estimator::%s]\tFound %d clusters of possible objects.",__func__,size);
     return size;
 }
 
@@ -126,7 +126,7 @@ Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision
 {
     if (isDisabled()){
         //Module was temporary disabled, notify the sad user, then exit
-        ROS_ERROR("[Estimator][%s]\tNode is globally disabled, this service is suspended!",__func__);
+        ROS_ERROR("[Estimator::%s]\tNode is globally disabled, this service is suspended!",__func__);
         return false;
     }
     if (this->estimate()){
@@ -142,11 +142,11 @@ Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision
             pose_est.parent_frame = scene->header.frame_id;
             res.estimated.poses.push_back(pose_est);
         }
-        ROS_INFO("[Estimator][%s]\tPose Estimation complete!", __func__);
+        ROS_INFO("[Estimator::%s]\tPose Estimation complete!", __func__);
         return true;
     }
     else{
-        ROS_WARN("[Estimator][%s]\tPose Estimation failed!", __func__);
+        ROS_WARN("[Estimator::%s]\tPose Estimation failed!", __func__);
         return false;
     }
 }
@@ -156,7 +156,7 @@ Estimator::estimate()
 {
     int size = this->extract_clusters();
     if (size < 1){
-        ROS_ERROR("[Estimator][%s]\tNo object clusters found in scene, aborting pose estimation...",__func__);
+        ROS_ERROR("[Estimator::%s]\tNo object clusters found in scene, aborting pose estimation...",__func__);
         return false;
     }
     bool calib, succ;
@@ -205,7 +205,7 @@ Estimator::estimate()
         estimations->push_back(pest.getTransformation());
         name.second = vst.at(0);
         names->push_back(name);
-        ROS_INFO("[Estimator][%s]\tFound %s.",__func__,name.first.c_str());
+        ROS_INFO("[Estimator::%s]\tFound %s.",__func__,name.first.c_str());
     }
     if (names->empty()){
         //pose estimation failed no cluster could be recognized

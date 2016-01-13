@@ -44,7 +44,7 @@ find_package(Boost REQUIRED
 #Find HDF5
 find_package(HDF5 REQUIRED)
 #Find PCL
-find_package(PCL 1.7.2 COMPONENTS common filters io
+find_package(PCL 1.7.2 COMPONENTS common filters io registration
                 segmentation sample_consensus search REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 link_directories(${PCL_LIBRARY_DIRS})

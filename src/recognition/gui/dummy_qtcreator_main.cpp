@@ -8,8 +8,10 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     pacv::EstimatorConfig::Ptr b=std::make_shared<pacv::EstimatorConfig>();//fake conf
-    // pacv::SensorConfig::Ptr s=std::make_shared<pacv::SensorConfig>();//fake conf
+    pacv::TrackerConfig::Ptr s=std::make_shared<pacv::TrackerConfig>();//fake conf
     EstimatorGui w(b);
+    TrackerGui v(s);
     w.show();
+    v.show();
     return a.exec();
 }

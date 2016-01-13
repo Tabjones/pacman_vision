@@ -4,6 +4,8 @@
 set(SRC
     estimator.cpp
     ../../include/recognition/estimator_config.hpp
+    tracker.cpp
+    ../../include/recognition/tracker_config.hpp
   )
 ########################
 ## Find pel in system ##
@@ -56,6 +58,7 @@ target_link_libraries(pacv_librecognition
     ${PCL_SAMPLE_CONSENSUS_LIBRARIES}
     ${PCL_SEGMENTATION_LIBRARIES}
     ${PCL_SEARCH_LIBRARIES}
+    ${PCL_REGISTRATION_LIBRARIES}
     ${PACV_COMMON_LIB}
     ${Boost_LIBRARIES}
     ${PEL_LIBRARIES})

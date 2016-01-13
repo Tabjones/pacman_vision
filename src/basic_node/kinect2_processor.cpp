@@ -57,7 +57,7 @@ bool
 Kinect2::initDevice()
 {
     if (freenect2.enumerateDevices() <= 0){
-        ROS_ERROR("[Kinect2][%s]\tNo Kinect2 devices found",__func__);
+        ROS_ERROR("[Kinect2::%s]\tNo Kinect2 devices found",__func__);
         return (false);
     }
     //no support for multiple kinects as of now... just get default one.
@@ -68,14 +68,14 @@ Kinect2::initDevice()
     if (!packetPipeline)
         packetPipeline = new libfreenect2::OpenCLPacketPipeline();
 #else
-    ROS_ERROR("[Kinect2][%s]\tLibFreenect2 does not have OpenCL support. Please recompile it with OpenCL support",__func__);
+    ROS_ERROR("[Kinect2::%s]\tLibFreenect2 does not have OpenCL support. Please recompile it with OpenCL support",__func__);
     return (false);
 #endif
 
     //Open kinect2
     device = freenect2.openDevice(serial, packetPipeline);
     if (device == 0){
-        ROS_ERROR("[Kinect2][%s]\tFailed to open Kinect2 with serial %s",__func__, serial.c_str());
+        ROS_ERROR("[Kinect2::%s]\tFailed to open Kinect2 with serial %s",__func__, serial.c_str());
         return (false);
     }
 

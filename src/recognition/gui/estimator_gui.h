@@ -40,4 +40,4 @@ private:
     bool running;
 };
 
-#endif // BASIC_NODE_GUI_H
+#endif

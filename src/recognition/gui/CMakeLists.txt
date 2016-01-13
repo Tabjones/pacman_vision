@@ -3,12 +3,12 @@
 ################################################################################
 set(SRC
     estimator_gui.cpp
-    #tracker_gui.cpp
+    tracker_gui.cpp
   )
 
 QT4_ADD_RESOURCES(QSRC ../../../resources/resources.qrc)
 QT4_WRAP_UI(QSRC estimator_gui.ui)
-# QT4_WRAP_UI(QSRC tracker_gui.ui)
+QT4_WRAP_UI(QSRC tracker_gui.ui)
 
 #set library name
 set(PACV_RECOGNITIONGUI_LIB pacv_librecognitiongui PARENT_SCOPE)

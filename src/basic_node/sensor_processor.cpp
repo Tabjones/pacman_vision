@@ -39,10 +39,10 @@ SensorProcessor::init()
     //we just need to read which topic to subscribe
     if(nh->getParam("topic",topic)){
             if(!config->set("topic", topic))
-                ROS_WARN("[%s]\tFailed to set key:topic into Config",__func__);
+                ROS_WARN("[SensorProcessor::%s]\tFailed to set key:topic into Config",__func__);
     }
     else
-        ROS_WARN("[%s]\tKey:topic not found on parameter server",__func__);
+        ROS_WARN("[SensorProcessor::%s]\tKey:topic not found on parameter server",__func__);
 #endif
 #ifdef PACV_KINECT2_SUPPORT
     for (auto key: config->valid_keys)
@@ -51,10 +51,10 @@ SensorProcessor::init()
         if(nh.getParam(key, val))
         {
             if(!config->set(key, val))
-                ROS_WARN("[%s]\tFailed to set key:%s into Config",__func__,key.c_str());
+                ROS_WARN("[SensorProcessor::%s]\tFailed to set key:%s into Config",__func__,key.c_str());
         }
         else
-            ROS_WARN("[%s]\tKey:%s not found on parameter server",__func__,key.c_str());
+            ROS_WARN("[SensorProcessor::%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
     //Fire subscriber or kinect2
     bool internal;

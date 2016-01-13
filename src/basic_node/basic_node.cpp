@@ -47,29 +47,29 @@ BasicNode::init()
         {
             Box lim(-0.5,-0.5,0.3,0.5,0.5,2);
             if(!nh->getParam("limit_xmax", lim.x2))
-                ROS_WARN("[%s]\tKey:limit_xmax not found on parameter server",__func__);
+                ROS_WARN("[BasicNode::%s]\tKey:limit_xmax not found on parameter server",__func__);
             if(!nh->getParam("limit_xmin", lim.x1))
-                ROS_WARN("[%s]\tKey:limit_xmin not found on parameter server",__func__);
+                ROS_WARN("[BasicNode::%s]\tKey:limit_xmin not found on parameter server",__func__);
             if(!nh->getParam("limit_ymax", lim.y2))
-                ROS_WARN("[%s]\tKey:limit_ymax not found on parameter server",__func__);
+                ROS_WARN("[BasicNode::%s]\tKey:limit_ymax not found on parameter server",__func__);
             if(!nh->getParam("limit_ymin", lim.y1))
-                ROS_WARN("[%s]\tKey:limit_ymin not found on parameter server",__func__);
+                ROS_WARN("[BasicNode::%s]\tKey:limit_ymin not found on parameter server",__func__);
             if(!nh->getParam("limit_zmax", lim.z2))
-                ROS_WARN("[%s]\tKey:limit_zmax not found on parameter server",__func__);
+                ROS_WARN("[BasicNode::%s]\tKey:limit_zmax not found on parameter server",__func__);
             if(!nh->getParam("limit_zmin", lim.z1))
-                ROS_WARN("[%s]\tKey:limit_zmin not found on parameter server",__func__);
+                ROS_WARN("[BasicNode::%s]\tKey:limit_zmin not found on parameter server",__func__);
 
             if(!config->set(key, lim))
-                ROS_WARN("[%s]\tFailed to set key:%s into Config",__func__,key.c_str());
+                ROS_WARN("[BasicNode::%s]\tFailed to set key:%s into Config",__func__,key.c_str());
             continue;
         }
         if(nh->getParam(key, val))
         {
             if(!config->set(key, val))
-                ROS_WARN("[%s]\tFailed to set key:%s into Config",__func__,key.c_str());
+                ROS_WARN("[BasicNode::%s]\tFailed to set key:%s into Config",__func__,key.c_str());
         }
         else
-            ROS_WARN("[%s]\tKey:%s not found on parameter server",__func__,key.c_str());
+            ROS_WARN("[BasicNode::%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
     update_markers(); //one time call
 }
@@ -130,7 +130,7 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
 {
     //This saves in home... possible todo improvement to let user specify location
     if (this->isDisabled()){
-        ROS_WARN("[PaCMaN Vision][%s]\tNode is globally disabled, this service is suspended!",__func__);
+        ROS_WARN("[BasicNode::%s]\tNode is globally disabled, this service is suspended!",__func__);
         return false;
     }
     if (scene_processed){
@@ -138,15 +138,15 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
         if (req.save.compare("false") != 0){
             std::string home = std::getenv("HOME");
             pcl::io::savePCDFile( (home + "/" + req.save + ".pcd").c_str(), *scene_processed);
-            ROS_INFO("[PaCMaN Vision][%s]\tProcessed scene saved to %s", __func__, (home + "/" + req.save + ".pcd").c_str());
+            ROS_INFO("[BasicNode::%s]\tProcessed scene saved to %s", __func__, (home + "/" + req.save + ".pcd").c_str());
         }
         pcl::toROSMsg(*scene_processed, msg);
         res.scene = msg;
-        ROS_INFO("[PaCMaN Vision][%s]\tSent processed scene to service response.", __func__);
+        ROS_INFO("[BasicNode::%s]\tSent processed scene to service response.", __func__);
         return true;
     }
     else{
-        ROS_WARN("[PaCMaN Vision][%s]\tNo Processed Scene to send to Service!", __func__);
+        ROS_WARN("[BasicNode::%s]\tNo Processed Scene to send to Service!", __func__);
         return false;
     }
 }
