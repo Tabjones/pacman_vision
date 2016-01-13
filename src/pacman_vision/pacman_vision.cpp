@@ -1,5 +1,6 @@
 #include <pacv_config.h>
 #include <pacman_vision.h>
+#include <servicer.hpp>
 #include <basic_node/basic_node.h>
 #include <basic_node/sensor_processor.h>
 #include <common/storage.h>
@@ -12,10 +13,12 @@
 //Add recognition support
 #ifdef PACV_RECOGNITION_SUPPORT
 #include <recognition/estimator.h>
-// #include <recognition/tracker.h>
+#include <recognition/tracker.h>
 #include <estimator_gui.h>
-// #include <tracker_gui.h>
+#include <tracker_gui.h>
 #include <pacman_vision_comm/estimate.h>
+#include <pacman_vision_comm/stop_track.h>
+#include <pacman_vision_comm/track_object.h>
 #endif
 
 #include <ros/ros.h>
@@ -44,6 +47,7 @@ PacmanVision::startChecker()
 #ifdef PACV_RECOGNITION_SUPPORT
     connect (estimator_gui->getRunButt(), SIGNAL( clicked()), this, SLOT( onSpawnKillEstimator() ));
     connect (estimator_gui->getEstButt(), SIGNAL( clicked()), this, SLOT( onPoseEstimation() ));
+    connect (tracker_gui->getRunButt(), SIGNAL( clicked()), this, SLOT( onSpawnKillTracker() ));
 #endif
 }
 
@@ -75,6 +79,24 @@ void PacmanVision::onSpawnKillEstimator()
 #endif
 }
 
+void PacmanVision::onSpawnKillTracker()
+{
+#ifdef PACV_RECOGNITION_SUPPORT
+    if (tracker->isRunning()){
+        tracker->kill();
+        tracker_gui->setRunning(false);
+        ROS_INFO("[PaCMan Vision]\tKilled Tracker Module.");
+        return;
+    }
+    else{
+        tracker->spawn();
+        tracker_gui->setRunning(true);
+        ROS_INFO("[PaCMan Vision]\tSpawned Tracker Module.");
+        return;
+    }
+#endif
+}
+
 bool
 PacmanVision::init(int argc, char** argv)
 {
@@ -97,6 +119,11 @@ PacmanVision::init(int argc, char** argv)
         estimator->setRate(5.0); //5Hz is enough
         estimator_gui = std::make_shared<EstimatorGui>(estimator->getConfig());
         basic_gui->addTab(estimator_gui->getWidget(), "Estimator Module");
+        ROS_INFO("[PaCMan Vision]\tAdding Tracker Module");
+        tracker = std::make_shared<pacv::Tracker>(basic_node->getNodeHandle(), "tracker", storage);
+        tracker->setRate(40.0); //40Hz is enough
+        tracker_gui = std::make_shared<TrackerGui>(tracker->getConfig());
+        basic_gui->addTab(tracker_gui->getWidget(), "Tracker Module");
 #endif
         //...
 

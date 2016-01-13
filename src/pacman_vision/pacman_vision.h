@@ -11,6 +11,7 @@
 //to not pollute the header with ifdefs
 namespace pacv
 {
+class Servicer;
 class Storage;
 class BasicNode;
 class SensorProcessor;
@@ -45,18 +46,23 @@ private slots:
     void onSensorChanged();
     ///when spawnkill estimator is presed
     void onSpawnKillEstimator();
+    ///when spawnkill tracker is presed
+    void onSpawnKillTracker();
     ///when pose estimation is clicked
     void onPoseEstimation();
 private:
     void startChecker();
 
     QTimer *check_timer;
+    std::shared_ptr<pacv::Servicer> service_caller;
     std::shared_ptr<pacv::BasicNode> basic_node;
     std::shared_ptr<pacv::Storage> storage;
     std::shared_ptr<pacv::SensorProcessor> sensor;
     std::shared_ptr<pacv::Estimator> estimator;
+    std::shared_ptr<pacv::Tracker> tracker;
     std::shared_ptr<BasicNodeGui> basic_gui;
     std::shared_ptr<EstimatorGui> estimator_gui;
+    std::shared_ptr<TrackerGui> tracker_gui;
     //todo other modules
 };
 #endif
