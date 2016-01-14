@@ -25,6 +25,8 @@ public:
 private slots:
     void on_RunningButt_clicked();
 
+    void on_objects_itemSelectionChanged();
+
 private:
     void init();
     Ui::TrackerGui *ui;

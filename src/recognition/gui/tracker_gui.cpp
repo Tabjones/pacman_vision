@@ -45,21 +45,13 @@ void TrackerGui::init()
 {
     bool value;
     config->get("publish_bounding_box", value);
-    ui->CalibButt->setChecked(value);
-
-//    double val;
-//    config->get("cluster_tol", val);
-//    ui->Cluster->setValue(val);
-//    int v;
-//    config->get("iterations", v);
-//    ui->Iter->setValue(v);
-//    config->get("neighbors", v);
-//    ui->Neigh->setValue(v);
-//    config->get("always_success", value);
-//    ui->SuccessButt->setChecked(value);
-//    config->get("rmse_thresh", val);
-//    ui->rmse->setValue(val);
+    ui->PubButt->setChecked(value);
     ui->status->setStyleSheet("QLabel {color : red}");
+    ui->StopButt->setDisabled(true);
+    ui->TrackButt->setDisabled(true);
+    ui->objects->addItem("pippo");
+    ui->objects->addItem("pluto");
+    ui->objects->addItem("topolino");
 }
 
 void TrackerGui::on_RunningButt_clicked()
@@ -80,4 +72,9 @@ void TrackerGui::on_RunningButt_clicked()
         ui->TrackerF->setDisabled(false);
         return;
     }
+}
+
+void TrackerGui::on_objects_itemSelectionChanged()
+{
+    ui->TrackButt->setDisabled(false);
 }
