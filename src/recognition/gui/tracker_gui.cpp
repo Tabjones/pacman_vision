@@ -1,7 +1,5 @@
 #include <tracker_gui.h>
 #include <ui_tracker_gui.h>
-//For modular build macros
-#include <pacv_config.h>
 
 TrackerGui::TrackerGui(const pacv::TrackerConfig::Ptr conf, QWidget *parent) :
     QMainWindow(parent),

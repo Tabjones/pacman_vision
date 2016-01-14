@@ -1,7 +1,6 @@
 #include <estimator_gui.h>
 #include <ui_estimator_gui.h>
 //For modular build macros
-#include <pacv_config.h>
 
 EstimatorGui::EstimatorGui(const pacv::EstimatorConfig::Ptr conf, QWidget *parent) :
     QMainWindow(parent),
@@ -109,7 +108,8 @@ void EstimatorGui::on_Neigh_valueChanged(int arg1)
 
 void EstimatorGui::on_EstimationButt_clicked()
 {
-    ui->EstimationButt->setDisabled(true);//doesnt disable !!
+    ui->EstimationButt->setDisabled(true);
+    ui->EstimationButt->setText("Pose Estimation (Running...)");
 }
 
 void EstimatorGui::on_SuccessButt_clicked(bool checked)

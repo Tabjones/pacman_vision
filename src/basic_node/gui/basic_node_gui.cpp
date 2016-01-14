@@ -1,7 +1,10 @@
 #include <basic_node_gui.h>
 #include <ui_basic_node_gui.h>
+#include <QFileDialog>
 //For modular build macros
 #include <pacv_config.h>
+
+#include <iostream>
 
 BasicNodeGui::BasicNodeGui(const pacv::BasicConfig::Ptr conf,
                            const pacv::SensorConfig::Ptr s_conf, QWidget *parent) :
@@ -18,6 +21,11 @@ BasicNodeGui::~BasicNodeGui()
     delete ui;
 }
 
+QPushButton*
+BasicNodeGui::getSaveButt() const
+{
+    return ui->SaveButt;
+}
 void
 BasicNodeGui::addTab(QWidget* tab, const QString title)
 {
@@ -364,4 +372,19 @@ void BasicNodeGui::on_RefreshT_clicked()
     //topic =
     s_config->set("topic", topic);
     emit sensorChanged();
+}
+
+void BasicNodeGui::on_SaveButt_clicked()
+{
+    ui->SaveButt->setDisabled(true);
+    QString dir = std::getenv("HOME");
+    QString filename = QFileDialog::getSaveFileName(this, tr("Save Processed Scene"),
+                               dir, tr("Point Clouds (*.pcd)"));
+    std::string * fn = new std::string();
+    *fn = filename.toStdString();
+    std::cout<<fn->c_str()<<std::endl;
+    if( fn->empty() )
+        ui->SaveButt->setDisabled(false);
+    else
+        emit saveCloud(fn);
 }

@@ -1,6 +1,16 @@
 #ifndef _PACMAN_VISION_H_
 #define _PACMAN_VISION_H_
 
+//include communication services
+#include <pacman_vision_comm/estimate.h>
+#include <pacman_vision_comm/stop_track.h>
+#include <pacman_vision_comm/track_object.h>
+#include <pacman_vision_comm/get_scene.h>
+#include <pacman_vision_comm/grasp_verification.h>
+#include <pacman_vision_comm/get_cloud_in_hand.h>
+#include <pacman_vision_comm/start_modeler.h>
+#include <pacman_vision_comm/stop_modeler.h>
+//Qt
 #include <QTimer>
 #include <QObject>
 #include <QApplication>
@@ -50,10 +60,20 @@ private slots:
     void onSpawnKillTracker();
     ///when pose estimation is clicked
     void onPoseEstimation();
+    ///after service is finished
+    void postPoseEstimation();
+    ///when save cloud is clicked
+    void onSaveCloud(std::string *fname);
+    ///after service is finished
+    void postSaveCloud();
 private:
-    void startChecker();
-
+    void initConnections();
+    QTimer *service_timer;
     QTimer *check_timer;
+    //services
+    pacman_vision_comm::estimate srv_estimate;
+    pacman_vision_comm::get_scene srv_get_scene;
+    //modules
     std::shared_ptr<pacv::Servicer> service_caller;
     std::shared_ptr<pacv::BasicNode> basic_node;
     std::shared_ptr<pacv::Storage> storage;

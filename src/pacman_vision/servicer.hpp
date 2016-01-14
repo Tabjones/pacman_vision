@@ -15,7 +15,6 @@
 
 #include <thread>
 
-
 namespace pacv
 {
 class Servicer
@@ -28,16 +27,27 @@ class Servicer
             father_nh = std::make_shared<ros::NodeHandle>(n);
         }
         typedef std::shared_ptr<Servicer> Ptr;
-        inline bool isBusy() const
-        {
-            return busy;
-        }
+
         template <typename Service>
-        bool spawn(Service &srv, std::string topic)
+        void spawn(Service &srv, std::string topic)
         {
+            busy = true;
             nh = std::make_shared<ros::NodeHandle>(*father_nh, name_space);
-            client = nh.serviceClient<Service>(topic);
-            caller
+            client = nh->serviceClient<Service>(topic);
+            //actually easier to use a lambda than monkeying around with function
+            //pointers and templates!
+            caller = std::thread( [&]{this->call(srv);} );
+        }
+        bool postCallClean()
+        {
+            if(!busy && caller.joinable()){
+                //means the thread was spawnd and it has finished
+                caller.join();
+                nh->shutdown();
+                nh.reset();
+                return true;
+            }
+            return false;
         }
     private:
         bool busy;
@@ -45,16 +55,15 @@ class Servicer
         std::string name_space;
         ros::ServiceClient client;
         std::thread caller;
-        //init with ros param
-        void init()
-        {
-        }
+
         template <typename Service>
-        void call(Service &srv, std::string topic)
+        void call(Service &srv)
         {
-            busy = true;
-            if (client.call(srv))
-                //success
+            //this is blocking call
+            if (!client.call(srv))
+                //failed
+                ROS_ERROR("[Servicer::%s]\tFailed to call service", __func__);
+            busy = false;
         }
 };
 }//namespace

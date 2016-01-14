@@ -2,6 +2,7 @@
 #define _BASIC_NODE_GUI_H_
 
 #include <QMainWindow>
+#include <QPushButton>
 #include <basic_node/basic_node_config.hpp>
 #include <basic_node/sensor_config.hpp>
 
@@ -18,10 +19,12 @@ public:
                           const pacv::SensorConfig::Ptr s_conf, QWidget *parent = 0) ;
     ~BasicNodeGui();
     void addTab(QWidget* tab, const QString title);
+    QPushButton* getSaveButt() const;
 
 signals:
     void boxChanged();
     void sensorChanged();
+    void saveCloud(std::string* n);
 private slots:
     void on_MasterDisable_clicked(bool checked);
     void on_MasterReset_pressed();
@@ -46,7 +49,7 @@ private slots:
     void on_External_toggled(bool checked);
     void on_RefreshN_clicked();
     void on_RefreshT_clicked();
-
+    void on_SaveButt_clicked();
 private:
     void init();
     Ui::BasicNodeGui *ui;

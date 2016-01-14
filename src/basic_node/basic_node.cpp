@@ -135,14 +135,14 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
     }
     if (scene_processed){
         sensor_msgs::PointCloud2 msg;
-        if (req.save.compare("false") != 0){
-            std::string home = std::getenv("HOME");
-            pcl::io::savePCDFile( (home + "/" + req.save + ".pcd").c_str(), *scene_processed);
-            ROS_INFO("[BasicNode::%s]\tProcessed scene saved to %s", __func__, (home + "/" + req.save + ".pcd").c_str());
+        if (!req.save.empty()){
+            if(pcl::io::savePCDFile( req.save.c_str(), *scene_processed) == 0)
+                ROS_INFO("[BasicNode::%s]\tProcessed scene saved to %s", __func__, req.save.c_str());
+            else
+                ROS_ERROR("[BasicNode::%s]\tFailed to save scene to %s", __func__, req.save.c_str());
         }
         pcl::toROSMsg(*scene_processed, msg);
         res.scene = msg;
-        ROS_INFO("[BasicNode::%s]\tSent processed scene to service response.", __func__);
         return true;
     }
     else{

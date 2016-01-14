@@ -16,9 +16,6 @@
 #include <recognition/tracker.h>
 #include <estimator_gui.h>
 #include <tracker_gui.h>
-#include <pacman_vision_comm/estimate.h>
-#include <pacman_vision_comm/stop_track.h>
-#include <pacman_vision_comm/track_object.h>
 #endif
 
 #include <ros/ros.h>
@@ -30,6 +27,7 @@ PacmanVision::PacmanVision():
 PacmanVision::~PacmanVision()
 {
     delete check_timer;
+    delete service_timer;
     sensor->kill();
     basic_node->kill();
     //...
@@ -37,13 +35,14 @@ PacmanVision::~PacmanVision()
 }
 
 void
-PacmanVision::startChecker()
+PacmanVision::initConnections()
 {
     check_timer = new QTimer(this);
     connect (check_timer, SIGNAL( timeout() ), this, SLOT( checkROS() ));
     check_timer->start(200); //check every 200ms
     connect (&(*basic_gui), SIGNAL( boxChanged()), this, SLOT( onBoxChanged() ));
     connect (&(*basic_gui), SIGNAL( sensorChanged()), this, SLOT( onSensorChanged() ));
+    connect (&(*basic_gui), SIGNAL( saveCloud(std::string*) ), this, SLOT( onSaveCloud(std::string*) ));
 #ifdef PACV_RECOGNITION_SUPPORT
     connect (estimator_gui->getRunButt(), SIGNAL( clicked()), this, SLOT( onSpawnKillEstimator() ));
     connect (estimator_gui->getEstButt(), SIGNAL( clicked()), this, SLOT( onPoseEstimation() ));
@@ -107,12 +106,14 @@ PacmanVision::init(int argc, char** argv)
         storage = std::make_shared<pacv::Storage>();
         basic_node = std::make_shared<pacv::BasicNode>("pacman_vision", storage);
         basic_node->setRate(40.0); //40Hz
+        basic_node->spawn();
         sensor = std::make_shared<pacv::SensorProcessor>(basic_node->getNodeHandle(), "sensor", storage);
         sensor->setRate(40.0); //40hz
         sensor->spawn();
-        //spawn basic node for last since it needs SensorProcessor
-        basic_node->spawn();
         basic_gui = std::make_shared<BasicNodeGui>(basic_node->getConfig(), sensor->getConfig());
+        //allocate the async service caller
+        service_caller = std::make_shared<pacv::Servicer>(basic_node->getNodeHandle(), "service_caller");
+        service_timer = new QTimer(this);
 #ifdef PACV_RECOGNITION_SUPPORT
         ROS_INFO("[PaCMan Vision]\tAdding Estimator Module");
         estimator = std::make_shared<pacv::Estimator>(basic_node->getNodeHandle(), "estimator", storage);
@@ -127,7 +128,7 @@ PacmanVision::init(int argc, char** argv)
 #endif
         //...
 
-        startChecker();
+        initConnections();
         ROS_INFO("[PaCMan Vision]\tShowing Gui(s)...");
         basic_gui->show();
     }
@@ -149,14 +150,51 @@ PacmanVision::checkROS()
 }
 
 void
+PacmanVision::onSaveCloud(std::string *fname)
+{
+    std::string srv_name(basic_node->getNamespace());
+    srv_name += "/get_scene_processed";
+    srv_get_scene.request.save = *fname;
+    service_caller->spawn(srv_get_scene, srv_name);
+    connect (service_timer, SIGNAL( timeout() ), this, SLOT( postSaveCloud() ));
+    service_timer->start(200);
+}
+void
+PacmanVision::postSaveCloud()
+{
+    if (service_caller->postCallClean()){
+        //service was called and it is finished
+        service_timer->disconnect(SIGNAL( timeout() ));
+        service_timer->stop();
+        //srv_estimate has the response, but we dont care about it
+        //reactivate the gui button
+        basic_gui->getSaveButt()->setDisabled(false);
+    }
+}
+
+void
 PacmanVision::onPoseEstimation()
 {
 #ifdef PACV_RECOGNITION_SUPPORT
-    pacman_vision_comm::estimate::Request req;
-    pacman_vision_comm::estimate::Response res;
-    std::string name(estimator->getNamespace());
-    name += "/estimate";
-    ros::service::call(name, req, res);
-    estimator_gui->getEstButt()->setDisabled(false);
+    std::string srv_name(estimator->getNamespace());
+    srv_name += "/estimate";
+    service_caller->spawn(srv_estimate, srv_name);
+    connect (service_timer, SIGNAL( timeout() ), this, SLOT( postPoseEstimation() ));
+    service_timer->start(500);
+#endif
+}
+void
+PacmanVision::postPoseEstimation()
+{
+#ifdef PACV_RECOGNITION_SUPPORT
+    if (service_caller->postCallClean()){
+        //service was called and it is finished
+        service_timer->disconnect(SIGNAL( timeout() ));
+        service_timer->stop();
+        //srv_estimate has the response, but we dont care about it
+        //reactivate the gui button
+        estimator_gui->getEstButt()->setDisabled(false);
+        estimator_gui->getEstButt()->setText("Pose Estimation");
+    }
 #endif
 }
