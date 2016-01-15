@@ -14,6 +14,12 @@ TrackerGui::~TrackerGui()
     delete ui;
 }
 
+QListWidget*
+TrackerGui::getObjList() const
+{
+    return ui->objects;
+}
+
 QPushButton*
 TrackerGui::getRunButt() const
 {
@@ -22,12 +28,18 @@ TrackerGui::getRunButt() const
 QPushButton*
 TrackerGui::getTrackButt() const
 {
-    //return ui->EstimationButt;
+    return ui->TrackButt;
 }
 QPushButton*
 TrackerGui::getStopButt() const
 {
-    //return ui->EstimationButt;
+    return ui->StopButt;
+}
+
+QPushButton*
+TrackerGui::getRefreshButt() const
+{
+    return ui->RefreshO;
 }
 QWidget*
 TrackerGui::getWidget() const
@@ -49,9 +61,7 @@ void TrackerGui::init()
     ui->status->setStyleSheet("QLabel {color : red}");
     ui->StopButt->setDisabled(true);
     ui->TrackButt->setDisabled(true);
-    ui->objects->addItem("pippo");
-    ui->objects->addItem("pluto");
-    ui->objects->addItem("topolino");
+    ui->objects->clear();
 }
 
 void TrackerGui::on_RunningButt_clicked()
@@ -77,4 +87,18 @@ void TrackerGui::on_RunningButt_clicked()
 void TrackerGui::on_objects_itemSelectionChanged()
 {
     ui->TrackButt->setDisabled(false);
+}
+
+void TrackerGui::on_TrackButt_clicked()
+{
+    ui->TrackButt->setDisabled(true);
+    ui->StopButt->setDisabled(false);
+    QListWidgetItem *item = ui->objects->currentItem();
+    std::string obj = item->text().toStdString();
+    emit trackObject(&obj);
+}
+
+void TrackerGui::on_StopButt_clicked()
+{
+   ui->StopButt->setDisabled(true);
 }

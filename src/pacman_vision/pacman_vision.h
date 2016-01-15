@@ -58,6 +58,8 @@ private slots:
     void onSpawnKillEstimator();
     ///when spawnkill tracker is presed
     void onSpawnKillTracker();
+    ///On update estimated objects
+    void onObjsRefresh();
     ///when pose estimation is clicked
     void onPoseEstimation();
     ///after service is finished
@@ -66,6 +68,14 @@ private slots:
     void onSaveCloud(std::string *fname);
     ///after service is finished
     void postSaveCloud();
+    ///when start tracker is clicked
+    void onTrackObject(std::string *obj);
+    ///after service is finished
+    void postTrackObject();
+    ///when stop tracker is clicked
+    void onStopTrack();
+    ///after service is finished
+    void postStopTrack();
 private:
     void initConnections();
     QTimer *service_timer;
@@ -73,7 +83,9 @@ private:
     //services
     pacman_vision_comm::estimate srv_estimate;
     pacman_vision_comm::get_scene srv_get_scene;
-    //modules
+    pacman_vision_comm::track_object srv_track_obj;
+    pacman_vision_comm::stop_track srv_stop_track;
+    //modules and their gui
     std::shared_ptr<pacv::Servicer> service_caller;
     std::shared_ptr<pacv::BasicNode> basic_node;
     std::shared_ptr<pacv::Storage> storage;

@@ -1097,7 +1097,7 @@
            <string>Save current Processed Scene on user selected location. (By calling service get_scene_processed)</string>
           </property>
           <property name="text">
-           <string>Save Processed Scene</string>
+           <string>Save Processed Scene ...</string>
           </property>
           <property name="iconSize">
            <size>
@@ -1226,7 +1226,6 @@
        <zorder>SegmentingButt</zorder>
        <zorder>DownsamplingButt</zorder>
        <zorder>CroppingG</zorder>
-       <zorder>LoggingConsole</zorder>
        <zorder>SaveButt</zorder>
       </widget>
       <widget class="QWidget" name="SensorTab">
@@ -1234,8 +1233,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>560</width>
-         <height>454</height>
+         <width>471</width>
+         <height>270</height>
         </rect>
        </property>
        <attribute name="label">

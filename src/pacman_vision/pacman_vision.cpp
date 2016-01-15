@@ -30,7 +30,10 @@ PacmanVision::~PacmanVision()
     delete service_timer;
     sensor->kill();
     basic_node->kill();
-    //...
+    if (estimator->isRunning())
+        estimator->kill();
+    if (tracker->isRunning())
+        tracker->kill();
     ros::shutdown();
 }
 
@@ -47,6 +50,9 @@ PacmanVision::initConnections()
     connect (estimator_gui->getRunButt(), SIGNAL( clicked()), this, SLOT( onSpawnKillEstimator() ));
     connect (estimator_gui->getEstButt(), SIGNAL( clicked()), this, SLOT( onPoseEstimation() ));
     connect (tracker_gui->getRunButt(), SIGNAL( clicked()), this, SLOT( onSpawnKillTracker() ));
+    connect (tracker_gui->getRefreshButt(), SIGNAL( clicked() ), this, SLOT ( onObjsRefresh() ));
+    connect (&(*tracker_gui), SIGNAL( trackObject(std::string*) ), this, SLOT ( onTrackObject(std::string*) ));
+    connect (tracker_gui->getStopButt(), SIGNAL( clicked() ), this, SLOT ( onStopTrack() ));
 #endif
 }
 
@@ -67,6 +73,8 @@ void PacmanVision::onSpawnKillEstimator()
         estimator->kill();
         estimator_gui->setRunning(false);
         ROS_INFO("[PaCMan Vision]\tKilled Estimator Module.");
+        tracker_gui->getObjList()->clear();
+        tracker_gui->getTrackButt()->setDisabled(true);
         return;
     }
     else{
@@ -91,6 +99,7 @@ void PacmanVision::onSpawnKillTracker()
         tracker->spawn();
         tracker_gui->setRunning(true);
         ROS_INFO("[PaCMan Vision]\tSpawned Tracker Module.");
+        onObjsRefresh();
         return;
     }
 #endif
@@ -167,16 +176,31 @@ PacmanVision::postSaveCloud()
         //service was called and it is finished
         service_timer->disconnect(SIGNAL( timeout() ));
         service_timer->stop();
-        //srv_estimate has the response, but we dont care about it
         //reactivate the gui button
         basic_gui->getSaveButt()->setDisabled(false);
     }
 }
 
 void
+PacmanVision::onObjsRefresh()
+{
+#ifdef PACV_RECOGNITION_SUPPORT
+    tracker_gui->getObjList()->clear();
+    std::list<std::string> objs;
+    tracker->getObjList(objs);
+    for (const auto& x: objs)
+        tracker_gui->getObjList()->addItem(x.c_str());
+    tracker_gui->getTrackButt()->setDisabled(true);
+#endif
+}
+
+void
 PacmanVision::onPoseEstimation()
 {
 #ifdef PACV_RECOGNITION_SUPPORT
+    tracker_gui->getObjList()->clear();
+    if (tracker->isRunning())
+        tracker_gui->getTrackButt()->setDisabled(true);
     std::string srv_name(estimator->getNamespace());
     srv_name += "/estimate";
     service_caller->spawn(srv_estimate, srv_name);
@@ -196,6 +220,64 @@ PacmanVision::postPoseEstimation()
         //reactivate the gui button
         estimator_gui->getEstButt()->setDisabled(false);
         estimator_gui->getEstButt()->setText("Pose Estimation");
+        if (tracker->isRunning()){
+            std::list<std::string> objs;
+            tracker->getObjList(objs);
+            for (const auto& x: objs)
+                tracker_gui->getObjList()->addItem(x.c_str());
+        }
+    }
+#endif
+}
+
+void
+PacmanVision::onTrackObject(std::string *obj)
+{
+#ifdef PACV_RECOGNITION_SUPPORT
+    std::string srv_name(tracker->getNamespace());
+    srv_name += "/track_object";
+    srv_track_obj.request.name = *obj;
+    service_caller->spawn(srv_track_obj, srv_name);
+    connect (service_timer, SIGNAL( timeout() ), this, SLOT( postTrackObject() ));
+    service_timer->start(300);
+#endif
+}
+void
+PacmanVision::postTrackObject()
+{
+#ifdef PACV_RECOGNITION_SUPPORT
+    if (service_caller->postCallClean()){
+        //service was called and it is finished
+        service_timer->disconnect(SIGNAL( timeout() ));
+        service_timer->stop();
+        if (estimator->isRunning())
+            estimator->create_markers();
+        tracker_gui->getTrackButt()->setDisabled(false);
+    }
+#endif
+}
+
+void
+PacmanVision::onStopTrack()
+{
+#ifdef PACV_RECOGNITION_SUPPORT
+    std::string srv_name(tracker->getNamespace());
+    srv_name += "/stop_track";
+    service_caller->spawn(srv_stop_track, srv_name);
+    connect (service_timer, SIGNAL( timeout() ), this, SLOT( postStopTrack() ));
+    service_timer->start(300);
+#endif
+}
+void
+PacmanVision::postStopTrack()
+{
+#ifdef PACV_RECOGNITION_SUPPORT
+    if (service_caller->postCallClean()){
+        //service was called and it is finished
+        service_timer->disconnect(SIGNAL( timeout() ));
+        service_timer->stop();
+        if (estimator->isRunning())
+            estimator->create_markers();
     }
 #endif
 }

@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QPushButton>
+#include <QListWidget>
 #include <recognition/tracker_config.hpp>
 
 namespace Ui {
@@ -21,11 +22,17 @@ public:
     QPushButton* getRunButt() const;
     QPushButton* getTrackButt() const;
     QPushButton* getStopButt() const;
+    QListWidget* getObjList() const;
+    QPushButton* getRefreshButt() const;
+
+signals:
+    void trackObject(std::string* obj);
 
 private slots:
     void on_RunningButt_clicked();
-
     void on_objects_itemSelectionChanged();
+    void on_TrackButt_clicked();
+    void on_StopButt_clicked();
 
 private:
     void init();

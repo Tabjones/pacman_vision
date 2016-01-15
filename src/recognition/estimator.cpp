@@ -57,6 +57,7 @@ Estimator::init()
     pe->setConsiderSuccessOnListSizeOne(all_success);
     config->get("rmse_thresh", rmse_thresh);
     pe->setRMSEThreshold(rmse_thresh);
+    tracked_idx = -1;
 }
 
 void Estimator::deInit()
@@ -77,6 +78,10 @@ Estimator::getConfig() const
 void
 Estimator::publish_markers()
 {
+    bool val;
+    config->get("publish_object_markers", val);
+    if (!val)
+        return;
     if (marks && pub_markers.getNumSubscribers()>0){
         pub_markers.publish(*marks);
     }
@@ -129,9 +134,14 @@ Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision
         ROS_ERROR("[Estimator::%s]\tNode is globally disabled, this service is suspended!",__func__);
         return false;
     }
+    if (tracked_idx != -1){
+        //the tracker is tracking, no new pose estimations :(
+        ROS_ERROR("[Estimator::%s]\tThis service is suspended while the Tracker is tracking an object.",__func__);
+        return false;
+    }
     if (estimate()){
         geometry_msgs::Pose pose;
-        for (int i=0; i<estimations->size(); ++i)
+        for (size_t i=0; i<estimations->size(); ++i)
         {
             //assemble service response
             fromEigen(estimations->at(i), pose);
@@ -241,6 +251,15 @@ Estimator::estimate()
 void
 Estimator::create_markers()
 {
+    if(!estimations){
+        //We dont have estimations, check if storage has some. This could happen
+        //after estimater  gets killed and  tracker is started without  new pose
+        //estimation called.
+        if (storage->readObjTransforms(estimations))
+            storage->readObjNames(names);
+        else
+            return;
+    }
     std::string ref_frame;
     storage->readSensorFrame(ref_frame);
     // if(marks){
@@ -252,8 +271,11 @@ Estimator::create_markers()
     //     }
     // }
     marks = std::make_shared<visualization_msgs::MarkerArray>();
-    for (int i=0; i<estimations->size(); ++i) //if size is zero dont do anything
+    for (size_t i=0; i<estimations->size(); ++i) //if size is zero dont do anything
     {
+        if (i == tracked_idx)
+            //skip tracked object marker, Tracker will pusblish it
+            continue;
         geometry_msgs::Pose pose;
         fromEigen(estimations->at(i), pose);
         visualization_msgs::Marker marker;
@@ -268,9 +290,30 @@ Estimator::create_markers()
 }
 
 void
+Estimator::publish_tf()
+{
+    bool val;
+    config->get("broadcast_object_tfs", val);
+    if (!val || !estimations || !names)
+        return;
+    std::string frame;
+    storage->readSensorFrame(frame);
+    for (size_t i=0; i<estimations->size(); ++i)
+    {
+        tf::Transform tran;
+        fromEigen(estimations->at(i), tran);
+        tf_brc.sendTransform(tf::StampedTransform(tran, ros::Time::now(), frame.c_str(), names->at(i).first.c_str()));
+    }
+}
+
+void
 Estimator::spinOnce()
 {
+    if (tracked_idx == -1)
+        //monitor when and if the Tracker starts tracking
+        storage->readTrackedIndex(tracked_idx);
     publish_markers();
+    publish_tf();
     queue_ptr->callAvailable(ros::WallDuration(0));
 }
 }

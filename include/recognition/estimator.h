@@ -24,6 +24,7 @@
 #include <boost/filesystem.hpp>
 //ROS
 #include <visualization_msgs/MarkerArray.h>
+#include <tf/transform_broadcaster.h>
 
 namespace pel
 {
@@ -43,6 +44,8 @@ class Estimator: public Module<Estimator>
         Estimator(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor);
         typedef std::shared_ptr<Estimator> Ptr;
         EstimatorConfig::Ptr getConfig() const;
+        //create new markers from estimation
+        void create_markers();
         //Eigen alignment
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:
@@ -56,6 +59,8 @@ class Estimator: public Module<Estimator>
         ros::ServiceServer srv_estimate;
         //marker broadcaster
         ros::Publisher pub_markers;
+        //tf
+        tf::TransformBroadcaster tf_brc;
         //marker
         std::shared_ptr<visualization_msgs::MarkerArray> marks;
         //estimated transforms
@@ -68,6 +73,8 @@ class Estimator: public Module<Estimator>
         PXC::Ptr scene;
         //path to pel database
         boost::filesystem::path db_path;
+        //index of tracked object, if the tracker is running and tracking this is != -1
+        int tracked_idx;
 
         //PEL object
         std::shared_ptr<pel::interface::PEProgressiveBisection> pe;
@@ -87,8 +94,8 @@ class Estimator: public Module<Estimator>
         void spinOnce();
         //publish markers
         void publish_markers();
-        //create new markers from estimation
-        void create_markers();
+        //publish tf transforms
+        void publish_tf();
 };
 }//namespace
 #endif

@@ -1,6 +1,7 @@
 #ifndef _TRACKER_H_
 #define _TRACKER_H_
 
+#include <list>
 #include <common/dynamic_modules.hpp>
 #include <common/common_pcl.h>
 #include <common/common_ros.h>
@@ -39,6 +40,7 @@ class Tracker: public Module<Tracker>
         typedef std::shared_ptr<Tracker> Ptr;
         TrackerConfig::Ptr getConfig() const;
         void setBasicNodeConfig(BasicConfig::Ptr config);
+        void getObjList(std::list<std::string> &list) const;
         //Eigen alignment
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:

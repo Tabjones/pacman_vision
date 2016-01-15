@@ -20,12 +20,25 @@ Tracker::setBasicNodeConfig(BasicConfig::Ptr config)
 }
 
 void
+Tracker::getObjList(std::list<std::string> &list) const
+{
+    if(est_names){
+        list.clear();
+        for (const auto& x: *est_names)
+        {
+            list.push_back(x.first);
+        }
+    }
+}
+
+void
 Tracker::init()
 {
     if(!nh){
         ROS_ERROR("[Tracker::%s]\tNode Handle not initialized, Module must call spawn() first!",__func__);
         return;
     }
+    index = -1;
     srv_track_object = nh->advertiseService("track_object", &Tracker::cb_track_object, this);
     srv_stop = nh->advertiseService("stop_track", &Tracker::cb_stop_tracker, this);
     srv_grasp = nh->advertiseService("grasp_verification", &Tracker::cb_grasp, this);
@@ -111,7 +124,7 @@ void Tracker::track()
       vg.filter (*model);
       icp.setInputSource(model);
       pcl::CentroidPoint<PX> mc;
-      for (int i=0; i<model->points.size(); ++i)
+      for (size_t i=0; i<model->points.size(); ++i)
           mc.add(model->points[i]);
       mc.get(model_centroid);
     }
@@ -120,7 +133,7 @@ void Tracker::track()
     if (centroid_counter >=5)
     {
         pcl::CentroidPoint<PX> tc;
-        for (int i=0; i<target->points.size(); ++i)
+        for (size_t i=0; i<target->points.size(); ++i)
             tc.add(target->points[i]);
         PX target_centroid, mc_transformed;
         mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(*transform));
@@ -333,7 +346,23 @@ Tracker::spinOnce()
         //read objs
         if(!est_names){
             if(!storage->readObjNames(est_names))
-                ///////////
+                ROS_WARN_THROTTLE(30,"[Tracker::%s]\tLooks like no Pose Estimation has been performed, perform one in order to start using the object tracker.",__func__);
+        }
+        else{
+            std::shared_ptr<std::vector<std::pair<std::string, std::string>>> new_names;
+            if(storage->readObjNames(new_names)){
+                if(new_names->size()!=est_names->size())
+                    storage->readObjNames(est_names);
+                else{
+                    for(size_t i=0; i<new_names->size(); ++i)
+                    {
+                        if (new_names->at(i).first.compare(est_names->at(i).first) != 0){
+                            storage->readObjNames(est_names);
+                            break;
+                        }
+                    }
+                }
+            }
         }
     }
     queue_ptr->callAvailable(ros::WallDuration(0));
@@ -351,7 +380,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
         return false;
     }
     std::string models_path (ros::package::getPath("asus_scanner_models"));
-    if (storage->searchObjName(req.name, index)){
+    if (!storage->searchObjName(req.name, index)){
         ROS_ERROR("[Tracker::%s] Cannot find %s from the pool of already estimated objects, check spelling or run a Pose Estimation first!", __func__, req.name.c_str());
         return false;
     }
@@ -385,7 +414,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
     //also get model centroid
     pcl::CentroidPoint<PX> mc;
     std::vector<float> xvec,yvec,zvec;
-    for (int i=0; i<model->points.size(); ++i)
+    for (size_t i=0; i<model->points.size(); ++i)
     {
         xvec.push_back(model->points[i].x);
         yvec.push_back(model->points[i].y);
@@ -431,6 +460,7 @@ bool Tracker::cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacm
     index = -1;
     storage->writeTrackedIndex(index);
     marks.reset();
+    est_names.reset();
     return true;
 }
 
@@ -448,7 +478,7 @@ Tracker::find_object_in_scene()
     if (scene->points.size() > model->points.size()/3)
     {
         pcl::CentroidPoint<PX> tc;
-        for (int i=0; i<scene->points.size(); ++i)
+        for (size_t i=0; i<scene->points.size(); ++i)
             tc.add(scene->points[i]);
         PX target_centroid, mc_transformed;
         mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(*transform));

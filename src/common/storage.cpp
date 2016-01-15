@@ -200,7 +200,8 @@ Storage::searchObjName(std::string n, int &idx)
 {
     idx = -1;
     LOCK guard(mtx_names);
-    for (size_t i=0; i<names.size(); ++i){
+    for (size_t i=0; i<names.size(); ++i)
+    {
         if (names[i].first.compare(n) == 0){
             idx = i;
             return true;
