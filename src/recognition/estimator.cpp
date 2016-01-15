@@ -84,7 +84,7 @@ Estimator::publish_markers()
 int
 Estimator::extract_clusters()
 {
-    storage->read_scene_processed(scene);
+    storage->readSceneProcessed(scene);
     if (scene->empty()){
         ROS_WARN("[Estimator::%s]\tProcessed scene is empty, cannot continue...",__func__);
         return -1;
@@ -231,8 +231,8 @@ Estimator::estimate()
     }
     //Save estimations in Storage
     // this->storage->write_obj_clusters(this->clusters);
-    storage->write_obj_names(names);
-    storage->write_obj_transforms(estimations);
+    storage->writeObjNames(names);
+    storage->writeObjTransforms(estimations);
     //elaborate new markers
     create_markers();
     return true;
@@ -242,7 +242,7 @@ void
 Estimator::create_markers()
 {
     std::string ref_frame;
-    storage->read_sensor_ref_frame(ref_frame);
+    storage->readSensorFrame(ref_frame);
     // if(marks){
     //     //remove old markers
     //     for (auto &x: marks->markers){

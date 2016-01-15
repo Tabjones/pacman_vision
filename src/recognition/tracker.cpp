@@ -63,6 +63,7 @@ void Tracker::deInit()
     bounding_box.reset();
     crd.reset();
     teDQ.reset();
+    est_names.reset();
 }
 
 TrackerConfig::Ptr
@@ -73,7 +74,7 @@ Tracker::getConfig() const
 //tracker step
 void Tracker::track()
 {
-    storage->read_scene_processed(scene);
+    storage->readSceneProcessed(scene);
     if (error_count >= 30)
     {
         //failed 30 times in a row
@@ -225,7 +226,7 @@ void Tracker::track()
         fitness = icp.getFitnessScore();
         *(transform) = icp.getFinalTransformation();
     }
-    storage->write_obj_transform_by_index(index, transform);
+    storage->writeObjTransformByIndex(index, transform);
     //adjust distance and factor according to fitness
     if (fitness > 0.0008 ) //something is probably wrong
     {
@@ -258,7 +259,7 @@ void
 Tracker::create_markers()
 {
     std::string ref_frame;
-    storage->read_sensor_ref_frame(ref_frame);
+    storage->readSensorFrame(ref_frame);
     marks = std::make_shared<visualization_msgs::MarkerArray>();
     geometry_msgs::Pose pose;
     fromEigen(*transform, pose);
@@ -282,7 +283,7 @@ Tracker::create_bb_marker(geometry_msgs::Pose pose)
         return;
     visualization_msgs::Marker bb_mark;
     std::string ref_frame;
-    storage->read_sensor_ref_frame(ref_frame);
+    storage->readSensorFrame(ref_frame);
     create_box_marker((*bounding_box)*factor, bb_mark, false);
     bb_mark.header.frame_id = ref_frame.c_str();
     bb_mark.color.r = 1.0f;
@@ -326,8 +327,14 @@ Tracker::spinOnce()
         publish_markers();
     }
     else if (lost_it){
+        find_object_in_scene();
     }
     else{
+        //read objs
+        if(!est_names){
+            if(!storage->readObjNames(est_names))
+                ///////////
+        }
     }
     queue_ptr->callAvailable(ros::WallDuration(0));
 }
@@ -344,7 +351,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
         return false;
     }
     std::string models_path (ros::package::getPath("asus_scanner_models"));
-    if (storage->search_obj_name(req.name, index)){
+    if (storage->searchObjName(req.name, index)){
         ROS_ERROR("[Tracker::%s] Cannot find %s from the pool of already estimated objects, check spelling or run a Pose Estimation first!", __func__, req.name.c_str());
         return false;
     }
@@ -352,7 +359,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
     std::vector<std::string> vst;
     boost::split(vst, req.name, boost::is_any_of("_"), boost::token_compress_on);
     obj_name.second = vst.at(0);
-    if (!storage->read_obj_transform_by_index(index, transform)){
+    if (!storage->readObjTransformByIndex(index, transform)){
         ROS_ERROR("[Tracker::%s] Cannot find %s transform from the pool of already estimated transforms, check spelling or run an estimation first!", __func__, req.name.c_str());
         return false;
     }
@@ -405,7 +412,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
     //Transformation Estimation
     icp.setTransformationEstimation(teDQ);
 
-    storage->write_tracked_index(index);
+    storage->writeTrackedIndex(index);
     //we are ready to start
     started = true;
     return true;
@@ -420,9 +427,9 @@ bool Tracker::cb_stop_tracker(pacman_vision_comm::stop_track::Request& req, pacm
     }
     started = false;
     lost_it = false;
-    storage->write_obj_transform_by_index(index, transform);
+    storage->writeObjTransformByIndex(index, transform);
     index = -1;
-    storage->write_tracked_index(index);
+    storage->writeTrackedIndex(index);
     marks.reset();
     return true;
 }
@@ -432,5 +439,38 @@ bool Tracker::cb_grasp(pacman_vision_comm::grasp_verification::Request& req, pac
 {
   //TODO
   return true;
+}
+
+void
+Tracker::find_object_in_scene()
+{
+    storage->readSceneProcessed(scene);
+    if (scene->points.size() > model->points.size()/3)
+    {
+        pcl::CentroidPoint<PX> tc;
+        for (int i=0; i<scene->points.size(); ++i)
+            tc.add(scene->points[i]);
+        PX target_centroid, mc_transformed;
+        mc_transformed = pcl::transformPoint(model_centroid, Eigen::Affine3f(*transform));
+        tc.get(target_centroid);
+        Eigen::Matrix4f Tcen, guess;
+        Tcen << 1, 0, 0,  (target_centroid.x - mc_transformed.x),
+             0, 1, 0,  (target_centroid.y - mc_transformed.y),
+             0, 0, 1,  (target_centroid.z - mc_transformed.z),
+             0, 0, 0,  1;
+        guess = Tcen*(*transform);
+        *transform = guess;
+        this->started = true;
+        this->lost_it = false;
+        this->error_count = 0;
+        this->centroid_counter = 0;
+        ROS_INFO("[Tracker::%s]\tFound something that could be the object, trying to track that",__func__);
+        return;
+    }
+    else
+    {
+        ROS_WARN_THROTTLE(30, "[Tracker::%s]\tNothing is found on scene yet...",__func__);
+        return;
+    }
 }
 }

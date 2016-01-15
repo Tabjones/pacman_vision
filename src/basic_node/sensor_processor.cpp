@@ -77,6 +77,8 @@ SensorProcessor::getConfig() const
     return config;
 }
 
+///This needs to be called every time subscription or type changes,
+///also when enable/disable is toggled. PacmanVision takes care of it
 void SensorProcessor::update()
 {
     if (isDisabled()){
@@ -141,13 +143,13 @@ void SensorProcessor::spinOnce()
         scene->header.frame_id = ref_name;
         pcl_conversions::toPCL(ros::Time::now(), scene->header.stamp);
         //Send it to good riddance downstream!
-        storage->write_scene(scene);
+        storage->writeScene(scene);
         tf::Vector3 t(0.0385,0,0);
         tf::Quaternion q;
         q.setRPY(0,0,0);
         tf::Transform T(q,t);
         kinect2_ref_brcaster.sendTransform(tf::StampedTransform(T, ros::Time::now(),"kinect2_anchor", ref_name.c_str()));
-        storage->write_sensor_ref_frame(ref_name);
+        storage->writeSensorFrame(ref_name);
     }
 #endif
     //nothing to do if we dont use internal kinect2, callback takes care of it all
@@ -158,7 +160,7 @@ void SensorProcessor::cb_cloud(const sensor_msgs::PointCloud2::ConstPtr &msg)
     PTC::Ptr scene = boost::make_shared<PTC>();
     pcl::fromROSMsg (*msg, *scene);
     // Save untouched scene into storage bye bye
-    storage->write_scene(scene);
-    storage->write_sensor_ref_frame(scene->header.frame_id);
+    storage->writeScene(scene);
+    storage->writeSensorFrame(scene->header.frame_id);
 }
 }

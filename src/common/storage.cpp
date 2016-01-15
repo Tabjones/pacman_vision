@@ -4,13 +4,14 @@
 namespace pacv
 {
 //Constructor
-Storage::Storage()
+Storage::Storage(): index(-1)
 {
-    this->index = -1;
+    left_hand = Eigen::Matrix4f::Zero();
+    right_hand = Eigen::Matrix4f::Zero();
 }
 
 bool
-Storage::read_scene(PTC::Ptr &cloud)
+Storage::readScene(PTC::Ptr &cloud)
 {
     cloud=boost::make_shared<PTC>();
     if (scene){
@@ -21,11 +22,12 @@ Storage::read_scene(PTC::Ptr &cloud)
         }
     }
     ROS_WARN_THROTTLE(30,"[Storage::%s]\tScene is empty! Not reading anything",__func__);
+    cloud.reset();
     return false;
 }
 
 bool
-Storage::read_scene(PXC::Ptr &cloud)
+Storage::readScene(PXC::Ptr &cloud)
 {
     cloud=boost::make_shared<PXC>();
     if (scene){
@@ -36,11 +38,12 @@ Storage::read_scene(PXC::Ptr &cloud)
         }
     }
     ROS_WARN_THROTTLE(30,"[Storage::%s]\tScene is empty! Not reading anything",__func__);
+    cloud.reset();
     return false;
 }
 
 bool
-Storage::read_scene_processed(PTC::Ptr &cloud)
+Storage::readSceneProcessed(PTC::Ptr &cloud)
 {
     cloud=boost::make_shared<PTC>();
     if (scene_processed){
@@ -51,11 +54,12 @@ Storage::read_scene_processed(PTC::Ptr &cloud)
         }
     }
     ROS_WARN_THROTTLE(30,"[Storage::%s]\tProcessed scene is empty! Not reading anything",__func__);
+    cloud.reset();
     return false;
 }
 
 bool
-Storage::read_scene_processed(PXC::Ptr &cloud)
+Storage::readSceneProcessed(PXC::Ptr &cloud)
 {
     cloud=boost::make_shared<PXC>();
     if(scene_processed){
@@ -66,11 +70,12 @@ Storage::read_scene_processed(PXC::Ptr &cloud)
         }
     }
     ROS_WARN_THROTTLE(30,"[Storage::%s]\tProcessed scene is empty! Not reading anything",__func__);
+    cloud.reset();
     return false;
 }
 
 bool
-Storage::write_scene(PTC::Ptr cloud)
+Storage::writeScene(PTC::Ptr cloud)
 {
     if (cloud){
         if (!cloud->empty()){
@@ -86,7 +91,7 @@ Storage::write_scene(PTC::Ptr cloud)
 }
 
 bool
-Storage::write_scene_processed(PTC::Ptr cloud)
+Storage::writeSceneProcessed(PTC::Ptr cloud)
 {
     if (cloud){
         if (!cloud->empty()){
@@ -133,12 +138,13 @@ Storage::write_scene_processed(PTC::Ptr cloud)
 // }
 
 bool
-Storage::read_obj_transforms (std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &trans)
+Storage::readObjTransforms (std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &trans)
 {
     trans=std::make_shared<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>();
     LOCK guard(mtx_estimations);
     if (estimations.empty()){
         ROS_WARN_THROTTLE(30,"[Storage::%s]\tEstimated objects transformations are empty! Not reading anything",__func__);
+        trans.reset();
         return false;
     }
     std::copy(estimations.begin(), estimations.end(), std::back_inserter(*trans));
@@ -146,7 +152,7 @@ Storage::read_obj_transforms (std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen:
 }
 
 bool
-Storage::write_obj_transforms (std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> trans)
+Storage::writeObjTransforms (std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> trans)
 {
     if (trans){
         if (!trans->empty()){
@@ -161,12 +167,13 @@ Storage::write_obj_transforms (std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen
 }
 
 bool
-Storage::read_obj_names (std::shared_ptr<std::vector<std::pair<std::string,std::string>>> &n)
+Storage::readObjNames (std::shared_ptr<std::vector<std::pair<std::string,std::string>>> &n)
 {
     n=std::make_shared<std::vector<std::pair<std::string, std::string>>>();
     LOCK guard(mtx_names);
     if (names.empty()){
         ROS_WARN_THROTTLE(30,"[Storage::%s]\tEstimated objects names are empty! Not reading anything",__func__);
+        n.reset();
         return false;
     }
     std::copy(names.begin(), names.end(), std::back_inserter(*n));
@@ -174,7 +181,7 @@ Storage::read_obj_names (std::shared_ptr<std::vector<std::pair<std::string,std::
 }
 
 bool
-Storage::write_obj_names (std::shared_ptr<std::vector<std::pair<std::string,std::string>>> n)
+Storage::writeObjNames (std::shared_ptr<std::vector<std::pair<std::string,std::string>>> n)
 {
     if (n){
         if (!n->empty()){
@@ -189,7 +196,7 @@ Storage::write_obj_names (std::shared_ptr<std::vector<std::pair<std::string,std:
 }
 
 bool
-Storage::search_obj_name(std::string n, int &idx)
+Storage::searchObjName(std::string n, int &idx)
 {
     idx = -1;
     LOCK guard(mtx_names);
@@ -204,7 +211,7 @@ Storage::search_obj_name(std::string n, int &idx)
 }
 
 bool
-Storage::read_obj_transform_by_index(int idx, std::shared_ptr<Eigen::Matrix4f> &trans)
+Storage::readObjTransformByIndex(int idx, std::shared_ptr<Eigen::Matrix4f> &trans)
 {
     trans=std::make_shared<Eigen::Matrix4f>();
     LOCK guard(mtx_estimations);
@@ -216,11 +223,12 @@ Storage::read_obj_transform_by_index(int idx, std::shared_ptr<Eigen::Matrix4f> &
         }
     }
     ROS_WARN_THROTTLE(30,"[Storage::%s]\tIndex %d does not correspond to a particular estimated transform...", __func__, idx);
+    trans.reset();
     return false;
 }
 
 bool
-Storage::write_obj_transform_by_index(int idx, std::shared_ptr<Eigen::Matrix4f> trans)
+Storage::writeObjTransformByIndex(int idx, std::shared_ptr<Eigen::Matrix4f> trans)
 {
     if (!trans){
         ROS_WARN_THROTTLE(30,"[Storage::%s]\tTried to write empty transform! Skipping...",__func__);
@@ -236,12 +244,13 @@ Storage::write_obj_transform_by_index(int idx, std::shared_ptr<Eigen::Matrix4f> 
 }
 
 bool
-Storage::read_left_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
+Storage::readLeftArm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
 {
     arm=std::make_shared<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>>();
     LOCK guard(mtx_left_arm);
     if (left_arm.empty()){
         ROS_WARN_THROTTLE(30,"[Storage::%s]\tVito Left Arm transforms are empty! Not reading anything",__func__);
+        arm.reset();
         return false;
     }
     std::copy(left_arm.begin(), left_arm.end(), std::back_inserter(*arm));
@@ -249,7 +258,7 @@ Storage::read_left_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligne
 }
 
 bool
-Storage::write_left_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> arm)
+Storage::writeLeftArm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> arm)
 {
     if (arm){
         if (!arm->empty()){
@@ -264,12 +273,13 @@ Storage::write_left_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::align
 }
 
 bool
-Storage::read_right_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
+Storage::readRightArm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm)
 {
     arm=std::make_shared<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>>();
     LOCK guard(mtx_right_arm);
     if (right_arm.empty()){
         ROS_WARN_THROTTLE(30,"[Storage::%s]\tVito Right Arm transforms are empty! Not reading anything",__func__);
+        arm.reset();
         return false;
     }
     std::copy(right_arm.begin(), right_arm.end(),  std::back_inserter(*arm));
@@ -277,7 +287,7 @@ Storage::read_right_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::align
 }
 
 bool
-Storage::write_right_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> arm)
+Storage::writeRightArm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligned_allocator<Eigen::Matrix4f>>> arm)
 {
     if (arm){
         if (!arm->empty()){
@@ -291,17 +301,22 @@ Storage::write_right_arm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::alig
     return false;
 }
 
-void
-Storage::read_left_hand(std::shared_ptr<Eigen::Matrix4f> &hand)
+bool
+Storage::readLeftHand(std::shared_ptr<Eigen::Matrix4f> &hand)
 {
     hand=std::make_shared<Eigen::Matrix4f>();
     LOCK guard(mtx_left_hand);
+    if(left_hand.isZero(1e-2)){
+        ROS_WARN_THROTTLE(30,"[Storage::%s]\tVito Left Soft Hand transforms is empty! Not reading anything",__func__);
+        hand.reset();
+        return false;
+    }
     *hand = left_hand;
-    return;
+    return true;
 }
 
 bool
-Storage::write_left_hand(std::shared_ptr<Eigen::Matrix4f> hand)
+Storage::writeLeftHand(std::shared_ptr<Eigen::Matrix4f> hand)
 {
     if (hand){
         LOCK guard(mtx_left_hand);
@@ -312,17 +327,22 @@ Storage::write_left_hand(std::shared_ptr<Eigen::Matrix4f> hand)
     return false;
 }
 
-void
-Storage::read_right_hand(std::shared_ptr<Eigen::Matrix4f> &hand)
+bool
+Storage::readRightHand(std::shared_ptr<Eigen::Matrix4f> &hand)
 {
     hand=std::make_shared<Eigen::Matrix4f>();
     LOCK guard(mtx_right_hand);
-    *hand = this->right_hand;
-    return;
+    if(right_hand.isZero(1e-2)){
+        ROS_WARN_THROTTLE(30,"[Storage::%s]\tVito Right Soft Hand transforms is empty! Not reading anything",__func__);
+        hand.reset();
+        return false;
+    }
+    *hand = right_hand;
+    return true;
 }
 
 bool
-Storage::write_right_hand(std::shared_ptr<Eigen::Matrix4f> hand)
+Storage::writeRightHand(std::shared_ptr<Eigen::Matrix4f> hand)
 {
     if (hand){
         LOCK guard(mtx_right_hand);
@@ -356,7 +376,7 @@ Storage::write_right_hand(std::shared_ptr<Eigen::Matrix4f> hand)
 // }
 
 void
-Storage::read_tracked_index(int &idx)
+Storage::readTrackedIndex(int &idx)
 {
     LOCK guard(mtx_index);
     idx = index;
@@ -364,7 +384,7 @@ Storage::read_tracked_index(int &idx)
 }
 
 void
-Storage::write_tracked_index(int idx)
+Storage::writeTrackedIndex(int idx)
 {
     LOCK guard(mtx_index);
     index = idx;
@@ -435,7 +455,7 @@ Storage::write_tracked_index(int idx)
 // }
 
 bool
-Storage::read_sensor_ref_frame (std::string& frame)
+Storage::readSensorFrame (std::string& frame)
 {
     LOCK guard(mtx_sensor_ref_frame);
     frame = sensor_ref_frame;
@@ -443,7 +463,7 @@ Storage::read_sensor_ref_frame (std::string& frame)
 }
 
 bool
-Storage::write_sensor_ref_frame (std::string frame)
+Storage::writeSensorFrame (std::string frame)
 {
     if (!frame.empty()){
         LOCK guard(mtx_sensor_ref_frame);

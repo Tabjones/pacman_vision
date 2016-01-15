@@ -214,19 +214,19 @@ BasicNode::segment_scene(const PTC::ConstPtr source, PTC::Ptr &dest)
 void
 BasicNode::process_scene()
 {
+    PTC::Ptr source;
+    storage->readScene(source);
+    //check if we need to crop scene
+    if(!source)
+        return;
+    if(source->empty())
+        return;
     bool crop, downsamp, segment;
     config->get("cropping", crop);
     config->get("downsampling", downsamp);
     config->get("segmenting", segment);
     PTC::Ptr tmp = boost::make_shared<PTC>();
     PTC::Ptr dest;
-    PTC::Ptr source;
-    storage->read_scene(source);
-    //check if we need to crop scene
-    if(!source)
-        return;
-    if(source->empty())
-        return;
     if (crop){
         Box lim;
         bool org;
@@ -314,12 +314,12 @@ BasicNode::process_scene()
     if (dest){
         if(!dest->empty()){
             pcl::copyPointCloud(*dest, *scene_processed);
-            storage->write_scene_processed(scene_processed);
+            storage->writeSceneProcessed(scene_processed);
         }
     }
     else{
         pcl::copyPointCloud(*source, *scene_processed);
-        storage->write_scene_processed(scene_processed);
+        storage->writeSceneProcessed(scene_processed);
     }
 }
 void
@@ -340,7 +340,7 @@ BasicNode::update_markers()
     Box lim;
     visualization_msgs::Marker mark_lim;
     std::string ref_frame;
-    storage->read_sensor_ref_frame(ref_frame);
+    storage->readSensorFrame(ref_frame);
     config->get("filter_limits", lim);
     create_box_marker(lim, mark_lim, false);
     //make it red
@@ -389,7 +389,7 @@ BasicNode::spin()
         if (isDisabled())
             ros::spinOnce();
         else
-            spinOnce();
+            this->spinOnce();
         spin_rate->sleep();
     }
 }
