@@ -79,7 +79,7 @@ SensorProcessor::getConfig() const
 
 void SensorProcessor::update()
 {
-    if (this->isDisabled()){
+    if (isDisabled()){
 #ifdef PACV_KINECT2_SUPPORT
         if (kinect2.isStarted() || kinect2.isInitialized()){
             kinect2.stop();

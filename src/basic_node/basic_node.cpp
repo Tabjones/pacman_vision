@@ -129,7 +129,7 @@ bool
 BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res)
 {
     //This saves in home... possible todo improvement to let user specify location
-    if (this->isDisabled()){
+    if (isDisabled()){
         ROS_WARN("[BasicNode::%s]\tNode is globally disabled, this service is suspended!",__func__);
         return false;
     }
@@ -314,12 +314,12 @@ BasicNode::process_scene()
     if (dest){
         if(!dest->empty()){
             pcl::copyPointCloud(*dest, *scene_processed);
-            storage->write_scene_processed(this->scene_processed);
+            storage->write_scene_processed(scene_processed);
         }
     }
     else{
         pcl::copyPointCloud(*source, *scene_processed);
-        storage->write_scene_processed(this->scene_processed);
+        storage->write_scene_processed(scene_processed);
     }
 }
 void

@@ -52,7 +52,7 @@ Estimator::init()
     config->get("neighbors", neigh);
     pe->setParam("lists_size",neigh);
     pe->setParam("downsamp",0);
-    pe->loadAndSetDatabase(this->db_path);
+    pe->loadAndSetDatabase(db_path);
     config->get("always_success", all_success);
     pe->setConsiderSuccessOnListSizeOne(all_success);
     config->get("rmse_thresh", rmse_thresh);
@@ -129,7 +129,7 @@ Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision
         ROS_ERROR("[Estimator::%s]\tNode is globally disabled, this service is suspended!",__func__);
         return false;
     }
-    if (this->estimate()){
+    if (estimate()){
         geometry_msgs::Pose pose;
         for (int i=0; i<estimations->size(); ++i)
         {
@@ -154,7 +154,7 @@ Estimator::cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision
 bool
 Estimator::estimate()
 {
-    int size = this->extract_clusters();
+    int size = extract_clusters();
     if (size < 1){
         ROS_ERROR("[Estimator::%s]\tNo object clusters found in scene, aborting pose estimation...",__func__);
         return false;
@@ -212,9 +212,6 @@ Estimator::estimate()
         names.reset();
         estimations.reset();
         marks.reset();
-        if (size !=0 && clusters)
-            //still write clusters even if unused
-            storage->write_obj_clusters(clusters);
         return false;
     }
     //first check if we have more copy of the same object in names
@@ -233,9 +230,9 @@ Estimator::estimate()
         }
     }
     //Save estimations in Storage
-    this->storage->write_obj_clusters(this->clusters);
-    this->storage->write_obj_names(this->names);
-    this->storage->write_obj_transforms(this->estimations);
+    // this->storage->write_obj_clusters(this->clusters);
+    storage->write_obj_names(names);
+    storage->write_obj_transforms(estimations);
     //elaborate new markers
     create_markers();
     return true;

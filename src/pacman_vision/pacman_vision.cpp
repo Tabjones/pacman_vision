@@ -123,6 +123,7 @@ PacmanVision::init(int argc, char** argv)
         ROS_INFO("[PaCMan Vision]\tAdding Tracker Module");
         tracker = std::make_shared<pacv::Tracker>(basic_node->getNodeHandle(), "tracker", storage);
         tracker->setRate(40.0); //40Hz is enough
+        tracker->setBasicNodeConfig(basic_node->getConfig());
         tracker_gui = std::make_shared<TrackerGui>(tracker->getConfig());
         basic_gui->addTab(tracker_gui->getWidget(), "Tracker Module");
 #endif

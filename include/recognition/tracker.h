@@ -38,6 +38,7 @@ class Tracker: public Module<Tracker>
         Tracker(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor);
         typedef std::shared_ptr<Tracker> Ptr;
         TrackerConfig::Ptr getConfig() const;
+        void setBasicNodeConfig(BasicConfig::Ptr config);
         //Eigen alignment
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:
@@ -56,9 +57,11 @@ class Tracker: public Module<Tracker>
         std::shared_ptr<visualization_msgs::MarkerArray> marks;
         //tracker transform
         std::shared_ptr<Eigen::Matrix4f> transform;
-        Eigen::Matrix4f T_rotx, T_rotz, T_roty; //for disturbances
+        // Eigen::Matrix4f T_rotx, T_rotz, T_roty; //for disturbances
         //name and id of tracker object
         std::pair<std::string, std::string> obj_name; //name/id
+        //estimated object names
+        std::shared_ptr<std::vector<std::pair<std::string, std::string>>> est_names;
         //index of tracked object in storage
         int index;
         //actual scene
@@ -111,7 +114,6 @@ class Tracker: public Module<Tracker>
         //tracker methods
         void track();
         void find_object_in_scene();
-        void setBasicNodeConfig(BasicConfig::Ptr config);
 };
 }//namespace
 #endif

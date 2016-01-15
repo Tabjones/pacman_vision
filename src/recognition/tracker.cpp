@@ -136,7 +136,7 @@ void Tracker::track()
         if (icp.getFitnessScore() < 0.001 )
         {
             fitness = icp.getFitnessScore();
-            *(this->transform) = icp.getFinalTransformation();
+            *(transform) = icp.getFinalTransformation();
         }
     }
     // else if (disturbance_counter >= 10 || manual_disturbance)
@@ -225,7 +225,7 @@ void Tracker::track()
         fitness = icp.getFitnessScore();
         *(transform) = icp.getFinalTransformation();
     }
-    this->storage->write_obj_transform_by_index(index, this->transform);
+    storage->write_obj_transform_by_index(index, transform);
     //adjust distance and factor according to fitness
     if (fitness > 0.0008 ) //something is probably wrong
     {
@@ -325,6 +325,10 @@ Tracker::spinOnce()
         update_markers();
         publish_markers();
     }
+    else if (lost_it){
+    }
+    else{
+    }
     queue_ptr->callAvailable(ros::WallDuration(0));
 }
 
@@ -348,7 +352,7 @@ bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pa
     std::vector<std::string> vst;
     boost::split(vst, req.name, boost::is_any_of("_"), boost::token_compress_on);
     obj_name.second = vst.at(0);
-    if (!this->storage->read_obj_transform_by_index(index, transform)){
+    if (!storage->read_obj_transform_by_index(index, transform)){
         ROS_ERROR("[Tracker::%s] Cannot find %s transform from the pool of already estimated transforms, check spelling or run an estimation first!", __func__, req.name.c_str());
         return false;
     }
