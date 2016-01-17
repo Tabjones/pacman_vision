@@ -56,6 +56,7 @@ private:
     pacv::Box lim;
     pacv::BasicConfig::Ptr config;
     pacv::SensorConfig::Ptr s_config;
+    QString last_save_location;
 };
 
 #endif // BASIC_NODE_GUI_H

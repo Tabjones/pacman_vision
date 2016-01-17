@@ -377,14 +377,18 @@ void BasicNodeGui::on_RefreshT_clicked()
 void BasicNodeGui::on_SaveButt_clicked()
 {
     ui->SaveButt->setDisabled(true);
-    QString dir = std::getenv("HOME");
+    if (last_save_location.isEmpty())
+        last_save_location = std::getenv("HOME");
     QString filename = QFileDialog::getSaveFileName(this, tr("Save Processed Scene"),
-                               dir, tr("Point Clouds (*.pcd)"));
+                               last_save_location, tr("Point Clouds (*.pcd)"));
     std::string * fn = new std::string();
     *fn = filename.toStdString();
-    std::cout<<fn->c_str()<<std::endl;
-    if( fn->empty() )
+    if( fn->empty() ){
         ui->SaveButt->setDisabled(false);
-    else
+        last_save_location.clear();
+    }
+    else{
+        last_save_location = filename;
         emit saveCloud(fn);
+    }
 }

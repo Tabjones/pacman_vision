@@ -28,12 +28,21 @@ PacmanVision::~PacmanVision()
 {
     delete check_timer;
     delete service_timer;
+}
+
+void
+PacmanVision::onShutdown()
+{
+    check_timer->stop();
+    service_timer->stop();
     sensor->kill();
-    basic_node->kill();
+#ifdef PACV_RECOGNITION_SUPPORT
     if (estimator->isRunning())
         estimator->kill();
     if (tracker->isRunning())
         tracker->kill();
+#endif
+    basic_node->kill();
     ros::shutdown();
 }
 
