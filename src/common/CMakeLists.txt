@@ -7,6 +7,7 @@ set(SRC
   box.cpp
   ../../include/common/dynamic_modules.hpp
   ../../include/common/modules_config.hpp
+  ../../include/common/random_generation.hpp
   )
 
 #set library name

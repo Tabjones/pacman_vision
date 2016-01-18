@@ -3,6 +3,7 @@
 
 #include <list>
 #include <common/dynamic_modules.hpp>
+#include <common/random_generation.hpp>
 #include <common/common_pcl.h>
 #include <common/common_ros.h>
 #include <recognition/tracker_config.hpp>
@@ -11,6 +12,13 @@
 #include <pcl/common/centroid.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/correspondence.h>
+// #include <pcl/octree/octree_pointcloud_adjacency.h>
+// #include <pcl/octree/octree_pointcloud_changedetector.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/fpfh_omp.h>
+#include <pcl/search/flann_search.h>
+#include <pcl/search/impl/flann_search.hpp>
 // #include <pcl/ModelCoefficients.h>
 // #include <pcl/sample_consensus/method_types.h>
 // #include <pcl/sample_consensus/model_types.h>
@@ -73,6 +81,10 @@ class Tracker: public Module<Tracker>
         PXC::Ptr scene;
         //model
         PXC::Ptr model;
+        // model features
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr model_feat;
+        //model normals
+        NTC::Ptr model_normals;
         //loaded model
         PXC::Ptr orig_model;
         //model centroid
@@ -84,7 +96,7 @@ class Tracker: public Module<Tracker>
         //leaf size to model downsampling
         double leaf;
         //counter
-        int error_count,centroid_counter;
+        int error_count,centroid_counter, disturbance_counter;
         //transform type (unused)
         int type;
         //BBs
@@ -98,8 +110,15 @@ class Tracker: public Module<Tracker>
         //correspondences
         pcl::registration::CorrespondenceRejectorDistance::Ptr crd;
         pcl::registration::TransformationEstimationDualQuaternion<PX,PX,float>::Ptr teDQ;
-        //filters
+        //filters and features
         pcl::VoxelGrid<PX> vg;
+        pcl::FPFHEstimationOMP<PX, NT, pcl::FPFHSignature33> fpfh;
+        pcl::NormalEstimationOMP<PX, NT> ne;
+        //feature comparators typedefs
+        typedef pcl::search::FlannSearch<pcl::FPFHSignature33, flann::L2<float>> SearchT;
+        typedef typename SearchT::FlannIndexCreatorPtr CreatorT;
+        typedef typename SearchT::KdTreeMultiIndexCreator IndexT;
+        typedef typename SearchT::PointRepresentationPtr RepT;
         //spin once
         void spinOnce();
         //publish markers
@@ -121,6 +140,7 @@ class Tracker: public Module<Tracker>
         //tracker methods
         void track();
         void find_object_in_scene();
+        void computeModel();
 };
 }//namespace
 #endif
