@@ -19,12 +19,14 @@ pacman_vision: {
         object_calibration: false,
         always_success: true,
         rmse_thresh: 0.005,
-        broadcast_object_tfs: true,
-        publish_object_markers: true},
+        broadcast_tf: true,
+        publish_markers: true},
     sensor: {
         internal: false,
         name: "kinect2_optical_frame",
         topic: "/camera/depth_registered/points"},
     tracker: {
-        publish_bounding_box: true}
+        publish_bounding_box: true,
+        publish_markers: true,
+        broadcast_tf: true}
 }

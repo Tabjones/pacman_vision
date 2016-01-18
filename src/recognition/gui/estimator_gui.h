@@ -28,10 +28,10 @@ private slots:
     void on_Iter_valueChanged(int arg1);
     void on_Neigh_valueChanged(int arg1);
     void on_EstimationButt_clicked();
-
     void on_SuccessButt_clicked(bool checked);
-
     void on_rmse_valueChanged(double arg1);
+    void on_MarksButt_clicked(bool checked);
+    void on_TfButt_clicked(bool checked);
 
 private:
     void init();

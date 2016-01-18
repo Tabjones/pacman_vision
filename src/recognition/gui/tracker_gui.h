@@ -33,6 +33,9 @@ private slots:
     void on_objects_itemSelectionChanged();
     void on_TrackButt_clicked();
     void on_StopButt_clicked();
+    void on_MarkButt_clicked(bool checked);
+    void on_PubButt_clicked(bool checked);
+    void on_TfButt_clicked(bool checked);
 
 private:
     void init();

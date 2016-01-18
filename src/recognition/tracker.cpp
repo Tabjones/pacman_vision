@@ -239,7 +239,6 @@ void Tracker::track()
         fitness = icp.getFitnessScore();
         *(transform) = icp.getFinalTransformation();
     }
-    storage->writeObjTransformByIndex(index, transform);
     //adjust distance and factor according to fitness
     if (fitness > 0.0008 ) //something is probably wrong
     {
@@ -313,15 +312,17 @@ Tracker::update_markers()
     if (!marks)
         return;
     geometry_msgs::Pose pose;
-    fromEigen(*transform, pose);
-    for (auto& x: marks->markers)
-        x.pose = pose;
-    bool val;
-    config->get("publish_bounding_box", val);
-    if (val && marks->markers.size() < 2)
-        create_bb_marker(pose);
-    if (!val && marks->markers.size() > 1)
-        marks->markers.resize(1);
+    if(transform){
+        fromEigen(*transform, pose);
+        for (auto& x: marks->markers)
+            x.pose = pose;
+        bool val;
+        config->get("publish_bounding_box", val);
+        if (val && marks->markers.size() < 2)
+            create_bb_marker(pose);
+        if (!val && marks->markers.size() > 1)
+            marks->markers.resize(1);
+    }
 }
 void
 Tracker::publish_markers()
@@ -332,38 +333,36 @@ Tracker::publish_markers()
 }
 
 void
+Tracker::broadcast_tf()
+{
+    bool val;
+    config->get("broadcast_object_tfs", val);
+    if (!val || !started)
+        return;
+    std::string frame;
+    storage->readSensorFrame(frame);
+    tf::Transform tran;
+    if(transform){
+        fromEigen(*transform, tran);
+        tf_brc.sendTransform(tf::StampedTransform(tran, ros::Time::now(), frame.c_str(), obj_name.first.c_str()));
+    }
+}
+
+void
 Tracker::spinOnce()
 {
     if (started){
         track();
         update_markers();
         publish_markers();
+        broadcast_tf();
     }
     else if (lost_it){
         find_object_in_scene();
     }
     else{
-        //read objs
-        if(!est_names){
-            if(!storage->readObjNames(est_names))
-                ROS_WARN_THROTTLE(30,"[Tracker::%s]\tLooks like no Pose Estimation has been performed, perform one in order to start using the object tracker.",__func__);
-        }
-        else{
-            std::shared_ptr<std::vector<std::pair<std::string, std::string>>> new_names;
-            if(storage->readObjNames(new_names)){
-                if(new_names->size()!=est_names->size())
-                    storage->readObjNames(est_names);
-                else{
-                    for(size_t i=0; i<new_names->size(); ++i)
-                    {
-                        if (new_names->at(i).first.compare(est_names->at(i).first) != 0){
-                            storage->readObjNames(est_names);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+        if(!storage->readObjNames(est_names))
+            ROS_WARN_THROTTLE(30,"[Tracker::%s]\tLooks like no Pose Estimation has been performed, perform one in order to start using the object tracker.",__func__);
     }
     queue_ptr->callAvailable(ros::WallDuration(0));
 }

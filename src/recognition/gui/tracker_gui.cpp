@@ -58,6 +58,11 @@ void TrackerGui::init()
     bool value;
     config->get("publish_bounding_box", value);
     ui->PubButt->setChecked(value);
+    config->get("publish_markers", value);
+    ui->MarkButt->setChecked(value);
+    ui->PubButt->setDisabled(!value);
+    config->get("broadcast_tf", value);
+    ui->TfButt->setChecked(value);
     ui->status->setStyleSheet("QLabel {color : red}");
     ui->StopButt->setDisabled(true);
     ui->TrackButt->setDisabled(true);
@@ -93,6 +98,7 @@ void TrackerGui::on_TrackButt_clicked()
 {
     ui->TrackButt->setDisabled(true);
     ui->StopButt->setDisabled(false);
+    ui->objects->setDisabled(true);
     QListWidgetItem *item = ui->objects->currentItem();
     std::string obj = item->text().toStdString();
     emit trackObject(&obj);
@@ -100,5 +106,22 @@ void TrackerGui::on_TrackButt_clicked()
 
 void TrackerGui::on_StopButt_clicked()
 {
-   ui->StopButt->setDisabled(true);
+    ui->objects->setDisabled(false);
+    ui->StopButt->setDisabled(true);
+}
+
+void TrackerGui::on_MarkButt_clicked(bool checked)
+{
+   config->set("publish_markers", checked);
+   ui->PubButt->setDisabled(!checked);
+}
+
+void TrackerGui::on_PubButt_clicked(bool checked)
+{
+   config->set("publish_bounding_box", checked);
+}
+
+void TrackerGui::on_TfButt_clicked(bool checked)
+{
+   config->set("broadcast_tf", checked);
 }

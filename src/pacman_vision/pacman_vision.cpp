@@ -259,8 +259,6 @@ PacmanVision::postTrackObject()
         //service was called and it is finished
         service_timer->disconnect(SIGNAL( timeout() ));
         service_timer->stop();
-        if (estimator->isRunning())
-            estimator->create_markers();
         tracker_gui->getTrackButt()->setDisabled(false);
     }
 #endif
@@ -285,8 +283,6 @@ PacmanVision::postStopTrack()
         //service was called and it is finished
         service_timer->disconnect(SIGNAL( timeout() ));
         service_timer->stop();
-        if (estimator->isRunning())
-            estimator->create_markers();
     }
 #endif
 }

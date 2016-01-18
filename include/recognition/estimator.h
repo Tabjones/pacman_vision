@@ -44,8 +44,6 @@ class Estimator: public Module<Estimator>
         Estimator(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor);
         typedef std::shared_ptr<Estimator> Ptr;
         EstimatorConfig::Ptr getConfig() const;
-        //create new markers from estimation
-        void create_markers();
         //Eigen alignment
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:
@@ -75,6 +73,7 @@ class Estimator: public Module<Estimator>
         boost::filesystem::path db_path;
         //index of tracked object, if the tracker is running and tracking this is != -1
         int tracked_idx;
+        int transition;
 
         //PEL object
         std::shared_ptr<pel::interface::PEProgressiveBisection> pe;
@@ -92,6 +91,8 @@ class Estimator: public Module<Estimator>
         bool cb_estimate(pacman_vision_comm::estimate::Request& req, pacman_vision_comm::estimate::Response& res);
         //spin once
         void spinOnce();
+        //create new markers from estimation
+        void create_markers();
         //publish markers
         void publish_markers();
         //publish tf transforms

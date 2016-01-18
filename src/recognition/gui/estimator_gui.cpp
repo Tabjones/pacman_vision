@@ -43,6 +43,10 @@ void EstimatorGui::init()
     bool value;
     config->get("object_calibration", value);
     ui->CalibButt->setChecked(value);
+    config->get("broadcast_tf", value);
+    ui->TfButt->setChecked(value);
+    config->get("publish_markers", value);
+    ui->MarksButt->setChecked(value);
     double val;
     config->get("cluster_tol", val);
     ui->Cluster->setValue(val);
@@ -120,4 +124,14 @@ void EstimatorGui::on_SuccessButt_clicked(bool checked)
 void EstimatorGui::on_rmse_valueChanged(double arg1)
 {
    config->set("rmse_thresh", arg1);
+}
+
+void EstimatorGui::on_MarksButt_clicked(bool checked)
+{
+    config->set("publish_markers", checked);
+}
+
+void EstimatorGui::on_TfButt_clicked(bool checked)
+{
+   config->set("broadcast_tf", checked);
 }

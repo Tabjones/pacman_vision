@@ -57,7 +57,7 @@ Estimator::init()
     pe->setConsiderSuccessOnListSizeOne(all_success);
     config->get("rmse_thresh", rmse_thresh);
     pe->setRMSEThreshold(rmse_thresh);
-    tracked_idx = -1;
+    tracked_idx = transition = -1;
 }
 
 void Estimator::deInit()
@@ -74,17 +74,6 @@ EstimatorConfig::Ptr
 Estimator::getConfig() const
 {
     return config;
-}
-void
-Estimator::publish_markers()
-{
-    bool val;
-    config->get("publish_object_markers", val);
-    if (!val)
-        return;
-    if (marks && pub_markers.getNumSubscribers()>0){
-        pub_markers.publish(*marks);
-    }
 }
 int
 Estimator::extract_clusters()
@@ -290,30 +279,60 @@ Estimator::create_markers()
 }
 
 void
+Estimator::publish_markers()
+{
+    bool val;
+    config->get("publish_markers", val);
+    if (!val)
+        return;
+    if (marks && pub_markers.getNumSubscribers()>0){
+        pub_markers.publish(*marks);
+    }
+}
+
+void
 Estimator::publish_tf()
 {
     bool val;
-    config->get("broadcast_object_tfs", val);
+    config->get("broadcast_tf", val);
     if (!val || !estimations || !names)
         return;
     std::string frame;
     storage->readSensorFrame(frame);
     for (size_t i=0; i<estimations->size(); ++i)
     {
+        if (i == tracked_idx)
+            //skip tracked tf, Tracker will do it
+            continue;
         tf::Transform tran;
         fromEigen(estimations->at(i), tran);
         tf_brc.sendTransform(tf::StampedTransform(tran, ros::Time::now(), frame.c_str(), names->at(i).first.c_str()));
     }
 }
 
+///Module behaviour
 void
 Estimator::spinOnce()
 {
-    if (tracked_idx == -1)
-        //monitor when and if the Tracker starts tracking
-        storage->readTrackedIndex(tracked_idx);
+    //monitor when and if the Tracker starts tracking
+    storage->readTrackedIndex(tracked_idx);
+    //Tracker transition from stopped to started
+    if (transition == -1 && tracked_idx != -1){
+        create_markers();
+        transition = tracked_idx;
+    }
+    //Tracker transition from started to stopped
+    else if (transition != -1 && tracked_idx == -1){
+        storage->readObjTransforms(estimations);
+        storage->readObjNames(names);
+        create_markers();
+        transition = tracked_idx;
+    }
+    //publish markers if user requested
     publish_markers();
+    //and tf if user requested
     publish_tf();
+    //check if some callback needs processing
     queue_ptr->callAvailable(ros::WallDuration(0));
 }
 }
