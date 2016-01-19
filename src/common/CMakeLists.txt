@@ -3,11 +3,11 @@
 set(SRC
   common_ros.cpp
   common_pcl.cpp
+  common_std.cpp
   storage.cpp
   box.cpp
   ../../include/common/dynamic_modules.hpp
   ../../include/common/modules_config.hpp
-  ../../include/common/random_generation.hpp
   )
 
 #set library name
