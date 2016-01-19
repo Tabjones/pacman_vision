@@ -18,6 +18,10 @@
 #include <tracker_gui.h>
 #endif
 
+#ifdef PACV_LISTENER_SUPPORT
+#include <listener/listener.h>
+#endif
+
 #include <ros/ros.h>
 
 PacmanVision::PacmanVision():

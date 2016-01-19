@@ -4,11 +4,7 @@
 namespace pacv
 {
 //Constructor
-Storage::Storage(): index(-1)
-{
-    left_hand = Eigen::Matrix4f::Zero();
-    right_hand = Eigen::Matrix4f::Zero();
-}
+Storage::Storage(): index(-1){}
 
 bool
 Storage::readScene(PTC::Ptr &cloud)
@@ -303,54 +299,60 @@ Storage::writeRightArm(std::shared_ptr<std::vector<Eigen::Matrix4f,Eigen::aligne
 }
 
 bool
-Storage::readLeftHand(std::shared_ptr<Eigen::Matrix4f> &hand)
+Storage::readLeftHand(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> &hand)
 {
-    hand=std::make_shared<Eigen::Matrix4f>();
+    hand=std::make_shared<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>();
     LOCK guard(mtx_left_hand);
-    if(left_hand.isZero(1e-2)){
-        ROS_WARN_THROTTLE(30,"[Storage::%s]\tVito Left Soft Hand transforms is empty! Not reading anything",__func__);
+    if(left_hand.empty()){
+        ROS_WARN_THROTTLE(30,"[Storage::%s]\tVito Left Soft Hand transforms are empty! Not reading anything",__func__);
         hand.reset();
         return false;
     }
-    *hand = left_hand;
+    std::copy(left_hand.begin(), left_hand.end(), std::back_inserter(*hand));
     return true;
 }
 
 bool
-Storage::writeLeftHand(std::shared_ptr<Eigen::Matrix4f> hand)
+Storage::writeLeftHand(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>  hand)
 {
     if (hand){
-        LOCK guard(mtx_left_hand);
-        left_hand = *hand;
-        return true;
+        if(!hand->empty()){
+            LOCK guard(mtx_left_hand);
+            left_hand.clear();
+            std::copy(hand->begin(), hand->end(), std::back_inserter(left_hand));
+            return true;
+        }
     }
-    ROS_WARN_THROTTLE(30,"[Storage][%s]Tried to write empty Left Hand transformation! Skipping...",__func__);
+    ROS_WARN_THROTTLE(30,"[Storage::%s]\tTried to write empty Left Hand transformations! Skipping...",__func__);
     return false;
 }
 
 bool
-Storage::readRightHand(std::shared_ptr<Eigen::Matrix4f> &hand)
+Storage::readRightHand(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>  &hand)
 {
-    hand=std::make_shared<Eigen::Matrix4f>();
+    hand=std::make_shared<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>();
     LOCK guard(mtx_right_hand);
-    if(right_hand.isZero(1e-2)){
-        ROS_WARN_THROTTLE(30,"[Storage::%s]\tVito Right Soft Hand transforms is empty! Not reading anything",__func__);
+    if(right_hand.empty()){
+        ROS_WARN_THROTTLE(30,"[Storage::%s]\tVito Right Soft Hand transforms are empty! Not reading anything",__func__);
         hand.reset();
         return false;
     }
-    *hand = right_hand;
+    std::copy(right_hand.begin(), right_hand.end(), std::back_inserter(*hand));
     return true;
 }
 
 bool
-Storage::writeRightHand(std::shared_ptr<Eigen::Matrix4f> hand)
+Storage::writeRightHand(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>  hand)
 {
     if (hand){
-        LOCK guard(mtx_right_hand);
-        right_hand = *hand;
-        return true;
+        if(!hand->empty()){
+            LOCK guard(mtx_right_hand);
+            right_hand.clear();
+            std::copy(hand->begin(), hand->end(), std::back_inserter(right_hand));
+            return true;
+        }
     }
-    ROS_WARN_THROTTLE(30,"[Storage::%s]\tTried to write empty Right Hand transformation! Skipping...",__func__);
+    ROS_WARN_THROTTLE(30,"[Storage::%s]\tTried to write empty Right Hand transformations! Skipping...",__func__);
     return false;
 }
 

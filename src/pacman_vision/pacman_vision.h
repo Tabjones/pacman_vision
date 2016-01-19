@@ -94,6 +94,7 @@ private:
     std::shared_ptr<pacv::SensorProcessor> sensor;
     std::shared_ptr<pacv::Estimator> estimator;
     std::shared_ptr<pacv::Tracker> tracker;
+    std::shared_ptr<pacv::Listener> listener;
     std::shared_ptr<BasicNodeGui> basic_gui;
     std::shared_ptr<EstimatorGui> estimator_gui;
     std::shared_ptr<TrackerGui> tracker_gui;

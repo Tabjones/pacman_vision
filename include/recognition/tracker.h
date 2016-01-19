@@ -15,10 +15,10 @@
 #include <pcl/correspondence.h>
 // #include <pcl/octree/octree_pointcloud_adjacency.h>
 // #include <pcl/octree/octree_pointcloud_changedetector.h>
-#include <pcl/features/normal_3d_omp.h>
-#include <pcl/features/fpfh_omp.h>
-#include <pcl/search/flann_search.h>
-#include <pcl/search/impl/flann_search.hpp>
+// #include <pcl/features/normal_3d_omp.h>
+// #include <pcl/features/fpfh_omp.h>
+// #include <pcl/search/flann_search.h>
+// #include <pcl/search/impl/flann_search.hpp>
 // #include <pcl/ModelCoefficients.h>
 // #include <pcl/sample_consensus/method_types.h>
 // #include <pcl/sample_consensus/model_types.h>
@@ -112,13 +112,13 @@ class Tracker: public Module<Tracker>
         pcl::registration::TransformationEstimationDualQuaternion<PX,PX,float>::Ptr teDQ;
         //filters and features
         pcl::VoxelGrid<PX> vg;
-        pcl::FPFHEstimationOMP<PX, NT, pcl::FPFHSignature33> fpfh;
-        pcl::NormalEstimationOMP<PX, NT> ne;
+        // pcl::FPFHEstimationOMP<PX, NT, pcl::FPFHSignature33> fpfh;
+        // pcl::NormalEstimationOMP<PX, NT> ne;
         //feature comparators typedefs
-        typedef pcl::search::FlannSearch<pcl::FPFHSignature33, flann::L2<float>> SearchT;
-        typedef typename SearchT::FlannIndexCreatorPtr CreatorT;
-        typedef typename SearchT::KdTreeMultiIndexCreator IndexT;
-        typedef typename SearchT::PointRepresentationPtr RepT;
+        // typedef pcl::search::FlannSearch<pcl::FPFHSignature33, flann::L2<float>> SearchT;
+        // typedef typename SearchT::FlannIndexCreatorPtr CreatorT;
+        // typedef typename SearchT::KdTreeMultiIndexCreator IndexT;
+        // typedef typename SearchT::PointRepresentationPtr RepT;
         //spin once
         void spinOnce();
         //publish markers

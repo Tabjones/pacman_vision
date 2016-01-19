@@ -154,6 +154,13 @@ ENDIF(PACV_BUILD_RECOGNITION)
 
 IF(PACV_BUILD_LISTENER)
     add_subdirectory(src/listener)
+    LIST(APPEND LIBRARIES
+        ${PACV_LISTENER_LIB})
+    #add GUI too
+    # add_subdirectory(src/listener/gui)
+    # LIST(APPEND LIBRARIES
+    #     ${PACV_LISTENER_LIB})
+    # include_directories(src/listener/gui)
 ENDIF(PACV_BUILD_LISTENER)
 
 IF(PACV_BUILD_MODELER)

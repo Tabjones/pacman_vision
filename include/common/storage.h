@@ -46,10 +46,10 @@ class Storage
         bool writeLeftArm(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> arm);
         bool readRightArm(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> &arm);
         bool writeRightArm(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> arm);
-        bool readLeftHand(std::shared_ptr<Eigen::Matrix4f> &hand);
-        bool writeLeftHand(std::shared_ptr<Eigen::Matrix4f> hand);
-        bool readRightHand(std::shared_ptr<Eigen::Matrix4f> &hand);
-        bool writeRightHand(std::shared_ptr<Eigen::Matrix4f> hand);
+        bool readLeftHand(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> &hand);
+        bool writeLeftHand(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> hand);
+        bool readRightHand(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> &hand);
+        bool writeRightHand(std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> hand);
         //Read/write index of tracked object
         void readTrackedIndex(int &idx);
         void writeTrackedIndex(int idx);
@@ -81,11 +81,11 @@ class Storage
         //Vito Right arm transforms
         std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> right_arm;
         std::mutex mtx_right_arm;
-        //Vito Left hand transform
-        Eigen::Matrix4f left_hand;
+        //Vito Left hand transforms
+        std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> left_hand;
         std::mutex mtx_left_hand;
         //Vito Right hand transform
-        Eigen::Matrix4f right_hand;
+        std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> right_hand;
         std::mutex mtx_right_hand;
 };
 }
