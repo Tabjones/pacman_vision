@@ -1,5 +1,9 @@
 #include <basic_node/basic_node.h>
 
+#ifdef PACV_LISTENER_SUPPORT
+#include <listener/vito_geometry.h>
+#endif
+
 namespace pacv
 {
 BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor):
@@ -220,52 +224,69 @@ BasicNode::process_scene()
     //Add vito cropping when listener is active
     //crop arms if listener is active and user requested it
 #ifdef PACV_LISTENER_SUPPORT
+    std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> trans;
     bool val;
+    double scale;
+    list_config->get("geometry_scale", scale);
     list_config->get("remove_right_arm", val);
     if (val){
-        if (dest){
-        }
+        if(storage->readRightArm(trans))
+            if (trans->size() == lwr_arm.size() )
+                for(size_t i=0; i<trans->size(); ++i)
+                {
+                    if (dest){
+                        crop_a_box(dest, tmp, lwr_arm[i]*scale, true, trans->at(i));
+                        dest = tmp;
+                        tmp = boost::make_shared<PTC>();
+                    }
+                    else
+                        crop_a_box(source, dest, lwr_arm[i]*scale, true, trans->at(i));
+                }
     }
-    //////////////
-        if (crop_r_arm){
-            if (dest)
-                pcl::copyPointCloud(*dest, *source);
-            crop_arm(source, dest, true);
-            if(dest->empty())
-                return;
-        }
-        if (crop_r_hand){
-            if(dest)
-                pcl::copyPointCloud(*dest, *source);
-            if (detailed_hand_crop){
-                for (size_t i=0; i<21; ++i)
-                    listener_module->listen_and_crop_detailed_hand_piece(true, i, source);
-                pcl::copyPointCloud(*source, *dest);
-                if(dest->empty())
-                    return;
-            }
-            else{
-                crop_hand(source, dest, true);
-                if(dest->empty())
-                    return;
-            }
-        }
-        if (crop_l_hand){
-            if (dest)
-                pcl::copyPointCloud(*dest, *source);
-            if (detailed_hand_crop){
-                for (size_t i=0; i<21; ++i)
-                    listener_module->listen_and_crop_detailed_hand_piece(false, i, source);
-                pcl::copyPointCloud(*source, *dest);
-                if(dest->empty())
-                    return;
-            }
-            else{
-                crop_hand(source, dest, false);
-                if(dest->empty())
-                    return;
-            }
-        }
+    list_config->get("remove_left_arm", val);
+    if (val){
+        if(storage->readLeftArm(trans))
+            if (trans->size() == lwr_arm.size() )
+                for(size_t i=0; i<trans->size(); ++i)
+                {
+                    if (dest){
+                        crop_a_box(dest, tmp, lwr_arm[i]*scale, true, trans->at(i));
+                        dest = tmp;
+                        tmp = boost::make_shared<PTC>();
+                    }
+                    else
+                        crop_a_box(source, dest, lwr_arm[i]*scale, true, trans->at(i));
+                }
+    }
+    list_config->get("remove_right_hand", val);
+    if (val){
+        if(storage->readRightHand(trans))
+            if (trans->size() == soft_hand_right.size() )
+                for(size_t i=0; i<trans->size(); ++i)
+                {
+                    if (dest){
+                        crop_a_box(dest, tmp, soft_hand_right[i]*scale, true, trans->at(i));
+                        dest = tmp;
+                        tmp = boost::make_shared<PTC>();
+                    }
+                    else
+                        crop_a_box(source, dest, soft_hand_right[i]*scale, true, trans->at(i));
+                }
+    }
+    list_config->get("remove_left_hand", val);
+    if (val){
+        if(storage->readLeftHand(trans))
+            if (trans->size() == soft_hand_left.size() )
+                for(size_t i=0; i<trans->size(); ++i)
+                {
+                    if (dest){
+                        crop_a_box(dest, tmp, soft_hand_left[i]*scale, true, trans->at(i));
+                        dest = tmp;
+                        tmp = boost::make_shared<PTC>();
+                    }
+                    else
+                        crop_a_box(source, dest, soft_hand_left[i]*scale, true, trans->at(i));
+                }
     }
 #endif
     //Save into storage
