@@ -33,28 +33,29 @@ ListenerGui::setRunning(const bool run)
 
 void ListenerGui::init()
 {
-/*
     bool value;
-    config->get("object_calibration", value);
-    ui->CalibButt->setChecked(value);
-    config->get("broadcast_tf", value);
-    ui->TfButt->setChecked(value);
+    config->get("listen_right_arm", value);
+    ui->LRAButt->setChecked(value);
+    config->get("listen_left_arm", value);
+    ui->LLAButt->setChecked(value);
+    config->get("listen_right_hand", value);
+    ui->LRHButt->setChecked(value);
+    config->get("listen_left_hand", value);
+    ui->LLHButt->setChecked(value);
+    config->get("remove_right_arm", value);
+    ui->RRAButt->setChecked(value);
+    config->get("remove_left_arm", value);
+    ui->RLAButt->setChecked(value);
+    config->get("remove_right_hand", value);
+    ui->RRHButt->setChecked(value);
+    config->get("remove_left_hand", value);
+    ui->RLHButt->setChecked(value);
     config->get("publish_markers", value);
     ui->MarksButt->setChecked(value);
     double val;
-    config->get("cluster_tol", val);
-    ui->Cluster->setValue(val);
-    int v;
-    config->get("iterations", v);
-    ui->Iter->setValue(v);
-    config->get("neighbors", v);
-    ui->Neigh->setValue(v);
-    config->get("always_success", value);
-    ui->SuccessButt->setChecked(value);
-    config->get("rmse_thresh", val);
-    ui->rmse->setValue(val);
+    config->get("geometry_scale", val);
+    ui->Scale->setValue(val);
     ui->status->setStyleSheet("QLabel {color : red}");
-    */
 }
 
 void ListenerGui::on_RunningButt_clicked()
@@ -94,44 +95,61 @@ void ListenerGui::on_SwitchHandButt_clicked()
 void ListenerGui::on_LRAButt_clicked(bool checked)
 {
     config->set("listen_right_arm", checked);
-    if (!checked && ui->RRAButt->cli)
+    if (!checked && ui->RRAButt->isChecked())
+        ui->RRAButt->click();
     ui->RRAButt->setDisabled(!checked);
 }
 
 void ListenerGui::on_LLAButt_clicked(bool checked)
 {
     config->set("listen_left_arm", checked);
+    if (!checked && ui->RLAButt->isChecked())
+        ui->RLAButt->click();
     ui->RLAButt->setDisabled(!checked);
 }
 
 void ListenerGui::on_LRHButt_clicked(bool checked)
 {
     config->set("listen_right_hand", checked);
+    if (!checked && ui->RRHButt->isChecked())
+        ui->RRHButt->click();
     ui->RRHButt->setDisabled(!checked);
 }
 
 void ListenerGui::on_LLHButt_clicked(bool checked)
 {
     config->set("listen_left_hand", checked);
+    if (!checked && ui->RLHButt->isChecked())
+        ui->RLHButt->click();
     ui->RLHButt->setDisabled(!checked);
 }
 
 void ListenerGui::on_RRAButt_clicked(bool checked)
 {
-   config->set("remove_right_arm", checked);
+    config->set("remove_right_arm", checked);
 }
 
 void ListenerGui::on_RLAButt_clicked(bool checked)
 {
-   config->set("remove_left_arm", checked);
+    config->set("remove_left_arm", checked);
 }
 
 void ListenerGui::on_RRHButt_clicked(bool checked)
 {
-   config->set("remove_right_hand", checked);
+    config->set("remove_right_hand", checked);
 }
 
 void ListenerGui::on_RLHButt_clicked(bool checked)
 {
-   config->set("remove_left_hand", checked);
+    config->set("remove_left_hand", checked);
+}
+
+void ListenerGui::on_Scale_valueChanged(double arg1)
+{
+    config->set("geometry_scale", arg1);
+}
+
+void ListenerGui::on_MarksButt_clicked(bool checked)
+{
+    config->set("publish_markers",checked);
 }

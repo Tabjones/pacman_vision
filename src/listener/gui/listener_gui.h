@@ -23,22 +23,16 @@ public:
 private slots:
     void on_RunningButt_clicked();
     void on_SwitchHandButt_clicked();
-
     void on_LRAButt_clicked(bool checked);
-
     void on_LLAButt_clicked(bool checked);
-
     void on_LRHButt_clicked(bool checked);
-
     void on_LLHButt_clicked(bool checked);
-
     void on_RRAButt_clicked(bool checked);
-
     void on_RLAButt_clicked(bool checked);
-
     void on_RRHButt_clicked(bool checked);
-
     void on_RLHButt_clicked(bool checked);
+    void on_Scale_valueChanged(double arg1);
+    void on_MarksButt_clicked(bool checked);
 
 private:
     void init();
