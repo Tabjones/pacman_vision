@@ -291,7 +291,7 @@
          <widget class="QPushButton" name="MarksButt">
           <property name="geometry">
            <rect>
-            <x>300</x>
+            <x>250</x>
             <y>320</y>
             <width>227</width>
             <height>35</height>
@@ -383,9 +383,6 @@
           </property>
          </widget>
          <widget class="QPushButton" name="SwitchHandButt">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
           <property name="geometry">
            <rect>
             <x>476</x>
@@ -437,6 +434,9 @@
           </property>
          </widget>
          <widget class="QPushButton" name="RRAButt">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="geometry">
            <rect>
             <x>250</x>
@@ -488,6 +488,9 @@
           </property>
          </widget>
          <widget class="QPushButton" name="RLAButt">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="geometry">
            <rect>
             <x>250</x>
@@ -590,6 +593,9 @@
           </property>
          </widget>
          <widget class="QPushButton" name="RRHButt">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="geometry">
            <rect>
             <x>250</x>
@@ -743,6 +749,9 @@
           </property>
          </widget>
          <widget class="QPushButton" name="RLHButt">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="geometry">
            <rect>
             <x>250</x>

@@ -93,5 +93,45 @@ void ListenerGui::on_SwitchHandButt_clicked()
 
 void ListenerGui::on_LRAButt_clicked(bool checked)
 {
+    config->set("listen_right_arm", checked);
+    if (!checked && ui->RRAButt->cli)
+    ui->RRAButt->setDisabled(!checked);
+}
 
+void ListenerGui::on_LLAButt_clicked(bool checked)
+{
+    config->set("listen_left_arm", checked);
+    ui->RLAButt->setDisabled(!checked);
+}
+
+void ListenerGui::on_LRHButt_clicked(bool checked)
+{
+    config->set("listen_right_hand", checked);
+    ui->RRHButt->setDisabled(!checked);
+}
+
+void ListenerGui::on_LLHButt_clicked(bool checked)
+{
+    config->set("listen_left_hand", checked);
+    ui->RLHButt->setDisabled(!checked);
+}
+
+void ListenerGui::on_RRAButt_clicked(bool checked)
+{
+   config->set("remove_right_arm", checked);
+}
+
+void ListenerGui::on_RLAButt_clicked(bool checked)
+{
+   config->set("remove_left_arm", checked);
+}
+
+void ListenerGui::on_RRHButt_clicked(bool checked)
+{
+   config->set("remove_right_hand", checked);
+}
+
+void ListenerGui::on_RLHButt_clicked(bool checked)
+{
+   config->set("remove_left_hand", checked);
 }

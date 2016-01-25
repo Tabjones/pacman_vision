@@ -26,11 +26,25 @@ private slots:
 
     void on_LRAButt_clicked(bool checked);
 
+    void on_LLAButt_clicked(bool checked);
+
+    void on_LRHButt_clicked(bool checked);
+
+    void on_LLHButt_clicked(bool checked);
+
+    void on_RRAButt_clicked(bool checked);
+
+    void on_RLAButt_clicked(bool checked);
+
+    void on_RRHButt_clicked(bool checked);
+
+    void on_RLHButt_clicked(bool checked);
+
 private:
     void init();
     bool right;
     Ui::ListenerGui *ui;
-    pacv::ListnerConfig::Ptr config;
+    pacv::ListenerConfig::Ptr config;
     bool running;
 };
 
