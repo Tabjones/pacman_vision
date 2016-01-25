@@ -79,51 +79,7 @@ BasicNode::getConfig() const
 {
     return config;
 }
-// void
-// BasicNode::updateIfNeeded(const BasicNode::ConfigPtr conf, bool reset)
-// {
-//     if (reset){
-//         init();
-//         return;
-//     }
-//     if (conf){
-//         if (config->cropping != conf->cropping){
-//             LOCK guard(mtx_config);
-//             config->cropping = conf->cropping;
-//         }
-//         if (config->downsampling != conf->downsampling){
-//             LOCK guard(mtx_config);
-//             config->downsampling = conf->downsampling;
-//         }
-//         if (config->segmenting != conf->segmenting){
-//             LOCK guard(mtx_config);
-//             config->segmenting = conf->segmenting;
-//         }
-//         if (config->keep_organized != conf->keep_organized){
-//             LOCK guard(mtx_config);
-//             config->keep_organized = conf->keep_organized;
-//         }
-//         if (config->publish_limits != conf->publish_limits){
-//             LOCK guard(mtx_config);
-//             config->publish_limits = conf->publish_limits;
-//         }
-//         // config->publish_plane = conf->publish_plane;
-//         if (config->limits != conf->limits){
-//             LOCK guard(mtx_config);
-//             config->limits = conf->limits;
-//             update_markers();
-//         }
-//         if (config->downsampling_leaf_size != conf->downsampling_leaf_size){
-//             LOCK guard(mtx_config);
-//             config->downsampling_leaf_size = conf->downsampling_leaf_size;
-//         }
-//         if (config->plane_tolerance != conf->plane_tolerance){
-//             LOCK guard(mtx_config);
-//             config->plane_tolerance = conf->plane_tolerance;
-//         }
-//     }
-// }
-//
+
 //when service to get scene is called
 bool
 BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_vision_comm::get_scene::Response& res)
@@ -240,8 +196,9 @@ BasicNode::process_scene()
     if (downsamp){
         if (dest){
             //means we have performed at least one filter before this
-            pcl::copyPointCloud(*dest, *tmp);
-            downsamp_scene(tmp, dest);
+            downsamp_scene(dest, tmp);
+            dest = tmp;
+            tmp = boost::make_shared<PTC>();
         }
         else
             downsamp_scene(source, dest);
@@ -251,65 +208,66 @@ BasicNode::process_scene()
     if (segment){
         if (dest){
             //means we have performed at least one filter before this
-            pcl::copyPointCloud(*dest, *tmp);
-            segment_scene(tmp, dest);
+            segment_scene(dest, tmp);
+            dest = tmp;
+            tmp = boost::make_shared<PTC>();
         }
         else
             segment_scene(source, dest);
         if(dest->empty())
             return;
     }
-    //Add vito cropping when listener is done
-    // //crop arms if listener is active and we set it
-    // if ((crop_r_arm || crop_l_arm || crop_r_hand || crop_l_hand) && this->en_listener && this->listener_module){
-    //     if (crop_l_arm){
-    //         if (dest)
-    //             pcl::copyPointCloud(*dest, *source);
-    //         crop_arm(source, dest, false);
-    //         if(dest->empty())
-    //             return;
-    //     }
-    //     if (crop_r_arm){
-    //         if (dest)
-    //             pcl::copyPointCloud(*dest, *source);
-    //         crop_arm(source, dest, true);
-    //         if(dest->empty())
-    //             return;
-    //     }
-    //     if (crop_r_hand){
-    //         if(dest)
-    //             pcl::copyPointCloud(*dest, *source);
-    //         if (detailed_hand_crop){
-    //             for (size_t i=0; i<21; ++i)
-    //                 listener_module->listen_and_crop_detailed_hand_piece(true, i, source);
-    //             pcl::copyPointCloud(*source, *dest);
-    //             if(dest->empty())
-    //                 return;
-    //         }
-    //         else{
-    //             crop_hand(source, dest, true);
-    //             if(dest->empty())
-    //                 return;
-    //         }
-    //     }
-    //     if (crop_l_hand){
-    //         if (dest)
-    //             pcl::copyPointCloud(*dest, *source);
-    //         if (detailed_hand_crop){
-    //             for (size_t i=0; i<21; ++i)
-    //                 listener_module->listen_and_crop_detailed_hand_piece(false, i, source);
-    //             pcl::copyPointCloud(*source, *dest);
-    //             if(dest->empty())
-    //                 return;
-    //         }
-    //         else{
-    //             crop_hand(source, dest, false);
-    //             if(dest->empty())
-    //                 return;
-    //         }
-    //     }
-    // }
-
+    //Add vito cropping when listener is active
+    //crop arms if listener is active and user requested it
+#ifdef PACV_LISTENER_SUPPORT
+    bool val;
+    list_config->get("remove_right_arm", val);
+    if (val){
+        if (dest){
+        }
+    }
+    //////////////
+        if (crop_r_arm){
+            if (dest)
+                pcl::copyPointCloud(*dest, *source);
+            crop_arm(source, dest, true);
+            if(dest->empty())
+                return;
+        }
+        if (crop_r_hand){
+            if(dest)
+                pcl::copyPointCloud(*dest, *source);
+            if (detailed_hand_crop){
+                for (size_t i=0; i<21; ++i)
+                    listener_module->listen_and_crop_detailed_hand_piece(true, i, source);
+                pcl::copyPointCloud(*source, *dest);
+                if(dest->empty())
+                    return;
+            }
+            else{
+                crop_hand(source, dest, true);
+                if(dest->empty())
+                    return;
+            }
+        }
+        if (crop_l_hand){
+            if (dest)
+                pcl::copyPointCloud(*dest, *source);
+            if (detailed_hand_crop){
+                for (size_t i=0; i<21; ++i)
+                    listener_module->listen_and_crop_detailed_hand_piece(false, i, source);
+                pcl::copyPointCloud(*source, *dest);
+                if(dest->empty())
+                    return;
+            }
+            else{
+                crop_hand(source, dest, false);
+                if(dest->empty())
+                    return;
+            }
+        }
+    }
+#endif
     //Save into storage
     if (dest){
         if(!dest->empty()){

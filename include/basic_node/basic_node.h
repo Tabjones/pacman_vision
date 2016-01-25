@@ -28,6 +28,10 @@
 // ROS generated headers
 #include <pacman_vision_comm/get_scene.h>
 
+#ifdef PACV_LISTENER_SUPPORT
+#include <listener/listener_config.hpp>
+#endif
+
 namespace pacv
 {
 class BasicNode: public Module<BasicNode>
@@ -45,9 +49,18 @@ class BasicNode: public Module<BasicNode>
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         ///Updates marker to publish, when changed from gui
         void update_markers();
+#ifdef PACV_LISTENER_SUPPORT
+        void setListenerConfig(ListenerConfig::Ptr config)
+        {
+            list_config = config;
+        }
+#endif
     private:
         //Configuration
         BasicConfig::Ptr config;
+#ifdef PACV_LISTENER_SUPPORT
+        ListenerConfig::Ptr list_config;
+#endif
         //Message Publisher to republish processed scene
         ros::Publisher pub_scene;
         //publisher for markers
