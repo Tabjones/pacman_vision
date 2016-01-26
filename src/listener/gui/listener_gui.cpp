@@ -1,5 +1,6 @@
 #include <listener_gui.h>
 #include <ui_listener_gui.h>
+#include <QFileDialog>
 //For modular build macros
 
 ListenerGui::ListenerGui(const pacv::ListenerConfig::Ptr conf, QWidget *parent) :
@@ -152,4 +153,35 @@ void ListenerGui::on_Scale_valueChanged(double arg1)
 void ListenerGui::on_MarksButt_clicked(bool checked)
 {
     config->set("publish_markers",checked);
+}
+
+void ListenerGui::on_GetInHandButt_clicked()
+{
+    ui->GetInHandButt->setDisabled(true);
+    if (last_save_location.isEmpty())
+        last_save_location = std::getenv("HOME");
+    QString filename = QFileDialog::getSaveFileName(this, "Save 'In Hand' Point Cloud",
+                               last_save_location, "Point Clouds (*.pcd)");
+    std::string * fn = new std::string();
+    std::string * hfn = new std::string();
+    *fn = filename.toStdString();
+    last_save_location = filename;
+    if( fn->empty() ){
+        ui->GetInHandButt->setDisabled(false);
+        last_save_location.clear();
+        return;
+    }
+    if (ui->saveHand->isChecked()){
+        if (last_save_location.isEmpty())
+            last_save_location = std::getenv("HOME");
+        filename = QFileDialog::getSaveFileName(this, "Save Soft Hand Point Cloud",
+                                             last_save_location, "Point Clouds (*.pcd)");
+        *hfn = filename.toStdString();
+        if( hfn->empty() ){
+            ui->GetInHandButt->setDisabled(false);
+            last_save_location.clear();
+            return;
+        }
+    }
+    emit saveInHand(right, fn, hfn);
 }

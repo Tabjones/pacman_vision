@@ -20,6 +20,9 @@ public:
     void setRunning(const bool run);
     QPushButton* getRunButt() const;
 
+signals:
+    void saveInHand(bool r, std::string *obj, std::string *hand);
+
 private slots:
     void on_RunningButt_clicked();
     void on_SwitchHandButt_clicked();
@@ -33,6 +36,7 @@ private slots:
     void on_RLHButt_clicked(bool checked);
     void on_Scale_valueChanged(double arg1);
     void on_MarksButt_clicked(bool checked);
+    void on_GetInHandButt_clicked();
 
 private:
     void init();
@@ -40,6 +44,7 @@ private:
     Ui::ListenerGui *ui;
     pacv::ListenerConfig::Ptr config;
     bool running;
+    QString last_save_location;
 };
 
 #endif
