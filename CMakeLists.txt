@@ -14,7 +14,7 @@ set (PACV_BUILD_LISTENER           1 )
 ## This will build in hand modeler module
 set (PACV_BUILD_MODELER            0 )
 ## This will build Kinect2 Processor
-set (PACV_BUILD_KINECT2            0 )
+set (PACV_BUILD_KINECT2            1 )
 
 ################################################################################
 ######### Check for c++11 support or we won't get far... #######################

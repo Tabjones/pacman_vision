@@ -9,6 +9,7 @@
 #include <libfreenect2/packet_pipeline.h>
 
 #include <common/common_ros.h>
+#include <common/common_pcl.h>
 
 namespace pacv
 {

@@ -48,7 +48,7 @@ SensorProcessor::init()
     for (auto key: config->valid_keys)
     {
         XmlRpc::XmlRpcValue val;
-        if(nh.getParam(key, val))
+        if(nh->getParam(key, val))
         {
             if(!config->set(key, val))
                 ROS_WARN("[SensorProcessor::%s]\tFailed to set key:%s into Config",__func__,key.c_str());
