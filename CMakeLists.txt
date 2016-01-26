@@ -10,7 +10,7 @@ project(pacman_vision)
 ## This will build estimator and tracker modules
 set (PACV_BUILD_RECOGNITION        1 )
 ## This will build vito listener module
-set (PACV_BUILD_LISTENER           0 )
+set (PACV_BUILD_LISTENER           1 )
 ## This will build in hand modeler module
 set (PACV_BUILD_MODELER            0 )
 ## This will build Kinect2 Processor
@@ -157,10 +157,10 @@ IF(PACV_BUILD_LISTENER)
     LIST(APPEND LIBRARIES
         ${PACV_LISTENER_LIB})
     #add GUI too
-    # add_subdirectory(src/listener/gui)
-    # LIST(APPEND LIBRARIES
-    #     ${PACV_LISTENER_LIB})
-    # include_directories(src/listener/gui)
+    add_subdirectory(src/listener/gui)
+    LIST(APPEND LIBRARIES
+        ${PACV_LISTENERGUI_LIB})
+    include_directories(src/listener/gui)
 ENDIF(PACV_BUILD_LISTENER)
 
 IF(PACV_BUILD_MODELER)

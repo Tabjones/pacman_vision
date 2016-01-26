@@ -19,14 +19,14 @@ class ListenerConfig: public Config<ListenerConfig>
                  "geometry_scale"}}
     {
         //create maps
-        map_bool["listen_right_arm"] = true;
-        map_bool["listen_left_arm"] = true;
-        map_bool["listen_right_hand"] = true;
-        map_bool["listen_left_hand"] = true;
-        map_bool["remove_right_arm"] = true;
-        map_bool["remove_left_arm"] = true;
-        map_bool["remove_right_hand"] = true;
-        map_bool["remove_left_hand"] = true;
+        map_bool["listen_right_arm"] = false;
+        map_bool["listen_left_arm"] = false;
+        map_bool["listen_right_hand"] = false;
+        map_bool["listen_left_hand"] = false;
+        map_bool["remove_right_arm"] = false;
+        map_bool["remove_left_arm"] = false;
+        map_bool["remove_right_hand"] = false;
+        map_bool["remove_left_hand"] = false;
         map_bool["publish_markers"] = true;
         map_double["geometry_scale"] = 1.0;
     }

@@ -28,10 +28,22 @@ Listener::init()
     left_arm = std::make_shared<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>();
     right_hand = std::make_shared<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>();
     left_hand = std::make_shared<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>>();
-    right_arm.resize(arm_names.size());
-    left_arm.resize(arm_names.size());
-    left_hand.resize(hand_names.size());
-    right_hand.resize(hand_names.size());
+    right_arm->resize(arm_names.size());
+    left_arm->resize(arm_names.size());
+    left_hand->resize(hand_names.size());
+    right_hand->resize(hand_names.size());
+    //init node params
+    for (auto key: config->valid_keys)
+    {
+        XmlRpc::XmlRpcValue val;
+        if(nh->getParam(key, val))
+        {
+            if(!config->set(key, val))
+                ROS_WARN("[Listener::%s]\tFailed to set key:%s into Config",__func__,key.c_str());
+        }
+        else
+            ROS_WARN("[Listener::%s]\tKey:%s not found on parameter server",__func__,key.c_str());
+    }
 }
 
 void
@@ -61,13 +73,13 @@ Listener::listen(std::string which, std::string component)
         ROS_ERROR_THROTTLE(30,"[Listener::%s]\tPlease only specify arm or hand as component",__func__);
         return;
     }
-    tf::Transform trans;
+    tf::StampedTransform trans;
     std::string ref_frame;
     storage->readSensorFrame(ref_frame);
     if (component.compare("arm") == 0){
         try
         {
-            for (size_t=0; i<arm_names.size(); ++i)
+            for (size_t i=0; i<arm_names.size(); ++i)
             {
                 tf_listener.waitForTransform(ref_frame, (which+arm_names[i]), ros::Time(0), ros::Duration(2.0));
                 tf_listener.lookupTransform(ref_frame, (which+arm_names[i]), ros::Time(0), trans);
@@ -91,7 +103,7 @@ Listener::listen(std::string which, std::string component)
     else{
         try
         {
-            for (size_t=0; i<hand_names.size(); ++i)
+            for (size_t i=0; i<hand_names.size(); ++i)
             {
                 tf_listener.waitForTransform(ref_frame, (which+hand_names[i]), ros::Time(0), ros::Duration(2.0));
                 tf_listener.lookupTransform(ref_frame, (which+hand_names[i]), ros::Time(0), trans);
@@ -129,12 +141,12 @@ Listener::cb_get_in_hand(pacman_vision_comm::get_cloud_in_hand::Request& req, pa
         ROS_ERROR("[Listener::%s]\tRequested left hand transforms are not present at the moment.",__func__);
         return false;
     }
-    PC::Ptr obj = boost::make_shared<PC>(); //gets progressively overwritten
-    PC::Ptr cloud_original = boost::make_shared<PC>();
-    PC::Ptr hand = boost::make_shared<PC>();
-    PC::Ptr piece = boost::make_shared<PC>();
-    PC::Ptr dest = boost::make_shared<PC>();
-    this->storage->read_scene_processed(obj);
+    PTC::Ptr obj = boost::make_shared<PTC>(); //gets progressively overwritten
+    PTC::Ptr cloud_original = boost::make_shared<PTC>();
+    PTC::Ptr hand = boost::make_shared<PTC>();
+    PTC::Ptr piece = boost::make_shared<PTC>();
+    PTC::Ptr dest = boost::make_shared<PTC>();
+    this->storage->readSceneProcessed(obj);
     pcl::copyPointCloud(*obj, *cloud_original);
     //listen right or left hand based on req.right
     if (req.right)
@@ -190,7 +202,7 @@ Listener::cb_get_in_hand(pacman_vision_comm::get_cloud_in_hand::Request& req, pa
 }
 
 void
-Listener::spin_once()
+Listener::spinOnce()
 {
     bool val;
     config->get("listen_right_arm", val);
@@ -234,10 +246,10 @@ Listener::create_markers()
             fromEigen(right_arm->at(i), pose);
             mark.pose = pose;
             mark.ns = "Right Arm";
-            makr.id = i;
+            mark.id = i;
             mark.color.b=0.0f;
             mark.color.r=0.4f;
-            marks->push_back(mark);
+            marks->markers.push_back(mark);
         }
     }
     config->get("listen_left_arm", val);
@@ -249,13 +261,13 @@ Listener::create_markers()
             create_box_marker(lwr_arm[i]*scale, mark, false);
             mark.header.frame_id = frame;
             mark.header.stamp = ros::Time();
-            fromEigen(right_arm->at(i), pose);
+            fromEigen(left_arm->at(i), pose);
             mark.pose = pose;
             mark.ns = "Left Arm";
-            makr.id = i;
+            mark.id = i;
             mark.color.b=0.0f;
             mark.color.r=0.4f;
-            marks->push_back(mark);
+            marks->markers.push_back(mark);
         }
     }
     config->get("listen_right_hand", val);
@@ -270,10 +282,10 @@ Listener::create_markers()
             fromEigen(right_hand->at(i), pose);
             mark.pose = pose;
             mark.ns = "Right Hand";
-            makr.id = i;
+            mark.id = i;
             mark.color.b=0.0f;
             mark.color.r=0.4f;
-            marks->push_back(mark);
+            marks->markers.push_back(mark);
         }
     }
     config->get("listen_left_hand", val);
@@ -288,10 +300,10 @@ Listener::create_markers()
             fromEigen(left_hand->at(i), pose);
             mark.pose = pose;
             mark.ns = "Left Hand";
-            makr.id = i;
+            mark.id = i;
             mark.color.b=0.0f;
             mark.color.r=0.4f;
-            marks->push_back(mark);
+            marks->markers.push_back(mark);
         }
     }
 }

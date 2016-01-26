@@ -21,6 +21,17 @@ pacman_vision: {
         rmse_thresh: 0.005,
         broadcast_tf: true,
         publish_markers: true},
+    listener: {
+        listen_right_arm: false,
+        listen_right_hand: false,
+        listen_left_arm: false,
+        listen_left_hand: false,
+        remove_right_arm: false,
+        remove_right_hand: false,
+        remove_left_arm: false,
+        remove_left_hand: false,
+        geometry_scale: 1.1,
+        publish_markers: true},
     sensor: {
         internal: false,
         name: "kinect2_optical_frame",

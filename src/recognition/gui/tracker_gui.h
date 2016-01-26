@@ -24,6 +24,7 @@ public:
     QPushButton* getStopButt() const;
     QListWidget* getObjList() const;
     QPushButton* getRefreshButt() const;
+    void init();
 
 signals:
     void trackObject(std::string* obj);
@@ -38,7 +39,6 @@ private slots:
     void on_TfButt_clicked(bool checked);
 
 private:
-    void init();
     Ui::TrackerGui *ui;
     pacv::TrackerConfig::Ptr config;
     bool running;

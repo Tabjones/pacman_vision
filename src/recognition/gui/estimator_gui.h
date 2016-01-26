@@ -20,6 +20,7 @@ public:
     void setRunning(const bool run);
     QPushButton* getRunButt() const;
     QPushButton* getEstButt() const;
+    void init();
 
 private slots:
     void on_RunningButt_clicked();
@@ -34,7 +35,6 @@ private slots:
     void on_TfButt_clicked(bool checked);
 
 private:
-    void init();
     Ui::EstimatorGui *ui;
     pacv::EstimatorConfig::Ptr config;
     bool running;

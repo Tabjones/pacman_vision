@@ -19,6 +19,8 @@ public:
     QWidget* getWidget() const;
     void setRunning(const bool run);
     QPushButton* getRunButt() const;
+    QPushButton* getInHandButt() const;
+    void init();
 
 signals:
     void saveInHand(bool r, std::string *obj, std::string *hand);
@@ -39,7 +41,6 @@ private slots:
     void on_GetInHandButt_clicked();
 
 private:
-    void init();
     bool right;
     Ui::ListenerGui *ui;
     pacv::ListenerConfig::Ptr config;

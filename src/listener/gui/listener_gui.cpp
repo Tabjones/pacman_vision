@@ -9,7 +9,6 @@ ListenerGui::ListenerGui(const pacv::ListenerConfig::Ptr conf, QWidget *parent) 
 {
     config = conf;
     ui->setupUi(this);
-    init();
 }
 ListenerGui::~ListenerGui()
 {
@@ -20,6 +19,11 @@ QPushButton*
 ListenerGui::getRunButt() const
 {
     return ui->RunningButt;
+}
+QPushButton*
+ListenerGui::getInHandButt() const
+{
+    return ui->GetInHandButt;
 }
 QWidget*
 ListenerGui::getWidget() const
@@ -56,7 +60,6 @@ void ListenerGui::init()
     double val;
     config->get("geometry_scale", val);
     ui->Scale->setValue(val);
-    ui->status->setStyleSheet("QLabel {color : red}");
 }
 
 void ListenerGui::on_RunningButt_clicked()
@@ -67,6 +70,7 @@ void ListenerGui::on_RunningButt_clicked()
         ui->status->setText("Not Running");
         ui->status->setStyleSheet("QLabel {color : red}");
         ui->ListenerF->setDisabled(true);
+        ui->ScaleF->setDisabled(true);
         return;
     }
     else{
@@ -75,6 +79,7 @@ void ListenerGui::on_RunningButt_clicked()
         ui->status->setText("Running");
         ui->status->setStyleSheet("QLabel {color : green}");
         ui->ListenerF->setDisabled(false);
+        ui->ScaleF->setDisabled(false);
         return;
     }
 }
@@ -175,7 +180,7 @@ void ListenerGui::on_GetInHandButt_clicked()
         if (last_save_location.isEmpty())
             last_save_location = std::getenv("HOME");
         filename = QFileDialog::getSaveFileName(this, "Save Soft Hand Point Cloud",
-                                             last_save_location, "Point Clouds (*.pcd)");
+                                last_save_location, "Point Clouds (*.pcd)");
         *hfn = filename.toStdString();
         if( hfn->empty() ){
             ui->GetInHandButt->setDisabled(false);

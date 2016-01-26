@@ -7,7 +7,6 @@ TrackerGui::TrackerGui(const pacv::TrackerConfig::Ptr conf, QWidget *parent) :
 {
     config = conf;
     ui->setupUi(this);
-    init();
 }
 TrackerGui::~TrackerGui()
 {
@@ -63,7 +62,6 @@ void TrackerGui::init()
     ui->PubButt->setDisabled(!value);
     config->get("broadcast_tf", value);
     ui->TfButt->setChecked(value);
-    ui->status->setStyleSheet("QLabel {color : red}");
     ui->StopButt->setDisabled(true);
     ui->TrackButt->setDisabled(true);
     ui->objects->clear();

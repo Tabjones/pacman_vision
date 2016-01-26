@@ -33,6 +33,8 @@ class InHandModeler;
 class BasicNodeGui;
 class EstimatorGui;
 class TrackerGui;
+class ListenerGui;
+class InHandModelerGui;
 
 class PacmanVision: public QObject
 {
@@ -78,6 +80,12 @@ private slots:
     void onStopTrack();
     ///after service is finished
     void postStopTrack();
+    //when spawnkill listener is pressed
+    void onSpawnKillListener();
+    //when getCloudInHand is clicked
+    void onSaveInHand(bool right, std::string *obj, std::string *hand);
+    //after service is finished
+    void postSaveInHand();
 private:
     void initConnections();
     QTimer *service_timer;
@@ -87,6 +95,7 @@ private:
     pacman_vision_comm::get_scene srv_get_scene;
     pacman_vision_comm::track_object srv_track_obj;
     pacman_vision_comm::stop_track srv_stop_track;
+    pacman_vision_comm::get_cloud_in_hand srv_get_in_hand;
     //modules and their gui
     std::shared_ptr<pacv::Servicer> service_caller;
     std::shared_ptr<pacv::BasicNode> basic_node;
@@ -95,9 +104,11 @@ private:
     std::shared_ptr<pacv::Estimator> estimator;
     std::shared_ptr<pacv::Tracker> tracker;
     std::shared_ptr<pacv::Listener> listener;
+    std::shared_ptr<pacv::InHandModeler> modeler;
     std::shared_ptr<BasicNodeGui> basic_gui;
     std::shared_ptr<EstimatorGui> estimator_gui;
     std::shared_ptr<TrackerGui> tracker_gui;
-    //todo other modules
+    std::shared_ptr<ListenerGui> listener_gui;
+    std::shared_ptr<InHandModelerGui> modeler_gui;
 };
 #endif

@@ -227,6 +227,10 @@ BasicNode::process_scene()
     std::shared_ptr<std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>>> trans;
     bool val;
     double scale;
+    if (!list_config){
+        ROS_ERROR("[BasicNode::%s]\tNo Listener Config set, set it with setListenerConfig()",__func__);
+        return;
+    }
     list_config->get("geometry_scale", scale);
     list_config->get("remove_right_arm", val);
     if (val){

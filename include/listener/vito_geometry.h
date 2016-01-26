@@ -4,6 +4,8 @@
 #include <common/box.h>
 #include <array>
 
+namespace pacv
+{
 //Globally define Vito Robot Geometry (Taken from meshes)
 const static std::array<Box,7> lwr_arm{ {
   Box(-0.06, -0.06, -0.008,
@@ -213,4 +215,5 @@ const static std::array<std::string, 21> hand_names {{
     "_hand_thumb_proximal_link",
     "_hand_thumb_distal_link"}};
 
+}
 #endif

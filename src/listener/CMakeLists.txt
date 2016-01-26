@@ -4,12 +4,13 @@
 set(SRC
     listener.cpp
     ../../include/listener/listener_config.hpp
+    # ../../include/listener/vito_geometry.h
   )
 
 #set library name
 set(PACV_LISTENER_LIB pacv_liblistener PARENT_SCOPE)
 
-IF(PACV_LISTENER_SUPPORT)
+set(PACV_LISTENER_SUPPORT 1 PARENT_SCOPE)
 
     add_library(pacv_liblistener SHARED
         ${SRC})
@@ -24,5 +25,5 @@ target_link_libraries(pacv_liblistener
     ${PCL_FILTERS_LIBRARIES}
     ${PCL_IO_LIBRARIES}
     ${PACV_COMMON_LIB}
+    )
 
-ENDIF(PACV_LISTENER_SUPPORT)

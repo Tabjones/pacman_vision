@@ -18,8 +18,10 @@
 #include <tracker_gui.h>
 #endif
 
+//add listener support
 #ifdef PACV_LISTENER_SUPPORT
 #include <listener/listener.h>
+#include <listener_gui.h>
 #endif
 
 #include <ros/ros.h>
@@ -46,6 +48,10 @@ PacmanVision::onShutdown()
     if (tracker->isRunning())
         tracker->kill();
 #endif
+#ifdef PACV_LISTENER_SUPPORT
+    if (listener->isRunning())
+        listener->kill();
+#endif
     basic_node->kill();
     ros::shutdown();
 }
@@ -66,6 +72,10 @@ PacmanVision::initConnections()
     connect (tracker_gui->getRefreshButt(), SIGNAL( clicked() ), this, SLOT ( onObjsRefresh() ));
     connect (&(*tracker_gui), SIGNAL( trackObject(std::string*) ), this, SLOT ( onTrackObject(std::string*) ));
     connect (tracker_gui->getStopButt(), SIGNAL( clicked() ), this, SLOT ( onStopTrack() ));
+#endif
+#ifdef PACV_LISTENER_SUPPORT
+    connect (listener_gui->getRunButt(), SIGNAL( clicked()), this, SLOT( onSpawnKillListener() ));
+    connect (&(*listener_gui), SIGNAL( saveInHand(bool, std::string*, std::string*) ), this, SLOT( onSaveInHand(bool, std::string*, std::string*) ));
 #endif
 }
 
@@ -93,6 +103,7 @@ void PacmanVision::onSpawnKillEstimator()
     else{
         estimator->spawn();
         estimator_gui->setRunning(true);
+        estimator_gui->init();
         ROS_INFO("[PaCMan Vision]\tSpawned Estimator Module.");
         return;
     }
@@ -111,8 +122,28 @@ void PacmanVision::onSpawnKillTracker()
     else{
         tracker->spawn();
         tracker_gui->setRunning(true);
+        tracker_gui->init();
         ROS_INFO("[PaCMan Vision]\tSpawned Tracker Module.");
         onObjsRefresh();
+        return;
+    }
+#endif
+}
+
+void PacmanVision::onSpawnKillListener()
+{
+#ifdef PACV_LISTENER_SUPPORT
+    if (listener->isRunning()){
+        listener->kill();
+        listener_gui->setRunning(false);
+        ROS_INFO("[PaCMan Vision]\tKilled Listener Module.");
+        return;
+    }
+    else{
+        listener->spawn();
+        listener_gui->setRunning(true);
+        listener_gui->init();
+        ROS_INFO("[PaCMan Vision]\tSpawned Listener Module.");
         return;
     }
 #endif
@@ -149,10 +180,18 @@ PacmanVision::init(int argc, char** argv)
         tracker_gui = std::make_shared<TrackerGui>(tracker->getConfig());
         basic_gui->addTab(tracker_gui->getWidget(), "Tracker Module");
 #endif
+#ifdef PACV_LISTENER_SUPPORT
+        ROS_INFO("[PaCMan Vision]\tAdding Listener Module");
+        listener = std::make_shared<pacv::Listener>(basic_node->getNodeHandle(), "listener", storage);
+        listener->setRate(30.0); //30Hz is enough
+        basic_node->setListenerConfig(listener->getConfig());
+        listener_gui = std::make_shared<ListenerGui>(listener->getConfig());
+        basic_gui->addTab(listener_gui->getWidget(), "Listener Module");
+#endif
         //...
 
         initConnections();
-        ROS_INFO("[PaCMan Vision]\tShowing Gui(s)...");
+        ROS_INFO("[PaCMan Vision]\tShowing Gui...");
         basic_gui->show();
     }
     catch(...)
@@ -169,6 +208,7 @@ PacmanVision::checkROS()
     if (!ros::ok()){
         check_timer->stop();
         QApplication::closeAllWindows();
+        ROS_INFO("[PaCMan Vision]\tShutting Down...");
     }
 }
 
@@ -287,6 +327,35 @@ PacmanVision::postStopTrack()
         //service was called and it is finished
         service_timer->disconnect(SIGNAL( timeout() ));
         service_timer->stop();
+    }
+#endif
+}
+
+void
+PacmanVision::onSaveInHand(bool right, std::string *obj, std::string *hand)
+{
+#ifdef PACV_LISTENER_SUPPORT
+    std::string srv_name(listener->getNamespace());
+    srv_name += "/get_cloud_in_hand";
+    srv_get_in_hand.request.right = right;
+    srv_get_in_hand.request.save_obj = *obj;
+    srv_get_in_hand.request.save_hand = *hand;
+    service_caller->spawn(srv_get_in_hand, srv_name);
+    connect (service_timer, SIGNAL( timeout() ), this, SLOT( postSaveInHand() ));
+    service_timer->start(200);
+#endif
+}
+void
+PacmanVision::postSaveInHand()
+{
+#ifdef PACV_LISTENER_SUPPORT
+    if (service_caller->postCallClean()){
+        //service was called and it is finished
+        service_timer->disconnect(SIGNAL( timeout() ));
+        service_timer->stop();
+        //srv_estimate has the response, but we dont care about it
+        //reactivate the gui button
+        listener_gui->getInHandButt()->setDisabled(false);
     }
 #endif
 }

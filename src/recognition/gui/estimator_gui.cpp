@@ -8,7 +8,6 @@ EstimatorGui::EstimatorGui(const pacv::EstimatorConfig::Ptr conf, QWidget *paren
 {
     config = conf;
     ui->setupUi(this);
-    init();
 }
 EstimatorGui::~EstimatorGui()
 {
@@ -59,7 +58,6 @@ void EstimatorGui::init()
     ui->SuccessButt->setChecked(value);
     config->get("rmse_thresh", val);
     ui->rmse->setValue(val);
-    ui->status->setStyleSheet("QLabel {color : red}");
 }
 
 void EstimatorGui::on_RunningButt_clicked()
