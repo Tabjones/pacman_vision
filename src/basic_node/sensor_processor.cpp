@@ -35,16 +35,6 @@ SensorProcessor::init()
         return;
     }
     //init node params
-#ifndef PACV_KINECT2_SUPPORT
-    //we just need to read which topic to subscribe
-    if(nh->getParam("topic",topic)){
-            if(!config->set("topic", topic))
-                ROS_WARN("[SensorProcessor::%s]\tFailed to set key:topic into Config",__func__);
-    }
-    else
-        ROS_WARN("[SensorProcessor::%s]\tKey:topic not found on parameter server",__func__);
-#endif
-#ifdef PACV_KINECT2_SUPPORT
     for (auto key: config->valid_keys)
     {
         XmlRpc::XmlRpcValue val;
@@ -56,19 +46,19 @@ SensorProcessor::init()
         else
             ROS_WARN("[SensorProcessor::%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
-    //Fire subscriber or kinect2
-    bool internal;
-    config->get("internal", internal);
-    if(internal)
-    {
-        kinect2.initDevice();
-        kinect2.start();
-        return;
-    }
-#endif
-    config->get("topic", topic);
-    //fire the subscriber
-    sub_cloud = nh->subscribe(nh->resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
+    update();
+    // //Fire subscriber or kinect2
+    // bool internal;
+    // config->get("internal", internal);
+    // if(internal)
+    // {
+    //     kinect2.initDevice();
+    //     kinect2.start();
+    //     return;
+    // }
+    // config->get("topic", topic);
+    // //fire the subscriber
+    // sub_cloud = nh->subscribe(nh->resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
 }
 
 SensorConfig::Ptr
@@ -89,7 +79,6 @@ void SensorProcessor::update()
         }
 #endif
         sub_cloud.shutdown();
-        was_disabled = true;
         return;
     }
 #ifdef PACV_KINECT2_SUPPORT
@@ -102,30 +91,18 @@ void SensorProcessor::update()
             kinect2.initDevice();
         if (!kinect2.isStarted())
             kinect2.start();
-        if(was_disabled)
-            was_disabled=false;
         return;
     }
-    //then we use external subscriber
+    //internal is off, we use external subscriber
     //stop the internal kinect2
     if (kinect2.isStarted() || kinect2.isInitialized()){
         kinect2.stop();
         kinect2.close();
     }
 #endif
-    if (was_disabled){
-        config->get("topic", topic);
-        //fire the subscriber
-        sub_cloud = nh->subscribe(nh->resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
-        was_disabled = false;
-        return;
-    }
     config->get("topic", topic);
-    if (topic.compare(sub_cloud.getTopic()) != 0){
-        //we need to change subscriber, topic changed
-        sub_cloud = nh->subscribe(nh->resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
-        return;
-    }
+    //fire the subscriber
+    sub_cloud = nh->subscribe(nh->resolveName(topic), 5, &SensorProcessor::cb_cloud, this);
 }
 
 void SensorProcessor::spinOnce()
@@ -148,11 +125,15 @@ void SensorProcessor::spinOnce()
         tf::Quaternion q;
         q.setRPY(0,0,0);
         tf::Transform T(q,t);
-        kinect2_ref_brcaster.sendTransform(tf::StampedTransform(T, ros::Time::now(),"kinect2_anchor", ref_name.c_str()));
+        kinect2_ref_brcaster.sendTransform(tf::StampedTransform(T, ros::Time::now(),"kinect2_link", ref_name.c_str()));
         storage->writeSensorFrame(ref_name);
     }
 #endif
-    //nothing to do if we dont use internal kinect2, callback takes care of it all
+    //nothing to do for point clouds if we dont use internal kinect2,
+    //callback takes care of it all
+
+    //broadcast identity between cameras if requested
+    broadcast_identity();
 }
 
 void SensorProcessor::cb_cloud(const sensor_msgs::PointCloud2::ConstPtr &msg)
@@ -163,4 +144,17 @@ void SensorProcessor::cb_cloud(const sensor_msgs::PointCloud2::ConstPtr &msg)
     storage->writeScene(scene);
     storage->writeSensorFrame(scene->header.frame_id);
 }
+
+void
+SensorProcessor::broadcast_identity()
+{
+    bool val;
+    config->get("broadcast_identity_tf", val);
+    if (val){
+        tf::Transform T;
+        T.setIdentity();
+        kinect2_ref_brcaster.sendTransform(tf::StampedTransform(T, ros::Time::now(), "kinect2_link", "camera_link"));
+    }
+}
+
 }

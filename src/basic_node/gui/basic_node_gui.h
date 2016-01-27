@@ -50,6 +50,8 @@ private slots:
     void on_RefreshN_clicked();
     void on_RefreshT_clicked();
     void on_SaveButt_clicked();
+    void on_BrdButt_clicked(bool checked);
+
 private:
     void init();
     Ui::BasicNodeGui *ui;

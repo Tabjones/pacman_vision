@@ -44,7 +44,7 @@
          <x>0</x>
          <y>0</y>
          <width>560</width>
-         <height>454</height>
+         <height>676</height>
         </rect>
        </property>
        <property name="toolTip">
@@ -1233,15 +1233,15 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>471</width>
-         <height>270</height>
+         <width>560</width>
+         <height>676</height>
         </rect>
        </property>
        <attribute name="label">
         <string>Point Cloud Acquisition</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_5">
-        <item row="0" column="0" colspan="2">
+        <item row="0" column="0">
          <widget class="QFrame" name="TypeF">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -1500,11 +1500,56 @@
           </property>
          </widget>
         </item>
+        <item row="3" column="0">
+         <widget class="QPushButton" name="BrdButt">
+          <property name="maximumSize">
+           <size>
+            <width>240</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Oxygen-Sans</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>Broadcast a TF transform (Identity) between camera_link and kinect2_link. This is useful if you have both sensors plugged and running and you want to switch subscriber without the need to change fixed frame in rviz.</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">Text-align:left</string>
+          </property>
+          <property name="text">
+           <string>  Broadcast Identity TF</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../resources/resources.qrc">
+            <normaloff>:/icons/off.png</normaloff>
+            <normalon>:/icons/on.png</normalon>:/icons/off.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>32</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </widget>
     </item>
-    <item row="2" column="0">
+    <item row="1" column="0">
      <widget class="QPushButton" name="MasterDisable">
       <property name="font">
        <font>
@@ -1536,7 +1581,7 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="1">
+    <item row="1" column="1">
      <widget class="QPushButton" name="MasterReset">
       <property name="font">
        <font>
@@ -1560,70 +1605,6 @@
         <width>32</width>
         <height>32</height>
        </size>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0" colspan="2">
-     <widget class="QPlainTextEdit" name="LoggingConsole">
-      <property name="minimumSize">
-       <size>
-        <width>256</width>
-        <height>64</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>256</height>
-       </size>
-      </property>
-      <property name="baseSize">
-       <size>
-        <width>256</width>
-        <height>64</height>
-       </size>
-      </property>
-      <property name="font">
-       <font>
-        <family>Inconsolata-dz for Powerline</family>
-        <pointsize>10</pointsize>
-        <weight>50</weight>
-        <bold>false</bold>
-        <stylestrategy>PreferAntialias</stylestrategy>
-       </font>
-      </property>
-      <property name="cursor" stdset="0">
-       <cursorShape>IBeamCursor</cursorShape>
-      </property>
-      <property name="toolTip">
-       <string>Displays some information on what's going on.</string>
-      </property>
-      <property name="layoutDirection">
-       <enum>Qt::LeftToRight</enum>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
-      </property>
-      <property name="frameShadow">
-       <enum>QFrame::Sunken</enum>
-      </property>
-      <property name="undoRedoEnabled">
-       <bool>false</bool>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-      <property name="plainText">
-       <string>Messages:</string>
-      </property>
-      <property name="maximumBlockCount">
-       <number>50</number>
-      </property>
-      <property name="backgroundVisible">
-       <bool>false</bool>
-      </property>
-      <property name="centerOnScroll">
-       <bool>true</bool>
       </property>
      </widget>
     </item>

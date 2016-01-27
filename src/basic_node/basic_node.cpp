@@ -297,11 +297,17 @@ BasicNode::process_scene()
     if (dest){
         if(!dest->empty()){
             pcl::copyPointCloud(*dest, *scene_processed);
+            std::string frame;
+            storage->readSensorFrame(frame);
+            scene_processed->header.frame_id = frame;
             storage->writeSceneProcessed(scene_processed);
         }
     }
     else{
         pcl::copyPointCloud(*source, *scene_processed);
+        std::string frame;
+        storage->readSensorFrame(frame);
+        scene_processed->header.frame_id = frame;
         storage->writeSceneProcessed(scene_processed);
     }
 }
@@ -322,8 +328,6 @@ BasicNode::update_markers()
     marks=std::make_shared<visualization_msgs::MarkerArray>();
     Box lim;
     visualization_msgs::Marker mark_lim;
-    std::string ref_frame;
-    storage->readSensorFrame(ref_frame);
     config->get("filter_limits", lim);
     create_box_marker(lim, mark_lim, false);
     //make it red
@@ -332,10 +336,6 @@ BasicNode::update_markers()
     //name it
     mark_lim.ns="Cropping Limits";
     mark_lim.id=0;
-    if (ref_frame.empty())
-        //fallback to asus
-        ref_frame = "/camera_rgb_optical_frame";
-    mark_lim.header.frame_id = ref_frame;
     marks->markers.push_back(mark_lim);
 }
 void
@@ -345,6 +345,13 @@ BasicNode::publish_markers()
     config->get("cropping", crop);
     config->get("publish_limits", plim);
     if (crop && plim && pub_markers.getNumSubscribers()>0 && marks){
+        std::string ref_frame;
+        storage->readSensorFrame(ref_frame);
+        if (ref_frame.empty())
+            //fallback to asus
+            ref_frame = "/camera_rgb_optical_frame";
+        for (auto &m: marks->markers)
+            m.header.frame_id = ref_frame;
         pub_markers.publish(*marks);
     }
     /*
@@ -361,7 +368,6 @@ BasicNode::spinOnce()
     process_scene();
     publish_scene_processed();
     publish_markers();
-    ros::spinOnce();
 }
 
 void
@@ -369,10 +375,9 @@ BasicNode::spin()
 {
     while (isOk() && is_running)
     {
-        if (isDisabled())
-            ros::spinOnce();
-        else
-            this->spinOnce();
+        if (!isDisabled())
+            spinOnce();
+        ros::spinOnce();
         spin_rate->sleep();
     }
 }

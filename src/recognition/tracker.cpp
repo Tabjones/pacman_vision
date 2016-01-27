@@ -354,7 +354,6 @@ Tracker::spinOnce()
         if(!storage->readObjNames(est_names))
             ROS_WARN_THROTTLE(30,"[Tracker::%s]\tLooks like no Pose Estimation has been performed, perform one in order to start using the object tracker.",__func__);
     }
-    queue_ptr->callAvailable(ros::WallDuration(0));
 }
 
 bool Tracker::cb_track_object(pacman_vision_comm::track_object::Request& req, pacman_vision_comm::track_object::Response& res)

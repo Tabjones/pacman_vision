@@ -34,6 +34,7 @@ pacman_vision: {
         publish_markers: true},
     sensor: {
         internal: false,
+        broadcast_identity_tf: false,
         name: "kinect2_optical_frame",
         topic: "/camera/depth_registered/points"},
     tracker: {

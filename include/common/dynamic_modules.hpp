@@ -182,11 +182,9 @@ class Module
         {
             while(derived().nh->ok() && derived().is_running)
             {
-                if(!derived().disabled){
+                if(!derived().disabled)
                     derived().spinOnce();
-                }
-                else
-                    derived().queue_ptr->callAvailable(ros::WallDuration(0));
+                derived().queue_ptr->callAvailable(ros::WallDuration(0));
                 derived().sleep();
             }
         }

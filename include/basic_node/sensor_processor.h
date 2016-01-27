@@ -34,17 +34,20 @@ class SensorProcessor: public Module<SensorProcessor>
         void deInit();
         //external subscriber to recieve a cloud
         ros::Subscriber sub_cloud;
+        //internal kinect2 name handler (if present) and or
+        //identity broadcaster
+        tf::TransformBroadcaster kinect2_ref_brcaster;
         //subscribed topic
         std::string topic;
         //and track when we were disableb
         bool was_disabled;
         //associated callback
         void cb_cloud(const sensor_msgs::PointCloud2::ConstPtr &msg);
+        //identity broadcaster at request
+        void broadcast_identity();
 
         void spinOnce();
 #ifdef PACV_KINECT2_SUPPORT
-        //internal kinect2 name handler (if present)
-        tf::TransformBroadcaster kinect2_ref_brcaster;
         //kinect2 processor
         Kinect2 kinect2;
 #endif

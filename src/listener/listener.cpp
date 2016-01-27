@@ -219,7 +219,6 @@ Listener::spinOnce()
         listen("left", "hand");
     create_markers();
     publish_markers();
-    this->queue_ptr->callAvailable(ros::WallDuration(0));
 }
 
 void

@@ -332,7 +332,5 @@ Estimator::spinOnce()
     publish_markers();
     //and tf if user requested
     publish_tf();
-    //check if some callback needs processing
-    queue_ptr->callAvailable(ros::WallDuration(0));
 }
 }
