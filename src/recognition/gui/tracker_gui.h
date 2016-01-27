@@ -25,6 +25,7 @@ public:
     QListWidget* getObjList() const;
     QPushButton* getRefreshButt() const;
     void init();
+    void enableDisable(bool enable);
 
 signals:
     void trackObject(std::string* obj);

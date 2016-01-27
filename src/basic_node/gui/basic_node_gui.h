@@ -25,6 +25,8 @@ signals:
     void boxChanged();
     void sensorChanged();
     void saveCloud(std::string* n);
+    void enableDisable(bool enable);
+
 private slots:
     void on_MasterDisable_clicked(bool checked);
     void on_MasterReset_pressed();

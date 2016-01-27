@@ -21,6 +21,7 @@ public:
     QPushButton* getRunButt() const;
     QPushButton* getInHandButt() const;
     void init();
+    void enableDisable(bool enable);
 
 signals:
     void saveInHand(bool r, std::string *obj, std::string *hand);

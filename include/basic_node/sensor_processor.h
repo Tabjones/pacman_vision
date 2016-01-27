@@ -39,8 +39,6 @@ class SensorProcessor: public Module<SensorProcessor>
         tf::TransformBroadcaster kinect2_ref_brcaster;
         //subscribed topic
         std::string topic;
-        //and track when we were disableb
-        bool was_disabled;
         //associated callback
         void cb_cloud(const sensor_msgs::PointCloud2::ConstPtr &msg);
         //identity broadcaster at request

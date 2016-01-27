@@ -10,7 +10,7 @@
 namespace pacv
 {
 SensorProcessor::SensorProcessor(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor):
-    Module<SensorProcessor>(n,ns,stor), was_disabled(false)
+    Module<SensorProcessor>(n,ns,stor)
 {
     //default to asus xtion
     config = std::make_shared<SensorConfig>();

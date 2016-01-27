@@ -52,6 +52,8 @@ class PacmanVision: public QObject
 private slots:
     /** Check if ros::ok() is false, if it is, just quit. */
     void checkROS();
+    //when enable/disable button is pressed
+    void onEnableDisable(bool enable);
     ///Shutdown cleanup
     void onShutdown();
     ///when box changes

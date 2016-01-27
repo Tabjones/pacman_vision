@@ -37,6 +37,7 @@ void BasicNodeGui::init()
     bool value;
     config->get("cropping", value);
     ui->CroppingButt->setChecked(value);
+    ui->CroppingG->setDisabled(!value);
     config->get("downsampling", value);
     ui->DownsamplingButt->setChecked(value);
     config->get("segmenting", value);
@@ -94,14 +95,16 @@ void BasicNodeGui::on_MasterDisable_clicked(bool checked)
         ui->MasterReset->setDisabled(false);
         ui->BaseTab->setDisabled(false);
         ui->SensorTab->setDisabled(false);
-        // re-enable everything TODO
+        // re-enable everything
+        emit enableDisable(true);
     }
     else if (checked == true){
         ui->MasterDisable->setText("    Master Enable");
         ui->MasterReset->setDisabled(true);
         ui->BaseTab->setDisabled(true);
         ui->SensorTab->setDisabled(true);
-        // disable everything TODO
+        // disable everything
+        emit enableDisable(false);
     }
 }
 

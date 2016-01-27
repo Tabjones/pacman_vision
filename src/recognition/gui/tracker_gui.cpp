@@ -13,6 +13,13 @@ TrackerGui::~TrackerGui()
     delete ui;
 }
 
+void
+TrackerGui::enableDisable(bool enable)
+{
+    ui->RunningButt->setDisabled(!enable);
+    ui->TrackerF->setDisabled(!enable);
+}
+
 QListWidget*
 TrackerGui::getObjList() const
 {

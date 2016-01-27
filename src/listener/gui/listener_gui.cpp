@@ -15,6 +15,13 @@ ListenerGui::~ListenerGui()
     delete ui;
 }
 
+void
+ListenerGui::enableDisable(bool enable)
+{
+    ui->RunningButt->setDisabled(!enable);
+    ui->ListenerF->setDisabled(!enable);
+}
+
 QPushButton*
 ListenerGui::getRunButt() const
 {

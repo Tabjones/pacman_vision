@@ -30,7 +30,9 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor):
 void
 BasicNode::deInit()
 {
-    //nothing to do actually this is suppress annoying warning
+    marks.reset();
+    //nothing much to do,
+    //actually this is to suppress annoying warning from base class
 }
 
 void

@@ -14,6 +14,13 @@ EstimatorGui::~EstimatorGui()
     delete ui;
 }
 
+void
+EstimatorGui::enableDisable(bool enable)
+{
+    ui->RunningButt->setDisabled(!enable);
+    ui->EstimatorF->setDisabled(!enable);
+}
+
 QPushButton*
 EstimatorGui::getRunButt() const
 {

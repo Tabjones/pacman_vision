@@ -168,13 +168,9 @@ class Module
             derived().is_running = true;
             derived().worker = std::thread(&Derived::spin, derived_ptr());
         }
-        inline void disable()
+        inline void setDisabled(bool disabled)
         {
-            derived().disabled=true;
-        }
-        inline void enable()
-        {
-            derived().disabled=false;
+            derived().disabled=disabled;
         }
     protected:
         //general spin, cannot be called from outside, only via spawn

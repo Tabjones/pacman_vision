@@ -21,6 +21,7 @@ public:
     QPushButton* getRunButt() const;
     QPushButton* getEstButt() const;
     void init();
+    void enableDisable(bool enable);
 
 private slots:
     void on_RunningButt_clicked();

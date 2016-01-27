@@ -117,9 +117,6 @@
         </item>
         <item row="0" column="2" rowspan="4">
          <widget class="QGroupBox" name="CroppingG">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
             <horstretch>0</horstretch>
