@@ -9,6 +9,7 @@ ListenerGui::ListenerGui(const pacv::ListenerConfig::Ptr conf, QWidget *parent) 
 {
     config = conf;
     ui->setupUi(this);
+    ui->status->setStyleSheet("QLabel {color : red}");
 }
 ListenerGui::~ListenerGui()
 {

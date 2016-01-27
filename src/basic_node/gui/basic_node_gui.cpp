@@ -40,8 +40,10 @@ void BasicNodeGui::init()
     ui->CroppingG->setDisabled(!value);
     config->get("downsampling", value);
     ui->DownsamplingButt->setChecked(value);
+    ui->LeafF->setDisabled(!value);
     config->get("segmenting", value);
     ui->SegmentingButt->setChecked(value);
+    ui->PlaneF->setDisabled(!value);
     config->get("publish_limits", value);
     ui->PublishLimitsButt->setChecked(value);
     config->get("keep_organized", value);
@@ -106,11 +108,6 @@ void BasicNodeGui::on_MasterDisable_clicked(bool checked)
         // disable everything
         emit enableDisable(false);
     }
-}
-
-void BasicNodeGui::on_MasterReset_pressed()
-{
-   //Reset Everything TODO
 }
 
 void BasicNodeGui::on_CroppingButt_clicked(bool checked)
@@ -375,4 +372,9 @@ void BasicNodeGui::on_SaveButt_clicked()
 void BasicNodeGui::on_BrdButt_clicked(bool checked)
 {
    s_config->set("broadcast_identity_tf", checked);
+}
+
+void BasicNodeGui::on_MasterReset_clicked()
+{
+    emit reset();
 }

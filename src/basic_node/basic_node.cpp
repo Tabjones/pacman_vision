@@ -27,24 +27,10 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor):
     // nh.setParam("plane_tolerance", 0.005);
     /////////////////////////////////////////
 }
-void
-BasicNode::deInit()
-{
-    marks.reset();
-    //nothing much to do,
-    //actually this is to suppress annoying warning from base class
-}
 
 void
-BasicNode::init()
+BasicNode::setConfigFromRosparams()
 {
-    if(!nh){
-        ROS_ERROR("[BasicNode::%s]\tNode Handle not initialized, Module must call spawn() first!",__func__);
-        return;
-    }
-    srv_get_scene = nh->advertiseService("get_scene_processed", &BasicNode::cb_get_scene, this);
-    pub_scene = nh->advertise<PTC> ("scene_processed", 5);
-    pub_markers = nh->advertise<visualization_msgs::MarkerArray>("markers", 1);
     //init node params
     for (auto key: config->valid_keys)
     {
@@ -77,6 +63,26 @@ BasicNode::init()
         else
             ROS_WARN("[BasicNode::%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
+}
+void
+BasicNode::deInit()
+{
+    marks.reset();
+    //nothing much to do,
+    //actually this is to suppress annoying warning from base class
+}
+
+void
+BasicNode::init()
+{
+    if(!nh){
+        ROS_ERROR("[BasicNode::%s]\tNode Handle not initialized, Module must call spawn() first!",__func__);
+        return;
+    }
+    srv_get_scene = nh->advertiseService("get_scene_processed", &BasicNode::cb_get_scene, this);
+    pub_scene = nh->advertise<PTC> ("scene_processed", 5);
+    pub_markers = nh->advertise<visualization_msgs::MarkerArray>("markers", 1);
+    setConfigFromRosparams();
     update_markers(); //one time call
 }
 

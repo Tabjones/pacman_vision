@@ -8,6 +8,7 @@ EstimatorGui::EstimatorGui(const pacv::EstimatorConfig::Ptr conf, QWidget *paren
 {
     config = conf;
     ui->setupUi(this);
+    ui->status->setStyleSheet("QLabel {color : red}");
 }
 EstimatorGui::~EstimatorGui()
 {

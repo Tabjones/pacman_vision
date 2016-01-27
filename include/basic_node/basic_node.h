@@ -49,6 +49,8 @@ class BasicNode: public Module<BasicNode>
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         ///Updates marker to publish, when changed from gui
         void update_markers();
+        ///Load config from rosparams
+        void setConfigFromRosparams();
 #ifdef PACV_LISTENER_SUPPORT
         void setListenerConfig(ListenerConfig::Ptr config)
         {

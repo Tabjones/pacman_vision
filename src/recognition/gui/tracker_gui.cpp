@@ -7,6 +7,7 @@ TrackerGui::TrackerGui(const pacv::TrackerConfig::Ptr conf, QWidget *parent) :
 {
     config = conf;
     ui->setupUi(this);
+    ui->status->setStyleSheet("QLabel {color : red}");
 }
 TrackerGui::~TrackerGui()
 {

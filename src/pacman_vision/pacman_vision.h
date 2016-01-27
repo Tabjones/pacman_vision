@@ -54,6 +54,8 @@ private slots:
     void checkROS();
     //when enable/disable button is pressed
     void onEnableDisable(bool enable);
+    //when master reset is pressed
+    void onReset();
     ///Shutdown cleanup
     void onShutdown();
     ///when box changes

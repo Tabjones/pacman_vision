@@ -28,12 +28,8 @@ SensorProcessor::deInit()
 }
 
 void
-SensorProcessor::init()
+SensorProcessor::setConfigFromRosparams()
 {
-    if(!nh){
-        ROS_ERROR("[SensorProcessor::%s]\tNode Handle not initialized, Module must call spawn() first",__func__);
-        return;
-    }
     //init node params
     for (auto key: config->valid_keys)
     {
@@ -46,6 +42,16 @@ SensorProcessor::init()
         else
             ROS_WARN("[SensorProcessor::%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
+}
+
+void
+SensorProcessor::init()
+{
+    if(!nh){
+        ROS_ERROR("[SensorProcessor::%s]\tNode Handle not initialized, Module must call spawn() first",__func__);
+        return;
+    }
+    setConfigFromRosparams();
     update();
     // //Fire subscriber or kinect2
     // bool internal;

@@ -27,6 +27,8 @@ class SensorProcessor: public Module<SensorProcessor>
         SensorConfig::Ptr getConfig() const;
         //update behaviour based on config
         void update();
+        //set configutation from ROS Params
+        void setConfigFromRosparams();
     private:
         SensorConfig::Ptr config;
         //init with ros param

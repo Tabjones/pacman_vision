@@ -20,16 +20,17 @@ public:
     ~BasicNodeGui();
     void addTab(QWidget* tab, const QString title);
     QPushButton* getSaveButt() const;
+    void init();
 
 signals:
     void boxChanged();
     void sensorChanged();
     void saveCloud(std::string* n);
     void enableDisable(bool enable);
+    void reset();
 
 private slots:
     void on_MasterDisable_clicked(bool checked);
-    void on_MasterReset_pressed();
     void on_CroppingButt_clicked(bool checked);
     void on_Xmax_valueChanged(double arg1);
     void on_Xmin_valueChanged(double arg1);
@@ -53,9 +54,9 @@ private slots:
     void on_RefreshT_clicked();
     void on_SaveButt_clicked();
     void on_BrdButt_clicked(bool checked);
+    void on_MasterReset_clicked();
 
 private:
-    void init();
     Ui::BasicNodeGui *ui;
     pacv::Box lim;
     pacv::BasicConfig::Ptr config;

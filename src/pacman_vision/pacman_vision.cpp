@@ -66,6 +66,7 @@ PacmanVision::initConnections()
     connect (&(*basic_gui), SIGNAL( sensorChanged()), this, SLOT( onSensorChanged() ));
     connect (&(*basic_gui), SIGNAL( saveCloud(std::string*) ), this, SLOT( onSaveCloud(std::string*) ));
     connect (&(*basic_gui), SIGNAL( enableDisable(bool) ), this, SLOT( onEnableDisable(bool) ));
+    connect (&(*basic_gui), SIGNAL( reset() ), this, SLOT( onReset() ));
 #ifdef PACV_RECOGNITION_SUPPORT
     connect (estimator_gui->getRunButt(), SIGNAL( clicked()), this, SLOT( onSpawnKillEstimator() ));
     connect (estimator_gui->getEstButt(), SIGNAL( clicked()), this, SLOT( onPoseEstimation() ));
@@ -96,6 +97,33 @@ PacmanVision::onEnableDisable(bool enable)
     listener->setDisabled(!enable);
     listener_gui->enableDisable(enable);
 #endif
+}
+
+void
+PacmanVision::onReset()
+{
+#ifdef PACV_LISTENER_SUPPORT
+    if(listener->isRunning()){
+        listener->kill();
+        listener_gui->getRunButt()->click();
+        listener_gui->setRunning(false);
+    }
+#endif
+#ifdef PACV_RECOGNITION_SUPPORT
+    if(estimator->isRunning()){
+        estimator->kill();
+        estimator_gui->getRunButt()->click();
+        estimator_gui->setRunning(false);
+    }
+    if(tracker->isRunning()){
+        tracker->kill();
+        tracker_gui->getRunButt()->click();
+        tracker_gui->setRunning(false);
+    }
+#endif
+    basic_node->setConfigFromRosparams();
+    sensor->setConfigFromRosparams();
+    basic_gui->init();
 }
 
 void PacmanVision::onBoxChanged()
