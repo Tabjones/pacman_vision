@@ -1,4 +1,5 @@
 # PaCMaN Vision ROS node #
+![PaCMan Vision](https://cloud.githubusercontent.com/assets/1950251/12723299/22f2d844-c909-11e5-9621-142a1d49dcd4.png)
 Collection of 3D Vision-Oriented utilities packed in a single ROS node.
 
 ## Install Instructions step-by-step##
