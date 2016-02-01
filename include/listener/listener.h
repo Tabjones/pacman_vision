@@ -22,6 +22,8 @@ class Listener: public Module<Listener>
         Listener(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor);
         typedef std::shared_ptr<Listener> Ptr;
         ListenerConfig::Ptr getConfig() const;
+        //update rosparams
+        void updateRosparams();
         //Eigen alignment
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:

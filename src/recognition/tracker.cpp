@@ -15,6 +15,19 @@ Tracker::Tracker(const ros::NodeHandle n, const std::string ns, const Storage::P
 }
 
 void
+Tracker::updateRosparams()
+{
+    for (const auto key: config->valid_keys)
+    {
+        XmlRpc::XmlRpcValue val;
+        if (!config->get(key, val))
+            ROS_WARN("[Tracker::%s]\tFailed to get key:%s from Config",__func__,key.c_str());
+        else
+            nh->setParam(key, val);
+    }
+}
+
+void
 Tracker::setBasicNodeConfig(BasicConfig::Ptr config)
 {
     basic_config = config;

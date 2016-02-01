@@ -44,7 +44,7 @@
          <x>0</x>
          <y>0</y>
          <width>560</width>
-         <height>676</height>
+         <height>636</height>
         </rect>
        </property>
        <property name="toolTip">
@@ -115,7 +115,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="2" rowspan="4">
+        <item row="0" column="2" rowspan="3">
          <widget class="QGroupBox" name="CroppingG">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
@@ -1231,7 +1231,7 @@
          <x>0</x>
          <y>0</y>
          <width>560</width>
-         <height>676</height>
+         <height>636</height>
         </rect>
        </property>
        <attribute name="label">
@@ -1547,6 +1547,80 @@
      </widget>
     </item>
     <item row="1" column="0">
+     <widget class="QPushButton" name="SaveConfB">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>35</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <family>Oxygen-Sans</family>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
+      </property>
+      <property name="acceptDrops">
+       <bool>false</bool>
+      </property>
+      <property name="toolTip">
+       <string>Save current configuration to a yaml file.</string>
+      </property>
+      <property name="text">
+       <string>Save Current Configuration ...</string>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>32</width>
+        <height>32</height>
+       </size>
+      </property>
+      <property name="checkable">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QPushButton" name="LoadConfB">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>35</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <family>Oxygen-Sans</family>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
+      </property>
+      <property name="acceptDrops">
+       <bool>false</bool>
+      </property>
+      <property name="toolTip">
+       <string>Load a Configuration from a yaml file. This will also reset the nodes to match the new configuration.</string>
+      </property>
+      <property name="text">
+       <string>Load Configuration ...</string>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>32</width>
+        <height>32</height>
+       </size>
+      </property>
+      <property name="checkable">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
      <widget class="QPushButton" name="MasterDisable">
       <property name="font">
        <font>
@@ -1578,7 +1652,7 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="1">
+    <item row="2" column="1">
      <widget class="QPushButton" name="MasterReset">
       <property name="font">
        <font>
@@ -1588,7 +1662,7 @@
        </font>
       </property>
       <property name="toolTip">
-       <string>Reset all node to default values.</string>
+       <string>Reset all nodes and configuration to the last loaded one.</string>
       </property>
       <property name="text">
        <string>    Master Reset</string>

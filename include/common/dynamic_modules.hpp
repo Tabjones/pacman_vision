@@ -172,6 +172,10 @@ class Module
         {
             derived().disabled=disabled;
         }
+        inline std::string getRelativeName() const
+        {
+            return derived().name;
+        }
     protected:
         //general spin, cannot be called from outside, only via spawn
         void spin()

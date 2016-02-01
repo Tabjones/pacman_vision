@@ -9,6 +9,7 @@
 #include <common/common_ros.h>
 #include <basic_node_gui.h>
 #include <QPushButton>
+#include <cstdlib>
 
 //Add recognition support
 #ifdef PACV_RECOGNITION_SUPPORT
@@ -67,6 +68,8 @@ PacmanVision::initConnections()
     connect (&(*basic_gui), SIGNAL( saveCloud(std::string*) ), this, SLOT( onSaveCloud(std::string*) ));
     connect (&(*basic_gui), SIGNAL( enableDisable(bool) ), this, SLOT( onEnableDisable(bool) ));
     connect (&(*basic_gui), SIGNAL( reset() ), this, SLOT( onReset() ));
+    connect (&(*basic_gui), SIGNAL( saveConf(std::string*) ), this, SLOT(onSaveConf(std::string*) ));
+    connect (&(*basic_gui), SIGNAL( loadConf(std::string*) ), this, SLOT(onLoadConf(std::string*) ));
 #ifdef PACV_RECOGNITION_SUPPORT
     connect (estimator_gui->getRunButt(), SIGNAL( clicked()), this, SLOT( onSpawnKillEstimator() ));
     connect (estimator_gui->getEstButt(), SIGNAL( clicked()), this, SLOT( onPoseEstimation() ));
@@ -82,6 +85,37 @@ PacmanVision::initConnections()
 }
 
 void
+PacmanVision::onSaveConf(std::string* n)
+{
+    basic_node->updateRosparams();
+    sensor->updateRosparams();
+#ifdef PACV_LISTENER_SUPPORT
+    if (listener->isRunning())
+        listener->updateRosparams();
+#endif
+#ifdef PACV_RECOGNITION_SUPPORT
+    if (estimator->isRunning())
+        estimator->updateRosparams();
+    if (tracker->isRunning())
+        tracker->updateRosparams();
+#endif
+    std::string command("rosparam dump ");
+    command += *n;
+    command += " /pacman_vision";
+    std::system(command.c_str());
+}
+
+void
+PacmanVision::onLoadConf(std::string* n)
+{
+    std::string command("rosparam load ");
+    command += *n;
+    command += " /pacman_vision";
+    std::system(command.c_str());
+    onReset();
+}
+
+void
 PacmanVision::onEnableDisable(bool enable)
 {
     sensor->setDisabled(!enable);
@@ -90,36 +124,53 @@ PacmanVision::onEnableDisable(bool enable)
 #ifdef PACV_RECOGNITION_SUPPORT
     estimator->setDisabled(!enable);
     tracker->setDisabled(!enable);
-    estimator_gui->enableDisable(enable);
-    tracker_gui->enableDisable(enable);
+    if (enable){
+        estimator_gui->enable(true);
+        tracker_gui->enable(true);
+    }
+    else{
+        estimator_gui->disable(true);
+        tracker_gui->disable(true);
+    }
 #endif
 #ifdef PACV_LISTENER_SUPPORT
     listener->setDisabled(!enable);
-    listener_gui->enableDisable(enable);
+    if (enable)
+        listener_gui->enable(true);
+    else
+        listener_gui->disable(true);
 #endif
 }
 
 void
 PacmanVision::onReset()
 {
+    bool run;
+    std::string father_ns = basic_node->getNamespace();
 #ifdef PACV_LISTENER_SUPPORT
     if(listener->isRunning()){
         listener->kill();
-        listener_gui->getRunButt()->click();
-        listener_gui->setRunning(false);
+        listener_gui->disable();
     }
+    ros::param::get( (father_ns + "/" + listener->getRelativeName() + "/running").c_str(), run);
+    if (run)
+        onSpawnKillListener();
 #endif
 #ifdef PACV_RECOGNITION_SUPPORT
     if(estimator->isRunning()){
         estimator->kill();
-        estimator_gui->getRunButt()->click();
-        estimator_gui->setRunning(false);
+        estimator_gui->disable();
     }
+    ros::param::get( (father_ns + "/" + estimator->getRelativeName() + "/running").c_str(), run);
+    if(run)
+        onSpawnKillEstimator();
     if(tracker->isRunning()){
         tracker->kill();
-        tracker_gui->getRunButt()->click();
-        tracker_gui->setRunning(false);
+        tracker_gui->disable();
     }
+    ros::param::get( (father_ns + "/" + tracker->getRelativeName() + "/running").c_str(), run);
+    if (run)
+        onSpawnKillTracker();
 #endif
     basic_node->setConfigFromRosparams();
     sensor->setConfigFromRosparams();
@@ -141,7 +192,7 @@ void PacmanVision::onSpawnKillEstimator()
 #ifdef PACV_RECOGNITION_SUPPORT
     if (estimator->isRunning()){
         estimator->kill();
-        estimator_gui->setRunning(false);
+        estimator_gui->disable();
         ROS_INFO("[PaCMan Vision]\tKilled Estimator Module.");
         tracker_gui->getObjList()->clear();
         tracker_gui->getTrackButt()->setDisabled(true);
@@ -149,8 +200,7 @@ void PacmanVision::onSpawnKillEstimator()
     }
     else{
         estimator->spawn();
-        estimator_gui->setRunning(true);
-        estimator_gui->init();
+        estimator_gui->enable();
         ROS_INFO("[PaCMan Vision]\tSpawned Estimator Module.");
         return;
     }
@@ -162,14 +212,13 @@ void PacmanVision::onSpawnKillTracker()
 #ifdef PACV_RECOGNITION_SUPPORT
     if (tracker->isRunning()){
         tracker->kill();
-        tracker_gui->setRunning(false);
+        tracker_gui->disable();
         ROS_INFO("[PaCMan Vision]\tKilled Tracker Module.");
         return;
     }
     else{
         tracker->spawn();
-        tracker_gui->setRunning(true);
-        tracker_gui->init();
+        tracker_gui->enable();
         ROS_INFO("[PaCMan Vision]\tSpawned Tracker Module.");
         onObjsRefresh();
         return;
@@ -182,14 +231,13 @@ void PacmanVision::onSpawnKillListener()
 #ifdef PACV_LISTENER_SUPPORT
     if (listener->isRunning()){
         listener->kill();
-        listener_gui->setRunning(false);
+        listener_gui->disable();
         ROS_INFO("[PaCMan Vision]\tKilled Listener Module.");
         return;
     }
     else{
         listener->spawn();
-        listener_gui->setRunning(true);
-        listener_gui->init();
+        listener_gui->enable();
         ROS_INFO("[PaCMan Vision]\tSpawned Listener Module.");
         return;
     }
@@ -220,12 +268,19 @@ PacmanVision::init(int argc, char** argv)
         estimator->setRate(5.0); //5Hz is enough
         estimator_gui = std::make_shared<EstimatorGui>(estimator->getConfig());
         basic_gui->addTab(estimator_gui->getWidget(), "Estimator Module");
+        bool run;
+        estimator->getConfig()->get("running", run);
+        if (run && !estimator->isRunning())
+            onSpawnKillEstimator();
         ROS_INFO("[PaCMan Vision]\tAdding Tracker Module");
         tracker = std::make_shared<pacv::Tracker>(basic_node->getNodeHandle(), "tracker", storage);
         tracker->setRate(40.0); //40Hz is enough
         tracker->setBasicNodeConfig(basic_node->getConfig());
         tracker_gui = std::make_shared<TrackerGui>(tracker->getConfig());
         basic_gui->addTab(tracker_gui->getWidget(), "Tracker Module");
+        tracker->getConfig()->get("running", run);
+        if (run && !tracker->isRunning())
+            onSpawnKillTracker();
 #endif
 #ifdef PACV_LISTENER_SUPPORT
         ROS_INFO("[PaCMan Vision]\tAdding Listener Module");
@@ -234,6 +289,10 @@ PacmanVision::init(int argc, char** argv)
         basic_node->setListenerConfig(listener->getConfig());
         listener_gui = std::make_shared<ListenerGui>(listener->getConfig());
         basic_gui->addTab(listener_gui->getWidget(), "Listener Module");
+        bool val;
+        listener->getConfig()->get("running", val);
+        if (val && !listener->isRunning())
+            onSpawnKillListener();
 #endif
         //...
 

@@ -28,6 +28,19 @@ SensorProcessor::deInit()
 }
 
 void
+SensorProcessor::updateRosparams()
+{
+    for (const auto key: config->valid_keys)
+    {
+        XmlRpc::XmlRpcValue val;
+        if (!config->get(key, val))
+            ROS_WARN("[SensorProcessor::%s]\tFailed to get key:%s from Config",__func__,key.c_str());
+        else
+            nh->setParam(key, val);
+    }
+}
+
+void
 SensorProcessor::setConfigFromRosparams()
 {
     //init node params

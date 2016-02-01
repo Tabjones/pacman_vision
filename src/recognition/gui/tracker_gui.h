@@ -18,20 +18,18 @@ public:
     explicit TrackerGui(const pacv::TrackerConfig::Ptr conf, QWidget *parent = 0);
     ~TrackerGui();
     QWidget* getWidget() const;
-    void setRunning(const bool run);
     QPushButton* getRunButt() const;
     QPushButton* getTrackButt() const;
     QPushButton* getStopButt() const;
     QListWidget* getObjList() const;
     QPushButton* getRefreshButt() const;
-    void init();
-    void enableDisable(bool enable);
+    void enable(bool full=false);
+    void disable(bool full=false);
 
 signals:
     void trackObject(std::string* obj);
 
 private slots:
-    void on_RunningButt_clicked();
     void on_objects_itemSelectionChanged();
     void on_TrackButt_clicked();
     void on_StopButt_clicked();
@@ -40,8 +38,8 @@ private slots:
     void on_TfButt_clicked(bool checked);
 
 private:
+    void init();
     Ui::TrackerGui *ui;
     pacv::TrackerConfig::Ptr config;
-    bool running;
 };
 #endif

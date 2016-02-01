@@ -17,17 +17,15 @@ public:
     explicit ListenerGui(const pacv::ListenerConfig::Ptr conf, QWidget *parent = 0);
     ~ListenerGui();
     QWidget* getWidget() const;
-    void setRunning(const bool run);
     QPushButton* getRunButt() const;
     QPushButton* getInHandButt() const;
-    void init();
-    void enableDisable(bool enable);
+    void enable(bool full=false);
+    void disable(bool full=false);
 
 signals:
     void saveInHand(bool r, std::string *obj, std::string *hand);
 
 private slots:
-    void on_RunningButt_clicked();
     void on_SwitchHandButt_clicked();
     void on_LRAButt_clicked(bool checked);
     void on_LLAButt_clicked(bool checked);
@@ -42,10 +40,10 @@ private slots:
     void on_GetInHandButt_clicked();
 
 private:
+    void init();
     bool right;
     Ui::ListenerGui *ui;
     pacv::ListenerConfig::Ptr config;
-    bool running;
     QString last_save_location;
 };
 

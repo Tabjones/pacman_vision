@@ -5,7 +5,7 @@
 
 ListenerGui::ListenerGui(const pacv::ListenerConfig::Ptr conf, QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::ListenerGui), running(false), right(true)
+    ui(new Ui::ListenerGui), right(true)
 {
     config = conf;
     ui->setupUi(this);
@@ -14,13 +14,6 @@ ListenerGui::ListenerGui(const pacv::ListenerConfig::Ptr conf, QWidget *parent) 
 ListenerGui::~ListenerGui()
 {
     delete ui;
-}
-
-void
-ListenerGui::enableDisable(bool enable)
-{
-    ui->RunningButt->setDisabled(!enable);
-    ui->ListenerF->setDisabled(!enable);
 }
 
 QPushButton*
@@ -37,11 +30,6 @@ QWidget*
 ListenerGui::getWidget() const
 {
     return ui->ListenerW;
-}
-void
-ListenerGui::setRunning(const bool run)
-{
-    running=run;
 }
 
 void ListenerGui::init()
@@ -70,26 +58,33 @@ void ListenerGui::init()
     ui->Scale->setValue(val);
 }
 
-void ListenerGui::on_RunningButt_clicked()
+void ListenerGui::disable(bool full)
 {
-    if (running){
-        //kill him
-        ui->RunningButt->setText("Spawn me");
-        ui->status->setText("Not Running");
-        ui->status->setStyleSheet("QLabel {color : red}");
-        ui->ListenerF->setDisabled(true);
-        ui->ScaleF->setDisabled(true);
+    if(full){
+        ui->ListenerW->setDisabled(true);
         return;
     }
-    else{
-        //spawn him
-        ui->RunningButt->setText("Kill me");
-        ui->status->setText("Running");
-        ui->status->setStyleSheet("QLabel {color : green}");
-        ui->ListenerF->setDisabled(false);
-        ui->ScaleF->setDisabled(false);
+    ui->RunningButt->setText("Spawn it");
+    ui->status->setText("Not Running");
+    ui->status->setStyleSheet("QLabel {color : red}");
+    ui->ListenerF->setDisabled(true);
+    ui->ScaleF->setDisabled(true);
+    config->set("running", false);
+}
+
+void ListenerGui::enable(bool full)
+{
+    if(full){
+        ui->ListenerW->setDisabled(false);
         return;
     }
+    ui->RunningButt->setText("Kill it");
+    ui->status->setText("Running");
+    ui->status->setStyleSheet("QLabel {color : green}");
+    ui->ListenerF->setDisabled(false);
+    ui->ScaleF->setDisabled(false);
+    config->set("running", true);
+    init();
 }
 
 void ListenerGui::on_SwitchHandButt_clicked()

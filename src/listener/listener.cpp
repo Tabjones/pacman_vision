@@ -15,6 +15,19 @@ Listener::Listener(const ros::NodeHandle n, const std::string ns, const Storage:
 }
 
 void
+Listener::updateRosparams()
+{
+    for (const auto key: config->valid_keys)
+    {
+        XmlRpc::XmlRpcValue val;
+        if (!config->get(key, val))
+            ROS_WARN("[Listener::%s]\tFailed to get key:%s from Config",__func__,key.c_str());
+        else
+            nh->setParam(key, val);
+    }
+}
+
+void
 Listener::init()
 {
     if(!nh){

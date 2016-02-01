@@ -29,10 +29,37 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor):
 }
 
 void
+BasicNode::updateRosparams()
+{
+    for (const auto key: config->valid_keys)
+    {
+        XmlRpc::XmlRpcValue val;
+        if (key.compare("filter_limits")==0){
+            Box lim;
+            if (!config->get("filter_limits", lim))
+                ROS_WARN("[BasicNode::%s]\tFailed to get key:%s from Config",__func__,key.c_str());
+            else{
+                nh->setParam("limit_xmax", lim.x2);
+                nh->setParam("limit_xmin", lim.x1);
+                nh->setParam("limit_ymax", lim.y2);
+                nh->setParam("limit_ymin", lim.y1);
+                nh->setParam("limit_zmax", lim.z2);
+                nh->setParam("limit_zmin", lim.z1);
+            }
+            continue;
+        }
+        if (!config->get(key, val))
+            ROS_WARN("[BasicNode::%s]\tFailed to get key:%s from Config",__func__,key.c_str());
+        else
+            nh->setParam(key, val);
+    }
+}
+
+void
 BasicNode::setConfigFromRosparams()
 {
     //init node params
-    for (auto key: config->valid_keys)
+    for (const auto key: config->valid_keys)
     {
         XmlRpc::XmlRpcValue val;
         if (key.compare("filter_limits")==0)

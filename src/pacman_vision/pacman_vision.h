@@ -90,6 +90,10 @@ private slots:
     void onSaveInHand(bool right, std::string *obj, std::string *hand);
     //after service is finished
     void postSaveInHand();
+    //save configuration
+    void onSaveConf(std::string* n);
+    //load configuration
+    void onLoadConf(std::string* n);
 private:
     void initConnections();
     QTimer *service_timer;

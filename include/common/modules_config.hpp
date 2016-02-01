@@ -140,6 +140,38 @@ class Config
         }
         return true;
     }
+    bool get(std::string key, XmlRpc::XmlRpcValue& val)
+    {
+        try
+        {
+            bool v;
+            if (get(key,v)){
+                XmlRpc::XmlRpcValue vb(v);
+                val = vb;
+                return (val.valid());
+            }
+            double vd;
+            if (get(key,vd)){
+                val = vd;
+                return (val.valid());
+            }
+            int vi;
+            if (get(key,vi)){
+                val=vi;
+                return (val.valid());
+            }
+            std::string vs;
+            if (get(key, vs)){
+                val=vs.c_str();
+                return (val.valid());
+            }
+        }
+        catch (...)
+        {
+            return false;
+        }
+        return false;
+    }
     bool set(std::string key, XmlRpc::XmlRpcValue val)
     {
         try

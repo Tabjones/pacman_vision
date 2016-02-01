@@ -44,6 +44,8 @@ class Estimator: public Module<Estimator>
         Estimator(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor);
         typedef std::shared_ptr<Estimator> Ptr;
         EstimatorConfig::Ptr getConfig() const;
+        ///update rosparams
+        void updateRosparams();
         //Eigen alignment
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:

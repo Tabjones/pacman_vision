@@ -11,13 +11,14 @@ class EstimatorConfig: public Config<EstimatorConfig>
     public:
     typedef std::shared_ptr<EstimatorConfig> Ptr;
     friend class Config<EstimatorConfig>;
-    const std::array<std::string,8> valid_keys;
+    const std::array<std::string,9> valid_keys;
     EstimatorConfig():
-    valid_keys {{"cluster_tol", "iterations", "neighbors",
+    valid_keys {{"running", "cluster_tol", "iterations", "neighbors",
                  "object_calibration", "always_success", "rmse_thresh",
                  "broadcast_tf", "publish_markers"}}
     {
         //create maps
+        map_bool["running"] = false;
         map_bool["object_calibration"] = false;
         map_bool["always_success"] = true;
         map_bool["broadcast_tf"] = true;

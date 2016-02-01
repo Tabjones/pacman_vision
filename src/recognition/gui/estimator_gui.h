@@ -17,14 +17,12 @@ public:
     explicit EstimatorGui(const pacv::EstimatorConfig::Ptr conf, QWidget *parent = 0);
     ~EstimatorGui();
     QWidget* getWidget() const;
-    void setRunning(const bool run);
     QPushButton* getRunButt() const;
     QPushButton* getEstButt() const;
-    void init();
-    void enableDisable(bool enable);
+    void enable(bool full=false);
+    void disable(bool full=false);
 
 private slots:
-    void on_RunningButt_clicked();
     void on_CalibButt_clicked(bool checked);
     void on_Cluster_valueChanged(double arg1);
     void on_Iter_valueChanged(int arg1);
@@ -36,9 +34,9 @@ private slots:
     void on_TfButt_clicked(bool checked);
 
 private:
+    void init();
     Ui::EstimatorGui *ui;
     pacv::EstimatorConfig::Ptr config;
-    bool running;
 };
 
 #endif

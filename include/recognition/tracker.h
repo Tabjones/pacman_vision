@@ -50,6 +50,8 @@ class Tracker: public Module<Tracker>
         TrackerConfig::Ptr getConfig() const;
         void setBasicNodeConfig(BasicConfig::Ptr config);
         void getObjList(std::list<std::string> &list) const;
+        ///update Rosparams
+        void updateRosparams();
         //Eigen alignment
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     private:

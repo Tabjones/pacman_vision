@@ -25,9 +25,11 @@ public:
 signals:
     void boxChanged();
     void sensorChanged();
-    void saveCloud(std::string* n);
+    void saveCloud(std::string* );
     void enableDisable(bool enable);
     void reset();
+    void saveConf(std::string* );
+    void loadConf(std::string* );
 
 private slots:
     void on_MasterDisable_clicked(bool checked);
@@ -55,13 +57,15 @@ private slots:
     void on_SaveButt_clicked();
     void on_BrdButt_clicked(bool checked);
     void on_MasterReset_clicked();
+    void on_SaveConfB_clicked();
+    void on_LoadConfB_clicked();
 
 private:
     Ui::BasicNodeGui *ui;
     pacv::Box lim;
     pacv::BasicConfig::Ptr config;
     pacv::SensorConfig::Ptr s_config;
-    QString last_save_location;
+    QString last_save_location, save_conf_loc;
 };
 
 #endif // BASIC_NODE_GUI_H

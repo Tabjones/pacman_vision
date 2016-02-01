@@ -3,7 +3,7 @@
 
 TrackerGui::TrackerGui(const pacv::TrackerConfig::Ptr conf, QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::TrackerGui), running(false)
+    ui(new Ui::TrackerGui)
 {
     config = conf;
     ui->setupUi(this);
@@ -14,12 +14,6 @@ TrackerGui::~TrackerGui()
     delete ui;
 }
 
-void
-TrackerGui::enableDisable(bool enable)
-{
-    ui->RunningButt->setDisabled(!enable);
-    ui->TrackerF->setDisabled(!enable);
-}
 
 QListWidget*
 TrackerGui::getObjList() const
@@ -54,12 +48,6 @@ TrackerGui::getWidget() const
     return ui->TrackerW;
 }
 
-void
-TrackerGui::setRunning(const bool run)
-{
-    running=run;
-}
-
 void TrackerGui::init()
 {
     bool value;
@@ -75,24 +63,31 @@ void TrackerGui::init()
     ui->objects->clear();
 }
 
-void TrackerGui::on_RunningButt_clicked()
+void TrackerGui::disable(bool full)
 {
-    if (running){
-        //kill him
-        ui->RunningButt->setText("Spawn me");
-        ui->status->setText("Not Running");
-        ui->status->setStyleSheet("QLabel {color : red}");
-        ui->TrackerF->setDisabled(true);
+    if (full){
+        ui->TrackerW->setDisabled(true);
         return;
     }
-    else{
-        //spawn him
-        ui->RunningButt->setText("Kill me");
-        ui->status->setText("Running");
-        ui->status->setStyleSheet("QLabel {color : green}");
-        ui->TrackerF->setDisabled(false);
+    ui->RunningButt->setText("Spawn it");
+    ui->status->setText("Not Running");
+    ui->status->setStyleSheet("QLabel {color : red}");
+    ui->TrackerF->setDisabled(true);
+    config->set("running", false);
+}
+
+void TrackerGui::enable(bool full)
+{
+    if (full){
+        ui->TrackerW->setDisabled(false);
         return;
     }
+    ui->RunningButt->setText("Kill it");
+    ui->status->setText("Running");
+    ui->status->setStyleSheet("QLabel {color : green}");
+    ui->TrackerF->setDisabled(false);
+    config->set("running", true);
+    init();
 }
 
 void TrackerGui::on_objects_itemSelectionChanged()

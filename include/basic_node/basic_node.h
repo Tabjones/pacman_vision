@@ -51,6 +51,8 @@ class BasicNode: public Module<BasicNode>
         void update_markers();
         ///Load config from rosparams
         void setConfigFromRosparams();
+        ///Save config to rosparams
+        void updateRosparams();
 #ifdef PACV_LISTENER_SUPPORT
         void setListenerConfig(ListenerConfig::Ptr config)
         {

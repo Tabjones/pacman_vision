@@ -4,7 +4,7 @@
 
 EstimatorGui::EstimatorGui(const pacv::EstimatorConfig::Ptr conf, QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::EstimatorGui), running(false)
+    ui(new Ui::EstimatorGui)
 {
     config = conf;
     ui->setupUi(this);
@@ -13,13 +13,6 @@ EstimatorGui::EstimatorGui(const pacv::EstimatorConfig::Ptr conf, QWidget *paren
 EstimatorGui::~EstimatorGui()
 {
     delete ui;
-}
-
-void
-EstimatorGui::enableDisable(bool enable)
-{
-    ui->RunningButt->setDisabled(!enable);
-    ui->EstimatorF->setDisabled(!enable);
 }
 
 QPushButton*
@@ -37,12 +30,6 @@ QWidget*
 EstimatorGui::getWidget() const
 {
     return ui->EstimatorW;
-}
-
-void
-EstimatorGui::setRunning(const bool run)
-{
-    running=run;
 }
 
 void EstimatorGui::init()
@@ -67,33 +54,38 @@ void EstimatorGui::init()
     config->get("rmse_thresh", val);
     ui->rmse->setValue(val);
 }
-
-void EstimatorGui::on_RunningButt_clicked()
+void
+EstimatorGui::disable(bool full){
+    if (full){
+        ui->EstimatorW->setDisabled(true);
+        return;
+    }
+    ui->RunningButt->setText("Spawn it");
+    ui->status->setText("Not Running");
+    ui->status->setStyleSheet("QLabel {color : red}");
+    ui->EstimatorF->setDisabled(true);
+    ui->ClusterF->setDisabled(true);
+    ui->IterF->setDisabled(true);
+    ui->NeighF->setDisabled(true);
+    ui->rmseF->setDisabled(true);
+    config->set("running", false);
+}
+void EstimatorGui::enable(bool full)
 {
-    if (running){
-        //kill him
-        ui->RunningButt->setText("Spawn me");
-        ui->status->setText("Not Running");
-        ui->status->setStyleSheet("QLabel {color : red}");
-        ui->EstimatorF->setDisabled(true);
-        ui->ClusterF->setDisabled(true);
-        ui->IterF->setDisabled(true);
-        ui->NeighF->setDisabled(true);
-        ui->rmseF->setDisabled(true);
+    if (full){
+        ui->EstimatorW->setDisabled(false);
         return;
     }
-    else{
-        //spawn him
-        ui->RunningButt->setText("Kill me");
-        ui->status->setText("Running");
-        ui->status->setStyleSheet("QLabel {color : green}");
-        ui->EstimatorF->setDisabled(false);
-        ui->ClusterF->setDisabled(false);
-        ui->IterF->setDisabled(false);
-        ui->NeighF->setDisabled(false);
-        ui->rmseF->setDisabled(false);
-        return;
-    }
+    ui->RunningButt->setText("Kill it");
+    ui->status->setText("Running");
+    ui->status->setStyleSheet("QLabel {color : green}");
+    ui->EstimatorF->setDisabled(false);
+    ui->ClusterF->setDisabled(false);
+    ui->IterF->setDisabled(false);
+    ui->NeighF->setDisabled(false);
+    ui->rmseF->setDisabled(false);
+    config->set("running", true);
+    init();
 }
 
 void EstimatorGui::on_CalibButt_clicked(bool checked)

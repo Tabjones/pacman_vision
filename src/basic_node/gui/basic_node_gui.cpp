@@ -378,3 +378,39 @@ void BasicNodeGui::on_MasterReset_clicked()
 {
     emit reset();
 }
+
+void BasicNodeGui::on_SaveConfB_clicked()
+{
+    ui->SaveConfB->setDisabled(true);
+    if (save_conf_loc.isEmpty())
+        save_conf_loc = std::getenv("HOME");
+    QString filename = QFileDialog::getSaveFileName(this, tr("Save Current Configuration"),
+                               save_conf_loc, tr("Configuration Files (*.yaml)"));
+    std::string * fn = new std::string();
+    *fn = filename.toStdString();
+    if ( fn->empty())
+        save_conf_loc.clear();
+    else{
+        save_conf_loc = filename;
+        emit saveConf(fn);
+    }
+    ui->SaveConfB->setDisabled(false);
+}
+
+void BasicNodeGui::on_LoadConfB_clicked()
+{
+    ui->LoadConfB->setDisabled(true);
+    if (save_conf_loc.isEmpty())
+        save_conf_loc = std::getenv("HOME");
+    QString filename = QFileDialog::getOpenFileName(this, tr("Load Configuration"),
+                               save_conf_loc, tr("Configuration Files (*.yaml)"));
+    std::string * fn = new std::string();
+    *fn = filename.toStdString();
+    if ( fn->empty())
+        save_conf_loc.clear();
+    else{
+        save_conf_loc = filename;
+        emit loadConf(fn);
+    }
+    ui->LoadConfB->setDisabled(false);
+}
