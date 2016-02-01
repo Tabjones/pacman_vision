@@ -35,14 +35,17 @@ In order to build PaCMan Vision you need these dependencies:
       The most important one is that it can handle `pure cmake` projects directly inside the ROS workspace, building any other non-ROS packages with a
       single `catkin build` command.
       To install `catkin tools` just type:
+
       ```
       sudo apt-get install python-catkin-tools
       ```
+
       Then, follow their documentation on how to configure the ROS workspace to work with it.
   4. A compiler that supports at least C++11, for example GCC > 4.8.
   5. [Point Cloud Library, PCL](http://pointclouds.org/) at version 1.7.2 (latest stable as of today).
       If you have Ubuntu 14.04 you will need to compile PCL from source, since there is no version 1.7.2 on Ubuntu repositories.
       Don't worry it's easy, just read the detailed instructions [here](http://pointclouds.org/downloads/source.html), or do the following:
+
       ```
       git clone https://github.com/PointCloudLibrary/pcl pcl
       cd pcl
