@@ -2,35 +2,55 @@
 ![PaCMan Vision](https://cloud.githubusercontent.com/assets/1950251/12723299/22f2d844-c909-11e5-9621-142a1d49dcd4.png)
 Collection of 3D Vision-Oriented utilities packed in a single ROS node.
 
-## Install Instructions step-by-step##
-__NOTE: These install instructions are for Linux only, there's currently no support (and probably will never be) for other operating systems.__
+PaCMan Vision is a modular ROS node for robot Vision handling point cloud streams from various RGB-D sensors, like the Asus Xtion PRO or the Microsft Kinect One and republishing
+the modified stream to the ROS network, making it available for the robot.
+The node is composed by a basic node, providing some simple and fast point cloud filters, like a cropping filter, a voxel grid downsampling and a RANSAC plane
+segmentation. All the filters can be modified at runtime using the built-in Qt Gui.
 
-### Step 0 - Base Dependencies ###
-You need a `catkin` workspace possibly initialized and configured to work with [catkin tools](http://catkin-tools.readthedocs.org/en/latest/index.html).
-`catkin tools` is to be preferred over `catkin_make` macro provided by ROS for a number of reasons.
-Most important one is that it can handle `pure cmake` projects better, such as [pel](https://bitbucket.org/Tabjones/pose-estimation-library), which is optionally
-needed by the package. To install `catkin tools` just type:
-```
-sudo apt-get install python-catkin-tools
-```
+The node has other functionalities like the possibility to dynamically change point cloud stream subscription or to save a single processed point cloud from the stream that's being republished.
 
-You need a compiler that supports C++11, for example GCC > 4.8.
+PaCMan Vision also introduces the concept of dynamic modules, a dynamic module is a part of the node, providing some additional functionality, you can dynamically load or kill at runtime.
+Each module has its own ROS node handle with its topics and services you can exploit and when you don't need it anymore you can kill the module and its functionality will disappear.
 
-You will also need [CMake](http://cmake.org/) at least version 2.8.3, and full [ROS](http://www.ros.org/) setup.
-The project was developed with ROS Indigo, but it should probably work also with ROS Hydro, although it is
-not tested with it.
+As of now, PaCMan Vision has a few modules providing object recognition and pose estimation and 3D object tracking, but it is planned to release more modules in the near future.
+Each module has its own section and will be explained in detail later on.
 
-Lastly you will need the [Point Cloud Library, PCL](http://pointclouds.org/) at version 1.7.2 (latest stable as of today).
-If you have Ubuntu 14.04 you will need to compile PCL from source, since there is no version 1.7.2 on Ubuntu repositories. Don't worry it's easy,
-just read the detailed instructions [here](http://pointclouds.org/downloads/source.html), or do the following:
+## Install Instructions ##
+First clone the repository into your ROS catkin workspace:
 ```
-git clone https://github.com/PointCloudLibrary/pcl pcl
-cd pcl
-git checkout pcl-1.7.2
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make && sudo make install
+roscd && cd ../src
+git clone git@github.com:Tabjones/pacman_vision.git
+git clone https://bitbucket.org/Tabjones/vision_communications.git pacman_vision_communications
 ```
+The vision communication repository is just a bunch of defined messages and services PaCMan Vision uses and you'll need it to build and run the node.
+The reason why those two packages are separated is to provide the user the flexibility of having PaCMan Vision messages and services without actually building the
+whole PaCMan Vision package, thus avoiding its dependencies, while still being able to call its services or subscribe to its messages.
+
+In order to build PaCMan Vision you need these dependencies:
+  1- [CMake](http://cmake.org/) at least version 2.8.11.
+  2- A full [ROS](http://www.ros.org/) setup. The project was developed with ROS Indigo, but it should probably also work with ROS Hydro, although it is
+      not tested with it.
+  3- A `catkin` workspace possibly initialized and configured to work with [catkin tools](http://catkin-tools.readthedocs.org/en/latest/index.html).
+      `catkin tools` is not required but it is to be preferred over `catkin_make` macro provided by ROS for a number of reasons.
+      The most important one is that it can handle `pure cmake` projects directly inside the ROS workspace, building any other non-ROS packages with a
+      single `catkin build` command.
+      To install `catkin tools` just type:
+      ```
+      sudo apt-get install python-catkin-tools
+      ```
+      Then, follow their documentation on how to configure the ROS workspace to work with it.
+  4- A compiler that supports at least C++11, for example GCC > 4.8.
+  5- [Point Cloud Library, PCL](http://pointclouds.org/) at version 1.7.2 (latest stable as of today).
+      If you have Ubuntu 14.04 you will need to compile PCL from source, since there is no version 1.7.2 on Ubuntu repositories.
+      Don't worry it's easy, just read the detailed instructions [here](http://pointclouds.org/downloads/source.html), or do the following:
+      ```
+      git clone https://github.com/PointCloudLibrary/pcl pcl
+      cd pcl
+      git checkout pcl-1.7.2
+      mkdir build && cd build
+      cmake -DCMAKE_BUILD_TYPE=Release ..
+      make && sudo make install
+      ```
 
 ### Step 1 - Get Pacman-Vision ###
 Navigate to you `catkin` source space (for most people it is `~/catkin_ws/src`) and then
