@@ -39,22 +39,16 @@
   <!-- ========================== -->
 
   <!-- launch_kinect2 -->
-  <!-- <arg name="launch_kinect2_bridge" default="false" doc="true if you want to include kinect2_bridge launch file. Note that launching openni2 and kinect2 simultaneously might not be the best idea!" /> -->
+  <arg name="launch_kinect2_bridge" default="false" doc="true if you want to include kinect2_bridge launch file. " />
 
   <!-- launch_openni2 -->
-  <arg name="launch_openni2" default="false" doc="true if you want to include openni2_launch file. Requires calibration package installed. Note that launching openni2 and kinect2 simultaneously might not be the best idea!" />
+  <arg name="launch_openni2" default="false" doc="true if you want to include openni2_launch file." />
 
   <!-- launch_vito -->
-  <arg name="launch_vito" default="false" doc="true if you want to include vito description launch file. It will be run in simulation mode and fake calibration." />
-
-  <!-- asus -->
-  <arg name="which_asus" default="asus1" doc="If launching openni2 specifies which asus you are using. asus1 or asus2 (there's a label on top of them)." />
+  <arg name="launch_vito" default="false" doc="true if you want to include vito description launch file. It will be run in simulation mode." />
 
   <!-- bridge_max_depth -->
-  <!-- <arg name="bridge_max_depth" default="12.0" doc="Maximum distance in meters to consider when creating the point clouds from kinect2. Smaller values increase performance, reducing total number of points processed. Ignored if launch_kinect2 is false." /> -->
-
-  <!-- bridge_calib_path -->
-  <!-- <arg name="bridge_calib_path" default="$(find kinect2_bridge)/data/" doc="Path to calibration data for Kinect2" /> -->
+  <arg name="bridge_max_depth" default="2.0" doc="Maximum distance in meters to consider when creating the point clouds from kinect2. Smaller values increase performance, reducing total number of points processed. Ignored if launch_kinect2 is false." />
 
   <!-- separate_term: Launch the node in a separate Terminal -->
   <arg name="separate_term" default="false" doc="Launch PaCMan Vision into a separate Terminal instance. Useful to clearly read output."/>
@@ -63,34 +57,31 @@
   <arg name="run_service_caller" default="false" doc="If true runs rqt_service_caller gui for calling various services" />
 
   <!-- run_rviz:  If true runs rviz gui.-->
-  <arg name="run_rviz" default="true" doc="If true runs rviz gui with config stored under cfg directory."/>
+  <arg name="run_rviz" default="true" doc="If true runs rviz gui with config stored under config directory."/>
 
-  <!-- load:  Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder).-->
-  <arg name="load" default="default" doc="Load a preset of parameters from yaml file named as this argument (yaml files must be located into params subfolder of this node)."/>
+  <!-- load:  Load a preset of parameters from yaml file named as this argument, without extension (yaml files must be located into config subfolder).-->
+  <arg name="load" default="default" doc="Load a configuration from yaml file named as this argument, without extension (yaml files must be located into config subfolder of this node)."/>
 
   <!-- ========================== -->
   <!--        Implementation      -->
   <!-- ========================== -->
 
-  <!-- <group if="$(arg launch_kinect2_bridge)"> -->
-  <!--   <!&#45;&#45; Launch kinect2 with custom driver parameters &#45;&#45;> -->
-  <!--   <include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch"> -->
-  <!--     <arg name="publish_tf"             value="true" /> -->
-  <!--     <arg name="worker_threads"         value="4" /> -->
-  <!--     <arg name="depth_method"           value="opencl" /> -->
-  <!--     <arg name="reg_method"             value="opencl" /> -->
-  <!--     <arg name="max_depth"              value="$(arg bridge_max_depth)" /> -->
-  <!--     <arg name="calib_path"             value="$(arg bridge_calib_path)"/> -->
-  <!--   </include> -->
-  <!-- </group> -->
+  <group if="$(arg launch_kinect2_bridge)"> -->
+    <!-- Launch kinect2 bridge with custom driver parameters -->
+    <include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch">
+      <arg name="publish_tf"             value="true" />
+      <arg name="worker_threads"         value="4" />
+      <arg name="depth_method"           value="opencl" />
+      <arg name="reg_method"             value="opencl" />
+      <arg name="max_depth"              value="$(arg bridge_max_depth)" />
+    </include>
+  </group>
 
   <group if="$(arg launch_openni2)">
     <!-- Launch openni2 launch with custom parameters -->
     <include file="$(find openni2_launch)/launch/openni2.launch">
       <arg name="depth_registration" value="true" />
       <arg name="color_depth_synchronization" value="true" />
-      <arg name="rgb_camera_info_url" value="file://$(find calibration)/config/intrinsics/rgb_$(arg which_asus).yaml"/>
-      <arg name="depth_camera_info_url" value="file://$(find calibration)/config/intrinsics/depth_$(arg which_asus).yaml"/>
     </include>
   </group>
 
