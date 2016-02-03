@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+ <!--
+   Software License Agreement (BSD License)
+
+     PaCMan Vision (PaCV) - https://github.com/Tabjones/pacman_vision
+     Copyright (c) 2015-2016, Federico Spinelli (fspinelli@gmail.com)
+     All rights reserved.
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
+
+   * Redistributions of source code must retain the above copyright notice, this
+     list of conditions and the following disclaimer.
+
+   * Redistributions in binary form must reproduce the above copyright notice,
+     this list of conditions and the following disclaimer in the documentation
+     and/or other materials provided with the distribution.
+
+   * Neither the name of the copyright holder(s) nor the names of its
+     contributors may be used to endorse or promote products derived from
+     this software without specific prior written permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+   SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ -->
+
+<launch>
+
+  <!-- ========================== -->
+  <!--        Configuration       -->
+  <!-- ========================== -->
+
+  <!-- launch_kinect2 -->
+  <arg name="launch_kinect2_bridge" default="false" doc="true if you want to include kinect2_bridge launch file. " />
+
+  <!-- launch_openni2 -->
+  <arg name="launch_openni2" default="false" doc="true if you want to include openni2_launch file." />
+
+  <!-- launch_vito -->
+  <arg name="launch_vito" default="false" doc="true if you want to include vito description launch file. It will be run in simulation mode." />
+
+  <!-- bridge_max_depth -->
+  <arg name="bridge_max_depth" default="2.0" doc="Maximum distance in meters to consider when creating the point clouds from kinect2. Smaller values increase performance, reducing total number of points processed. Ignored if launch_kinect2 is false." />
+
+  <!-- separate_term: Launch the node in a separate Terminal -->
+  <arg name="separate_term" default="false" doc="Launch PaCMan Vision into a separate Terminal instance. Useful to clearly read output."/>
+
+  <!-- run_service_caller:  If true runs rqt_service_caller gui for calling services.-->
+  <arg name="run_service_caller" default="false" doc="If true runs rqt_service_caller gui for calling various services" />
+
+  <!-- run_rviz:  If true runs rviz gui.-->
+  <arg name="run_rviz" default="true" doc="If true runs rviz gui with config stored under config directory."/>
+
+  <!-- load:  Load a preset of parameters from yaml file named as this argument, without extension (yaml files must be located into config subfolder).-->
+  <arg name="load" default="default" doc="Load a configuration from yaml file named as this argument, without extension (yaml files must be located into config subfolder of this node)."/>
+
+  <!-- ========================== -->
+  <!--        Implementation      -->
+  <!-- ========================== -->
+
+  <group if="$(arg launch_kinect2_bridge)"> -->
+    <!-- Launch kinect2 bridge with custom driver parameters -->
+    <include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch">
+      <arg name="publish_tf"             value="true" />
+      <arg name="worker_threads"         value="4" />
+      <arg name="depth_method"           value="opencl" />
+      <arg name="reg_method"             value="opencl" />
+      <arg name="max_depth"              value="$(arg bridge_max_depth)" />
+    </include>
+  </group>
+
+  <group if="$(arg launch_openni2)">
+    <!-- Launch openni2 launch with custom parameters -->
+    <include file="$(find openni2_launch)/launch/openni2.launch">
+      <arg name="depth_registration" value="true" />
+      <arg name="color_depth_synchronization" value="true" />
+    </include>
+  </group>
+
+  <group if="$(arg launch_vito)">
+    <!-- Launch vito description -->
+    <include file="$(find vito_description)/launch/display.launch"/>
+  </group>
+
+  <rosparam command="load" file="$(find pacman_vision)/config/$(arg load).yaml" ns="/pacman_vision"/>
+
+  <!-- pacman vision node  -->
+  <node if="$(arg separate_term)" name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" launch-prefix="gnome-terminal --title='PaCMan Vision' --hide-menubar --command"/>
+  <node unless="$(arg separate_term)" name="pacman_vision" pkg="pacman_vision" type="pacman_vision" output="screen" />
+
+  <!-- rviz -->
+  <node if="$(arg run_rviz)" name="rviz_pacman_vision" pkg="rviz" type="rviz" respawn="false" args="-d $(find pacman_vision)/config/pacmanvision.rviz" output="screen"/>
+
+  <!-- rqt_service_caller -->
+  <node if="$(arg run_service_caller)" name="service_caller_pacman_vision" pkg="rqt_service_caller" type="rqt_service_caller" respawn="false"/>
+
+</launch>

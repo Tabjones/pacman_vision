@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- Calibration -->
+    <include file="$(find calibration)/launch/asus_head_vito_broadcaster.launch" />
+
+    <!-- Launch vito description -->
+    <include file="$(find vito_description)/launch/display.launch"/>
+
+    <!-- Pacman Vision -->
+    <include file="$(find pacman_vision)/launch/pacman_vision.launch">
+        <arg name="run_rviz" value="false"/>
+    </include>
+
+</launch>
