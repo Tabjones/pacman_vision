@@ -1,0 +1,49 @@
+cropping: true
+downsampling: false
+downsampling_leaf_size: 0.01
+keep_organized: false
+limit_xmax: 0.2
+limit_xmin: -0.2
+limit_ymax: 0.1
+limit_ymin: -0.3
+limit_zmax: 1.0
+limit_zmin: 0.4
+publish_limits: true
+segmenting: false
+plane_tolerance: 0.005
+estimator: {
+    running: false,
+    cluster_tol: 0.05,
+    iterations: 5,
+    neighbors: 20,
+    object_calibration: false,
+    always_success: true,
+    rmse_thresh: 0.005,
+    broadcast_tf: true,
+    publish_markers: true
+    }
+listener: {
+    running: true,
+    listen_right_arm: true,
+    listen_right_hand: false,
+    listen_left_arm: true,
+    listen_left_hand: true,
+    remove_right_arm: false,
+    remove_right_hand: false,
+    remove_left_arm: true,
+    remove_left_hand: false,
+    geometry_scale: 1.1,
+    publish_markers: true
+    }
+sensor: {
+    internal: false,
+    broadcast_identity_tf: false,
+    name: "kinect2_optical_frame",
+    topic: "/camera/depth_registered/points"
+    }
+tracker: {
+    running: false,
+    publish_bounding_box: true,
+    publish_markers: true,
+    broadcast_tf: true
+}
