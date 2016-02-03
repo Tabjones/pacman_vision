@@ -80,10 +80,29 @@ To check available parameters:
     roslaunch pacman_vision pacman_vision.launch --ros-args
 ```
 
+### Code Info
+http://cloc.sourceforge.net v 1.60  T=1.40 s (43.5 files/s, 6293.6 lines/s)
+___
+
+
+|Language  |  files |    blank |  comment |     code|    scale |  3rd gen. equiv|
+|:--      | :--:    | :--:    | :--:      | :--:    | :--:    | --:           |
+|C++          |        20  |     220  |    1022   |   3694 x  | 1.51 =   |     5577.94|
+|C/C++ Header |        25  |     122  |    1197   |   1515 x  | 1.00 =   |     1515.00|
+|CMake        |        10  |      66  |     367   |    358 x  | 1.00 =   |      358.00|
+|YAML         |         2  |       0  |       0   |     98 x  | 0.90 =   |       88.20|
+|IDL          |         3  |      24  |       0   |     63 x  | 3.80 =   |      239.40|
+|XML          |         1  |      15  |      34   |     24 x  | 1.90 =   |       45.60|
+|             |            |          |           |           |          |            |
+|SUM:         |        61  |     447  |    2620   |   5752 x  | 1.36 =   |     7824.14|
+
+___
+
 ### Mirrors ###
 This project is mirrored on:
 
   * [Github](https://github.com/Tabjones/pacman_vision).
   * [Bitbucket](https://bitbucket.org/Tabjones/pacman_vision).
   * [Gitlab](https://gitlab.com/fspinelli/pacman_vision).
+
 
