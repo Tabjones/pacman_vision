@@ -1,46 +1,49 @@
-pacman_vision: 
-  {
-    Master_Disable: false,
+cropping: true
+downsampling: false
+downsampling_leaf_size: 0.01
+keep_organized: false
+limit_xmax: 0.2
+limit_xmin: -0.2
+limit_ymax: 0.1
+limit_ymin: -0.3
+limit_zmax: 1.0
+limit_zmin: 0.4
+publish_limits: true
+segmenting: false
+plane_tolerance: 0.005
+estimator: {
+    running: false,
     cluster_tol: 0.05,
-    color_importance: 0.3333,
-    crop_left_arm: true,
-    crop_left_hand: false,
-    crop_right_arm: true,
-    crop_right_hand: false,
-    downsample_leaf_size: 0.005,
-    downsampling: false,
-    enable_broadcaster: true,
-    enable_estimator: false,
-    enable_listener: true,
-    enable_supervoxels: false,
-    enable_tracker: false,
-    estimated_objects: true,
-    estimation_type: 0,
     iterations: 5,
-    keep_organized: false,
-    external_kinect2_resolution: 1,
     neighbors: 20,
-    normal_importance: 0.3333,
-    normals_search_radius: 0.01,
     object_calibration: false,
-    pass_xmax: 0.2,
-    pass_xmin: -0.2,
-    pass_ymax: 0.1,
-    pass_ymin: -0.3,
-    pass_zmax: 1.0,
-    pass_zmin: 0.4,
-    passthrough: true,
-    passthrough_limits: true,
-    plane_segmentation: false,
-    plane_tolerance: 0.01,
-    publish_tf: true,
-    refinement_iterations: 2,
-    seed_resolution: 0.18,
-    spatial_importance: 0.3333,
-    tracker_bounding_box: false,
-    tracker_disturbance: false,
-    sensor_type: 0,
-    use_service: false,
-    use_table_transform: false,
-    voxel_resolution: 0.02
-  }
+    always_success: true,
+    rmse_thresh: 0.005,
+    broadcast_tf: true,
+    publish_markers: true
+    }
+listener: {
+    running: true,
+    listen_right_arm: true,
+    listen_right_hand: false,
+    listen_left_arm: true,
+    listen_left_hand: true,
+    remove_right_arm: false,
+    remove_right_hand: false,
+    remove_left_arm: true,
+    remove_left_hand: false,
+    geometry_scale: 1.1,
+    publish_markers: true
+    }
+sensor: {
+    internal: false,
+    broadcast_identity_tf: false,
+    name: "kinect2_optical_frame",
+    topic: "/camera/depth_registered/points"
+    }
+tracker: {
+    running: false,
+    publish_bounding_box: true,
+    publish_markers: true,
+    broadcast_tf: true
+}
