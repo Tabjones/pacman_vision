@@ -11,7 +11,7 @@ limit_ymax: 0.1
 limit_ymin: -0.3
 limit_zmax: 1.0
 limit_zmin: 0.4
-listener: {geometry_scale: 3.800000000000002, listen_left_arm: true, listen_left_hand: false,
+listener: {geometry_scale: 2.100000000000002, listen_left_arm: true, listen_left_hand: false,
   listen_right_arm: true, listen_right_hand: false, publish_markers: true, remove_left_arm: true,
   remove_left_hand: false, remove_right_arm: true, remove_right_hand: false, running: true}
 plane_tolerance: 0.005
