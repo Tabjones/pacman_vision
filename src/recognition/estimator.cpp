@@ -50,6 +50,9 @@ Estimator::Estimator(const ros::NodeHandle n, const std::string ns, const Storag
     // nh.setParam("neighbors", 20);
     // nh.setParam("cluster_tol", 0.05);
     ////////////////////////////////////////////////////////
+    bool run;
+    ros::param::get("/pacman_vision/estimator/running", run);
+    config->set("running", run);
 }
 
 void

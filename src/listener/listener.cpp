@@ -42,6 +42,9 @@ Listener::Listener(const ros::NodeHandle n, const std::string ns, const Storage:
     :Module<Listener>(n,ns,stor)
 {
     config=std::make_shared<ListenerConfig>();
+    bool run;
+    ros::param::get("/pacman_vision/listener/running", run);
+    config->set("running", run);
 }
 
 void
