@@ -1,6 +1,6 @@
 cropping: true
-downsampling: false
-downsampling_leaf_size: 0.01
+downsampling: true
+downsampling_leaf_size: 0.015
 keep_organized: false
 limit_xmax: 0.2
 limit_xmin: -0.2
