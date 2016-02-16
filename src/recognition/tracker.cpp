@@ -42,6 +42,9 @@ Tracker::Tracker(const ros::NodeHandle n, const std::string ns, const Storage::P
     error_count(0), centroid_counter(0), disturbance_counter(0), rej_distance(0.03)
 {
     config=std::make_shared<TrackerConfig>();
+    bool run;
+    ros::param::get("/pacman_vision/tracker/spawn", run);
+    config->set("spawn", run);
 }
 
 void

@@ -137,7 +137,7 @@ BasicNode::init()
         return;
     }
     srv_get_scene = nh->advertiseService("get_scene_processed", &BasicNode::cb_get_scene, this);
-    pub_scene = nh->advertise<PTC> ("scene_processed", 5);
+    pub_scene = nh->advertise<PTC> ("processed_scene", 5);
     pub_markers = nh->advertise<visualization_msgs::MarkerArray>("markers", 1);
     setConfigFromRosparams();
     update_markers(); //one time call
@@ -162,7 +162,7 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
         sensor_msgs::PointCloud2 msg;
         if (!req.save.empty()){
             if(pcl::io::savePCDFile( req.save.c_str(), *scene_processed) == 0)
-                ROS_INFO("[BasicNode::%s]\tProcessed scene saved to %s", __func__, req.save.c_str());
+                ROS_INFO("[BasicNode::%s]\tScene Processed saved to %s", __func__, req.save.c_str());
             else
                 ROS_ERROR("[BasicNode::%s]\tFailed to save scene to %s", __func__, req.save.c_str());
         }
@@ -171,7 +171,7 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
         return true;
     }
     else{
-        ROS_WARN("[BasicNode::%s]\tNo Processed Scene to send to Service!", __func__);
+        ROS_WARN("[BasicNode::%s]\tNo Scene Processed to send to Service!", __func__);
         return false;
     }
 }
@@ -296,66 +296,69 @@ BasicNode::process_scene()
         ROS_ERROR("[BasicNode::%s]\tNo Listener Config set, set it with setListenerConfig()",__func__);
         return;
     }
-    list_config->get("geometry_scale", scale);
-    list_config->get("remove_right_arm", val);
+    list_config->get("spawn", val);
     if (val){
-        if(storage->readRightArm(trans))
-            if (trans->size() == lwr_arm.size() )
-                for(size_t i=0; i<trans->size(); ++i)
-                {
-                    if (dest){
-                        crop_a_box(dest, tmp, lwr_arm[i]*scale, true, trans->at(i));
-                        dest = tmp;
-                        tmp = boost::make_shared<PTC>();
+        list_config->get("geometry_scale", scale);
+        list_config->get("remove_right_arm", val);
+        if (val){
+            if(storage->readRightArm(trans))
+                if (trans->size() == lwr_arm.size() )
+                    for(size_t i=0; i<trans->size(); ++i)
+                    {
+                        if (dest){
+                            crop_a_box(dest, tmp, lwr_arm[i]*scale, true, trans->at(i).inverse());
+                            dest = tmp;
+                            tmp = boost::make_shared<PTC>();
+                        }
+                        else
+                            crop_a_box(source, dest, lwr_arm[i]*scale, true, trans->at(i).inverse());
                     }
-                    else
-                        crop_a_box(source, dest, lwr_arm[i]*scale, true, trans->at(i));
-                }
-    }
-    list_config->get("remove_left_arm", val);
-    if (val){
-        if(storage->readLeftArm(trans))
-            if (trans->size() == lwr_arm.size() )
-                for(size_t i=0; i<trans->size(); ++i)
-                {
-                    if (dest){
-                        crop_a_box(dest, tmp, lwr_arm[i]*scale, true, trans->at(i));
-                        dest = tmp;
-                        tmp = boost::make_shared<PTC>();
+        }
+        list_config->get("remove_left_arm", val);
+        if (val){
+            if(storage->readLeftArm(trans))
+                if (trans->size() == lwr_arm.size() )
+                    for(size_t i=0; i<trans->size(); ++i)
+                    {
+                        if (dest){
+                            crop_a_box(dest, tmp, lwr_arm[i]*scale, true, trans->at(i).inverse());
+                            dest = tmp;
+                            tmp = boost::make_shared<PTC>();
+                        }
+                        else
+                            crop_a_box(source, dest, lwr_arm[i]*scale, true, trans->at(i).inverse());
                     }
-                    else
-                        crop_a_box(source, dest, lwr_arm[i]*scale, true, trans->at(i));
-                }
-    }
-    list_config->get("remove_right_hand", val);
-    if (val){
-        if(storage->readRightHand(trans))
-            if (trans->size() == soft_hand_right.size() )
-                for(size_t i=0; i<trans->size(); ++i)
-                {
-                    if (dest){
-                        crop_a_box(dest, tmp, soft_hand_right[i]*scale, true, trans->at(i));
-                        dest = tmp;
-                        tmp = boost::make_shared<PTC>();
+        }
+        list_config->get("remove_right_hand", val);
+        if (val){
+            if(storage->readRightHand(trans))
+                if (trans->size() == soft_hand_right.size() )
+                    for(size_t i=0; i<trans->size(); ++i)
+                    {
+                        if (dest){
+                            crop_a_box(dest, tmp, soft_hand_right[i]*scale, true, trans->at(i).inverse());
+                            dest = tmp;
+                            tmp = boost::make_shared<PTC>();
+                        }
+                        else
+                            crop_a_box(source, dest, soft_hand_right[i]*scale, true, trans->at(i).inverse());
                     }
-                    else
-                        crop_a_box(source, dest, soft_hand_right[i]*scale, true, trans->at(i));
-                }
-    }
-    list_config->get("remove_left_hand", val);
-    if (val){
-        if(storage->readLeftHand(trans))
-            if (trans->size() == soft_hand_left.size() )
-                for(size_t i=0; i<trans->size(); ++i)
-                {
-                    if (dest){
-                        crop_a_box(dest, tmp, soft_hand_left[i]*scale, true, trans->at(i));
-                        dest = tmp;
-                        tmp = boost::make_shared<PTC>();
+        }
+        list_config->get("remove_left_hand", val);
+        if (val){
+            if(storage->readLeftHand(trans))
+                if (trans->size() == soft_hand_left.size() )
+                    for(size_t i=0; i<trans->size(); ++i)
+                    {
+                        if (dest){
+                            crop_a_box(dest, tmp, soft_hand_left[i]*scale, true, trans->at(i).inverse());
+                            dest = tmp;
+                            tmp = boost::make_shared<PTC>();
+                        }
+                        else
+                            crop_a_box(source, dest, soft_hand_left[i]*scale, true, trans->at(i).inverse());
                     }
-                    else
-                        crop_a_box(source, dest, soft_hand_left[i]*scale, true, trans->at(i));
-                }
+        }
     }
 #endif
     //Save into storage

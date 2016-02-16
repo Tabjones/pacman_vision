@@ -43,13 +43,13 @@ class ListenerConfig: public Config<ListenerConfig>
     friend class Config<ListenerConfig>;
     const std::array<std::string,11> valid_keys;
     ListenerConfig():
-    valid_keys {{"running", "listen_right_arm", "listen_left_arm", "listen_right_hand",
+    valid_keys {{"spawn", "listen_right_arm", "listen_left_arm", "listen_right_hand",
                  "listen_left_hand", "remove_right_arm", "remove_left_arm",
                  "remove_left_hand", "remove_right_hand", "publish_markers",
                  "geometry_scale"}}
     {
         //create maps
-        map_bool["running"] = false;
+        map_bool["spawn"] = false;
         map_bool["listen_right_arm"] = false;
         map_bool["listen_left_arm"] = false;
         map_bool["listen_right_hand"] = false;

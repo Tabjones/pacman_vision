@@ -12,7 +12,7 @@ publish_limits: true
 segmenting: false
 plane_tolerance: 0.005
 estimator: {
-    running: false,
+    spawn: false,
     cluster_tol: 0.05,
     iterations: 5,
     neighbors: 20,
@@ -23,7 +23,7 @@ estimator: {
     publish_markers: true
     }
 listener: {
-    running: true,
+    spawn: true,
     listen_right_arm: true,
     listen_right_hand: false,
     listen_left_arm: true,
@@ -42,7 +42,7 @@ sensor: {
     topic: "/camera/depth_registered/points"
     }
 tracker: {
-    running: false,
+    spawn: false,
     publish_bounding_box: true,
     publish_markers: true,
     broadcast_tf: true

@@ -66,13 +66,17 @@ void ListenerGui::init()
 {
     bool value;
     config->get("listen_right_arm", value);
-    ui->LRAButt->setChecked(value);
+    if (value)
+        ui->LRAButt->click();
     config->get("listen_left_arm", value);
-    ui->LLAButt->setChecked(value);
+    if (value)
+        ui->LLAButt->click();
     config->get("listen_right_hand", value);
-    ui->LRHButt->setChecked(value);
+    if (value)
+        ui->LRHButt->click();
     config->get("listen_left_hand", value);
-    ui->LLHButt->setChecked(value);
+    if (value)
+        ui->LLHButt->click();
     config->get("remove_right_arm", value);
     ui->RRAButt->setChecked(value);
     config->get("remove_left_arm", value);
@@ -99,7 +103,7 @@ void ListenerGui::disable(bool full)
     ui->status->setStyleSheet("QLabel {color : red}");
     ui->ListenerF->setDisabled(true);
     ui->ScaleF->setDisabled(true);
-    config->set("running", false);
+    config->set("spawn", false);
 }
 
 void ListenerGui::enable(bool full)
@@ -113,7 +117,7 @@ void ListenerGui::enable(bool full)
     ui->status->setStyleSheet("QLabel {color : green}");
     ui->ListenerF->setDisabled(false);
     ui->ScaleF->setDisabled(false);
-    config->set("running", true);
+    config->set("spawn", true);
     init();
 }
 

@@ -98,7 +98,7 @@ EstimatorGui::disable(bool full){
     ui->IterF->setDisabled(true);
     ui->NeighF->setDisabled(true);
     ui->rmseF->setDisabled(true);
-    config->set("running", false);
+    config->set("spawn", false);
 }
 void EstimatorGui::enable(bool full)
 {
@@ -114,7 +114,7 @@ void EstimatorGui::enable(bool full)
     ui->IterF->setDisabled(false);
     ui->NeighF->setDisabled(false);
     ui->rmseF->setDisabled(false);
-    config->set("running", true);
+    config->set("spawn", true);
     init();
 }
 
