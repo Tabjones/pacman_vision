@@ -182,7 +182,7 @@ PacmanVision::onReset()
         listener->kill();
         listener_gui->disable();
     }
-    ros::param::get( (father_ns + "/" + listener->getRelativeName() + "/running").c_str(), run);
+    ros::param::get( (father_ns + "/" + listener->getRelativeName() + "/spawn").c_str(), run);
     if (run)
         onSpawnKillListener();
 #endif
@@ -191,14 +191,14 @@ PacmanVision::onReset()
         estimator->kill();
         estimator_gui->disable();
     }
-    ros::param::get( (father_ns + "/" + estimator->getRelativeName() + "/running").c_str(), run);
+    ros::param::get( (father_ns + "/" + estimator->getRelativeName() + "/spawn").c_str(), run);
     if(run)
         onSpawnKillEstimator();
     if(tracker->isRunning()){
         tracker->kill();
         tracker_gui->disable();
     }
-    ros::param::get( (father_ns + "/" + tracker->getRelativeName() + "/running").c_str(), run);
+    ros::param::get( (father_ns + "/" + tracker->getRelativeName() + "/spawn").c_str(), run);
     if (run)
         onSpawnKillTracker();
 #endif
@@ -299,7 +299,7 @@ PacmanVision::init(int argc, char** argv)
         estimator_gui = std::make_shared<EstimatorGui>(estimator->getConfig());
         basic_gui->addTab(estimator_gui->getWidget(), "Estimator Module");
         bool run;
-        estimator->getConfig()->get("running", run);
+        estimator->getConfig()->get("spawn", run);
         if (run && !estimator->isRunning())
             onSpawnKillEstimator();
         ROS_INFO("[PaCMan Vision]\tAdding Tracker Module");
@@ -308,7 +308,7 @@ PacmanVision::init(int argc, char** argv)
         tracker->setBasicNodeConfig(basic_node->getConfig());
         tracker_gui = std::make_shared<TrackerGui>(tracker->getConfig());
         basic_gui->addTab(tracker_gui->getWidget(), "Tracker Module");
-        tracker->getConfig()->get("running", run);
+        tracker->getConfig()->get("spawn", run);
         if (run && !tracker->isRunning())
             onSpawnKillTracker();
 #endif
@@ -316,11 +316,11 @@ PacmanVision::init(int argc, char** argv)
         ROS_INFO("[PaCMan Vision]\tAdding Listener Module");
         listener = std::make_shared<pacv::Listener>(basic_node->getNodeHandle(), "listener", storage);
         listener->setRate(30.0); //30Hz is enough
-        basic_node->setListenerConfig(listener->getConfig());
         listener_gui = std::make_shared<ListenerGui>(listener->getConfig());
+        basic_node->setListenerConfig(listener->getConfig());
         basic_gui->addTab(listener_gui->getWidget(), "Listener Module");
         bool val;
-        listener->getConfig()->get("running", val);
+        listener->getConfig()->get("spawn", val);
         if (val && !listener->isRunning())
             onSpawnKillListener();
 #endif

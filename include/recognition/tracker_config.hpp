@@ -44,10 +44,10 @@ class TrackerConfig: public Config<TrackerConfig>
     const std::array<std::string,4> valid_keys;
     TrackerConfig():
         //empty for now
-    valid_keys {{"publish_bounding_box", "publish_markers", "broadcast_tf", "running" }}
+    valid_keys {{"publish_bounding_box", "publish_markers", "broadcast_tf", "spawn" }}
     {
         //create maps
-        map_bool["running"] = false;
+        map_bool["spawn"] = false;
         map_bool["publish_bounding_box"]= true;
         map_bool["publish_markers"]= true;
         map_bool["broadcast_tf"]= true;

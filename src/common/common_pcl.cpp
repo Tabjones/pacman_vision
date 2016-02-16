@@ -57,11 +57,8 @@ crop_a_box(const PTC::ConstPtr source, PTC::Ptr& dest, const Box lim, const bool
     cb.setMax(max);
     //Note this transform is applied to the box, not the cloud
     if(!trans.isIdentity()){
-        Eigen::Matrix3f Rot = trans.block<3,3>(0,0); //3x3 block starting at 0,0
-        Eigen::Vector3f angles = Rot.eulerAngles(0,1,2);
-        Eigen::Vector3f translation( trans(0,3), trans(1,3), trans(2,3));
-        cb.setTranslation(translation);
-        cb.setRotation(angles);
+        Eigen::Affine3f t (trans);
+        cb.setTransform(t);
     }
     cb.setNegative(remove_inside);
     cb.filter (*dest);

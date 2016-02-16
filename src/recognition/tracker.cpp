@@ -43,8 +43,8 @@ Tracker::Tracker(const ros::NodeHandle n, const std::string ns, const Storage::P
 {
     config=std::make_shared<TrackerConfig>();
     bool run;
-    ros::param::get("/pacman_vision/tracker/running", run);
-    config->set("running", run);
+    ros::param::get("/pacman_vision/tracker/spawn", run);
+    config->set("spawn", run);
 }
 
 void

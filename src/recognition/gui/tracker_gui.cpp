@@ -103,7 +103,7 @@ void TrackerGui::disable(bool full)
     ui->status->setText("Not Running");
     ui->status->setStyleSheet("QLabel {color : red}");
     ui->TrackerF->setDisabled(true);
-    config->set("running", false);
+    config->set("spawn", false);
 }
 
 void TrackerGui::enable(bool full)
@@ -116,7 +116,7 @@ void TrackerGui::enable(bool full)
     ui->status->setText("Running");
     ui->status->setStyleSheet("QLabel {color : green}");
     ui->TrackerF->setDisabled(false);
-    config->set("running", true);
+    config->set("spawn", true);
     init();
 }
 

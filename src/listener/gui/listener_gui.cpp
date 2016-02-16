@@ -103,7 +103,7 @@ void ListenerGui::disable(bool full)
     ui->status->setStyleSheet("QLabel {color : red}");
     ui->ListenerF->setDisabled(true);
     ui->ScaleF->setDisabled(true);
-    config->set("running", false);
+    config->set("spawn", false);
 }
 
 void ListenerGui::enable(bool full)
@@ -117,7 +117,7 @@ void ListenerGui::enable(bool full)
     ui->status->setStyleSheet("QLabel {color : green}");
     ui->ListenerF->setDisabled(false);
     ui->ScaleF->setDisabled(false);
-    config->set("running", true);
+    config->set("spawn", true);
     init();
 }
 
