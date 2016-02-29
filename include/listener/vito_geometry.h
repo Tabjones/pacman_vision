@@ -136,8 +136,8 @@ const static std::array<Box,21> soft_hand_right{ {
 //left hand
 const static std::array<Box,21> soft_hand_left{ {
 //base - coupler - clamps. in base ref system. take y of clamps, since biggest
-  Box(-0.033, -0.037, 0.004 -0.035 -0.014,
-       0.033,  0.037, 0.066),
+  Box(-0.06, -0.06, 0.004 -0.05 -0.014,
+       0.06,  0.06, 0.066),
 //Left Palm + glove tolerance + board
   Box(-0.027 + glove.x1 + board.x1, -0.039 + glove.y1 + board.y1, -0.011 + glove.z1 + board.z1,
        0.012 + glove.x2 + board.x2,  0.049 + glove.y2 + board.y2, 0.113 + glove.z2 + board.z2),

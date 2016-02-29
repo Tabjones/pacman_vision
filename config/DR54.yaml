@@ -1,6 +1,9 @@
 cropping: true
 downsampling: true
 downsampling_leaf_size: 0.015
+estimator: {always_success: true, broadcast_tf: true, cluster_tol: 0.05, iterations: 5,
+  neighbors: 20, object_calibration: false, publish_markers: true, rmse_thresh: 0.005,
+  spawn: false}
 keep_organized: false
 limit_xmax: 0.2
 limit_xmin: -0.2
@@ -8,42 +11,12 @@ limit_ymax: 0.1
 limit_ymin: -0.3
 limit_zmax: 1.0
 limit_zmin: 0.4
+listener: {geometry_scale: 1.4000000000000004, listen_left_arm: true, listen_left_hand: true,
+  listen_right_arm: true, listen_right_hand: false, publish_markers: true, remove_left_arm: true,
+  remove_left_hand: true, remove_right_arm: true, remove_right_hand: false, spawn: true}
+plane_tolerance: 0.005
 publish_limits: true
 segmenting: false
-plane_tolerance: 0.005
-estimator: {
-    spawn: false,
-    cluster_tol: 0.05,
-    iterations: 5,
-    neighbors: 20,
-    object_calibration: false,
-    always_success: true,
-    rmse_thresh: 0.005,
-    broadcast_tf: true,
-    publish_markers: true
-    }
-listener: {
-    spawn: true,
-    listen_right_arm: true,
-    listen_right_hand: false,
-    listen_left_arm: true,
-    listen_left_hand: true,
-    remove_right_arm: false,
-    remove_right_hand: false,
-    remove_left_arm: true,
-    remove_left_hand: false,
-    geometry_scale: 1.1,
-    publish_markers: true
-    }
-sensor: {
-    internal: false,
-    broadcast_identity_tf: false,
-    name: "kinect2_optical_frame",
-    topic: "/camera/depth_registered/points"
-    }
-tracker: {
-    spawn: false,
-    publish_bounding_box: true,
-    publish_markers: true,
-    broadcast_tf: true
-}
+sensor: {broadcast_identity_tf: false, internal: false, name: kinect2_optical_frame,
+  topic: /camera/depth_registered/points}
+tracker: {broadcast_tf: true, publish_bounding_box: true, publish_markers: true, spawn: false}
