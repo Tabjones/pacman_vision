@@ -38,13 +38,13 @@ project(pacman_vision)
 ###########   Change these according to your will ##############################
 ################################################################################
 ## This will build estimator and tracker modules
-set (PACV_BUILD_RECOGNITION        0 )
+set (PACV_BUILD_RECOGNITION        1 )
 ## This will build vito listener module
 set (PACV_BUILD_LISTENER           1 )
 ## This will build in hand modeler module
-set (PACV_BUILD_MODELER            0 )
+set (PACV_BUILD_MODELER            1 )
 ## This will build Kinect2 Processor
-set (PACV_BUILD_KINECT2            0 )
+set (PACV_BUILD_KINECT2            1 )
 
 ################################################################################
 ######### Check for c++11 support or we won't get far... #######################
@@ -75,7 +75,7 @@ find_package(Boost REQUIRED
 find_package(HDF5 REQUIRED)
 #Find PCL
 find_package(PCL 1.7.2 COMPONENTS common filters io registration
-                segmentation sample_consensus search REQUIRED)
+                segmentation sample_consensus search octree REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 link_directories(${PCL_LIBRARY_DIRS})
 ##Eigen
@@ -94,32 +94,6 @@ find_package(catkin REQUIRED COMPONENTS
   visualization_msgs
   cmake_modules
   )
-##Catkin specific configuration:
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if you package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-  INCLUDE_DIRS
-    include
-    # ${EIGEN_INCLUDE_DIRS}
-    ${PCL_INCLUDE_DIRS}
-  LIBRARIES
-    pacv_libcommon
-  CATKIN_DEPENDS
-    geometry_msgs
-    pcl_conversions
-    roscpp
-    roslib
-    sensor_msgs
-    tf
-    pacman_vision_comm
-    visualization_msgs
-    message_runtime
-  # DEPENDS ${EXT_DEPS}
-)
 #include a bunch of dirs to search path
 include_directories(include src/pacman_vision src/basic_node/gui)
 include_directories(${catkin_INCLUDE_DIRS})
@@ -195,6 +169,8 @@ ENDIF(PACV_BUILD_LISTENER)
 
 IF(PACV_BUILD_MODELER)
     add_subdirectory(src/modeler)
+    LIST(APPEND LIBRARIES
+        ${PACV_MODELER_LIB})
 ENDIF(PACV_BUILD_MODELER)
 
 include_directories(${MORE_INCLUDE_DIRS})
@@ -208,6 +184,34 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/config_h.cmake.in"
   "${CATKIN_DEVEL_PREFIX}/include/pacv_config.h")
 include_directories(${CATKIN_DEVEL_PREFIX}/include)
 
+################################################################################
+#### Export project and libraries through catkin ###############################
+################################################################################
+##Catkin specific configuration:
+## The catkin_package macro generates cmake config files for your package
+## Declare things to be passed to dependent projects
+## INCLUDE_DIRS: uncomment this if you package contains header files
+## LIBRARIES: libraries you create in this project that dependent projects also need
+## CATKIN_DEPENDS: catkin_packages dependent projects also need
+## DEPENDS: system dependencies of this project that dependent projects also need
+catkin_package(
+  INCLUDE_DIRS
+    include
+  LIBRARIES
+    ${LIBRARIES}
+  CATKIN_DEPENDS
+    geometry_msgs
+    pcl_conversions
+    roscpp
+    roslib
+    sensor_msgs
+    tf
+    pacman_vision_comm
+    visualization_msgs
+    message_runtime
+  DEPENDS
+   ${MORE_LIBRARIES}
+)
 ################################################################################
 ####################### Now Build the project ##################################
 ################################################################################
