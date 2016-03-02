@@ -1,4 +1,7 @@
 cropping: true
+color_dist_thresh: 20.0
+color_filter: false
+invert_color_filter: false
 downsampling: false
 downsampling_leaf_size: 0.01
 keep_organized: false
@@ -8,9 +11,13 @@ limit_ymax: 0.5
 limit_ymin: -0.5
 limit_zmax: 1.5
 limit_zmin: 0.3
+cropping_ref_frame: "/camera_rgb_optical_frame"
 publish_limits: true
 segmenting: false
 plane_tolerance: 0.005
+outliers_filter: false
+outliers_mean_k: 50
+outliers_std_mul: 2.0
 estimator: {
     spawn: false,
     cluster_tol: 0.05,
@@ -46,4 +53,10 @@ tracker: {
     publish_bounding_box: true,
     publish_markers: true,
     broadcast_tf: true
+}
+in_hand_modeler: {
+    spawn: false,
+    model_ds_leaf: 0.003,
+    normals_ang_thresh: 10.0,
+    use_gicp: false
 }

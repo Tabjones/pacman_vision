@@ -28,43 +28,40 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#ifndef _BASIC_NODE_CONFIG_HPP_
-#define _BASIC_NODE_CONFIG_HPP_
+#ifndef _MODELER_CONFIG_HPP_
+#define _MODELER_CONFIG_HPP_
 
 #include <common/modules_config.hpp>
 #include <array>
 
 namespace pacv
 {
-class BasicConfig: public Config<BasicConfig>
+class ModelerConfig: public Config<ModelerConfig>
 {
     public:
-    typedef std::shared_ptr<BasicConfig> Ptr;
-    friend class Config<BasicConfig>;
-    Box filter_limits;
-    const std::array<std::string,15> valid_keys;
-    BasicConfig(): filter_limits(-0.5, -0.5, 0.3, 0.5, 0.5, 2),
-    valid_keys {{"cropping", "downsampling", "segmenting", "outliers_filter", "color_filter",
-                 "publish_limits", "keep_organized", "downsampling_leaf_size",
-                 "plane_tolerance", "filter_limits", "outliers_mean_k", "outliers_std_mul",
-                 "color_dist_thresh", "invert_color_filter", "cropping_ref_frame"}}
+    typedef std::shared_ptr<ModelerConfig> Ptr;
+    friend class Config<ModelerConfig>;
+    const std::array<std::string,5> valid_keys;
+    ModelerConfig():
+    valid_keys {{"spawn", "model_ds_leaf",
+                 "use_gicp", "normals_ang_thresh", "curvature_thresh"}}
     {
+        //TODO
         //create maps
-        map_bool["cropping"] = false;
-        map_bool["downsampling"] = false;
-        map_bool["segmenting"] = false;
-        map_bool["outliers_filter"] = false;
-        map_bool["color_filter"] = false;
-        map_bool["publish_limits"] = false;
-        map_bool["keep_organized"] = false;
-        map_bool["invert_color_filter"] = false;
-        map_double["downsampling_leaf_size"] = 0.01;
-        map_int["outliers_mean_k"] = 30;
-        map_double["plane_tolerance"] = 0.01;
-        map_double["outliers_std_mul"] = 2.0;
-        map_double["color_dist_thresh"] = 10.0;
-        map_box["filter_limits"] = filter_limits;
-        map_string["cropping_ref_frame"] = "/camera_rgb_optical_frame";
+        map_bool["spawn"] = false;
+        map_bool["use_gicp"] = false;
+        // map_bool["listen_left_arm"] = false;
+        // map_bool["listen_right_hand"] = false;
+        // map_bool["listen_left_hand"] = false;
+        // map_bool["remove_right_arm"] = false;
+        // map_bool["remove_left_arm"] = false;
+        // map_bool["remove_right_hand"] = false;
+        // map_bool["remove_left_hand"] = false;
+        // map_bool["publish_markers"] = true;
+        map_double["model_ds_leaf"] = 0.003;
+        map_double["normals_ang_thresh"] = 30.0;
+        map_double["curvature_thresh"] = 1.0;
+        // map_int["color_k_neigh"] = 20;
     }
 };
 }

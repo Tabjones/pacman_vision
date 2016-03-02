@@ -37,10 +37,11 @@
 namespace pacv
 {
 BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor):
-        Module<BasicNode>(ns,stor)
+        Module<BasicNode>(ns,stor), was_color_filtering(false)
 {
     scene_processed = boost::make_shared<PTC>();
     config = std::make_shared<BasicConfig>();
+    box_transform.setIdentity();
     //tmp set param to dump into default
     // nh.setParam("cropping", false);
     // nh.setParam("downsampling", false);
@@ -161,7 +162,9 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
     if (scene_processed){
         sensor_msgs::PointCloud2 msg;
         if (!req.save.empty()){
-            if(pcl::io::savePCDFile( req.save.c_str(), *scene_processed) == 0)
+            pcl::PointCloud<pcl::PointXYZRGBA> cloud;
+            pcl::copyPointCloud(*scene_processed, cloud);
+            if(pcl::io::savePCDFileBinaryCompressed( req.save.c_str(), cloud) == 0)
                 ROS_INFO("[BasicNode::%s]\tScene Processed saved to %s", __func__, req.save.c_str());
             else
                 ROS_ERROR("[BasicNode::%s]\tFailed to save scene to %s", __func__, req.save.c_str());
@@ -174,6 +177,22 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
         ROS_WARN("[BasicNode::%s]\tNo Scene Processed to send to Service!", __func__);
         return false;
     }
+}
+
+void
+BasicNode::remove_outliers(const PTC::ConstPtr source, PTC::Ptr &dest)
+{
+    if (!dest)
+        dest=boost::make_shared<PTC>();
+    pcl::StatisticalOutlierRemoval<PT> sor;
+    int k;
+    double std_mul;
+    config->get("outliers_mean_k", k);
+    config->get("outliers_std_mul", std_mul);
+    sor.setInputCloud(source);
+    sor.setMeanK(k);
+    sor.setStddevMulThresh(std_mul);
+    sor.filter(*dest);
 }
 
 void
@@ -236,6 +255,53 @@ BasicNode::segment_scene(const PTC::ConstPtr source, PTC::Ptr &dest)
      * }
      */
 }
+
+// void
+// BasicNode::extract_principal_color(const PTC::ConstPtr scene)
+// {
+//     //for now just compute the mean color...
+//     //in the future we can create some palette and let the user choose
+//     mean_L = mean_a = mean_b = 0.0;
+//     for (const auto& pt: scene->points)
+//     {
+//         double L, a, b;
+//         convertPCLColorToCIELAB(pt, L, a, b);
+//         mean_L += L;
+//         mean_a += a;
+//         mean_b += b;
+//     }
+//     mean_L /= scene->size();
+//     mean_a /= scene->size();
+//     mean_b /= scene->size();
+// }
+
+void
+BasicNode::setFilterColor(const double r, const double g, const double b)
+{
+    convertRGBToCIELAB(r,g,b, ref_L, ref_a, ref_b);
+}
+
+void
+BasicNode::apply_color_filter(const PTC::ConstPtr source, PTC::Ptr &dest)
+{
+    if (!dest)
+        dest=boost::make_shared<PTC>();
+    double thresh;
+    config->get("color_dist_thresh", thresh);
+    for (std::size_t i=0; i< source->size(); ++i)
+    {
+        double L,a,b;
+        convertPCLColorToCIELAB(source->points[i], L,a,b);
+        double dE = deltaE(ref_L, ref_a, ref_b, L,a,b);
+        bool invert(false);
+        config->get("invert_color_filter", invert);
+        if ( dE <= thresh && !invert)
+            dest->push_back(source->points[i]);
+        else if ( dE > thresh && invert)
+            dest->push_back(source->points[i]);
+    }
+}
+
 void
 BasicNode::process_scene()
 {
@@ -246,10 +312,19 @@ BasicNode::process_scene()
         return;
     if(source->empty())
         return;
-    bool crop, downsamp, segment;
+    bool crop, downsamp, segment, outliers, color;
     config->get("cropping", crop);
     config->get("downsampling", downsamp);
     config->get("segmenting", segment);
+    config->get("outliers_filter", outliers);
+    config->get("color_filter", color);
+    // if (color && !was_color_filtering){
+    //     //we compute a new color model
+    //     PTC::Ptr last_processed_scene;
+    //     storage->readSceneProcessed(last_processed_scene);
+    //     extract_principal_color(last_processed_scene);
+    // }
+    // was_color_filtering = color;
     PTC::Ptr tmp = boost::make_shared<PTC>();
     PTC::Ptr dest;
     if (crop){
@@ -257,7 +332,13 @@ BasicNode::process_scene()
         bool org;
         config->get("filter_limits", lim);
         config->get("keep_organized", org);
-        crop_a_box(source, dest, lim, false, Eigen::Matrix4f::Identity(), org);
+        std::string  ref_frame, box_frame;
+        config->get("cropping_ref_frame", box_frame);
+        storage->readSensorFrame(ref_frame);
+        if (ref_frame.compare(box_frame)!=0)
+            crop_a_box(source, dest, lim, false, box_transform.inverse(), org);
+        else
+            crop_a_box(source, dest, lim, false, Eigen::Matrix4f::Identity(), org);
         if(dest->empty())
             return;
     }
@@ -274,6 +355,7 @@ BasicNode::process_scene()
         if(dest->empty())
             return;
     }
+    //check if we need the plane segmentation
     if (segment){
         if (dest){
             //means we have performed at least one filter before this
@@ -283,6 +365,32 @@ BasicNode::process_scene()
         }
         else
             segment_scene(source, dest);
+        if(dest->empty())
+            return;
+    }
+    //check if we need to apply a color filter
+    if (color){
+        if (dest){
+            //means we have performed at least one filter before this
+            apply_color_filter(dest, tmp);
+            dest = tmp;
+            tmp = boost::make_shared<PTC>();
+        }
+        else
+            apply_color_filter(source, dest);
+        if(dest->empty())
+            return;
+    }
+    //check if we need to remove outliers
+    if (outliers){
+        if (dest){
+            //means we have performed at least one filter before this
+            remove_outliers(dest, tmp);
+            dest = tmp;
+            tmp = boost::make_shared<PTC>();
+        }
+        else
+            remove_outliers(source, dest);
         if(dest->empty())
             return;
     }
@@ -395,9 +503,16 @@ BasicNode::update_markers()
     //only update crop limits, plane always gets recomputed if active
     marks=std::make_shared<visualization_msgs::MarkerArray>();
     Box lim;
+    std::string  frame, box_frame;
+    storage->readSensorFrame(frame);
+    config->get("cropping_ref_frame", box_frame);
     visualization_msgs::Marker mark_lim;
     config->get("filter_limits", lim);
     create_box_marker(lim, mark_lim, false);
+    geometry_msgs::Pose pose;
+    mark_lim.header.frame_id = frame;
+    fromEigen(box_transform, pose);
+    mark_lim.pose = pose;
     //make it red
     mark_lim.color.g = 0.0f;
     mark_lim.color.b = 0.0f;
@@ -433,6 +548,23 @@ BasicNode::publish_markers()
 void
 BasicNode::spinOnce()
 {
+    std::string  ref_frame, box_frame;
+    config->get("cropping_ref_frame", box_frame);
+    storage->readSensorFrame(ref_frame);
+    if (ref_frame.compare(box_frame) !=0){
+        try
+        {
+            tf::StampedTransform trans;
+            tf_listener.waitForTransform(ref_frame, box_frame, ros::Time(0), ros::Duration(2.0));
+            tf_listener.lookupTransform(ref_frame, box_frame, ros::Time(0), trans);
+            fromTF(trans, box_transform);
+        }
+        catch(tf::TransformException& ex)
+        {
+            ROS_ERROR("%s", ex.what());
+            ROS_ERROR_THROTTLE(30,"[BasicNode::%s]\tCannot find Cropbox transform %s.",__func__, box_frame.c_str());
+        }
+    }
     process_scene();
     publish_scene_processed();
     publish_markers();

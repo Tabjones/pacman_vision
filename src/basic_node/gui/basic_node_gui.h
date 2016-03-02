@@ -60,6 +60,7 @@ signals:
     void reset();
     void saveConf(std::string* );
     void loadConf(std::string* );
+    void colorChange(double, double, double);
 
 private slots:
     void on_MasterDisable_clicked(bool checked);
@@ -89,6 +90,20 @@ private slots:
     void on_MasterReset_clicked();
     void on_SaveConfB_clicked();
     void on_LoadConfB_clicked();
+
+    void on_ColorButt_clicked(bool checked);
+
+    void on_OutiliersButt_clicked(bool checked);
+
+    void on_OutliersK_valueChanged(int arg1);
+
+    void on_OutliersS_valueChanged(double arg1);
+
+    void on_Color_valueChanged(double arg1);
+
+    void on_ColorSelectB_pressed();
+
+    void on_invertColor_pressed();
 
 private:
     Ui::BasicNodeGui *ui;

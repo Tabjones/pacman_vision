@@ -43,12 +43,14 @@
 #include <sensor_msgs/point_cloud_conversion.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 // #include <pcl_ros/transforms.h>
 // #include <pcl_ros/point_cloud.h>
 // #include <pcl_conversions/pcl_conversions.h>
 //PCL
 #include <pcl/io/pcd_io.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/sample_consensus/method_types.h>
@@ -84,6 +86,7 @@ class BasicNode: public Module<BasicNode>
         void setConfigFromRosparams();
         ///Save config to rosparams
         void updateRosparams();
+        void setFilterColor(const double r, const double g, const double b);
 #ifdef PACV_LISTENER_SUPPORT
         void setListenerConfig(ListenerConfig::Ptr config)
         {
@@ -96,8 +99,16 @@ class BasicNode: public Module<BasicNode>
 #ifdef PACV_LISTENER_SUPPORT
         ListenerConfig::Ptr list_config;
 #endif
+        //color filtering behaviour
+        bool was_color_filtering;
+        //model CIELab color
+        double ref_L, ref_a, ref_b;
         //Message Publisher to republish processed scene
         ros::Publisher pub_scene;
+        //tf
+        tf::TransformListener tf_listener;
+        // cropbox transform
+        Eigen::Matrix4f box_transform;
         //publisher for markers
         ros::Publisher pub_markers;
         //marker to publish
@@ -118,7 +129,10 @@ class BasicNode: public Module<BasicNode>
         void spin();
         void spinOnce();
         void downsamp_scene(const PTC::ConstPtr source, PTC::Ptr &dest);
+        void remove_outliers(const PTC::ConstPtr source, PTC::Ptr &dest);
         void segment_scene(const PTC::ConstPtr source, PTC::Ptr &dest);
+        // void extract_principal_color(const PTC::ConstPtr scene);
+        void apply_color_filter(const PTC::ConstPtr source, PTC::Ptr &dest);
         void publish_markers();
         //Create a box marker
         /* TODO move into listener, handle realtime cropping with services OR conditional variable
