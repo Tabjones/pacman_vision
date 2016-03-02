@@ -35,7 +35,7 @@
 #include <common/common_pcl.h>
 #include <common/common_ros.h>
 #include <modeler/modeler_config.hpp>
-#include <pacman_vision/config.h>
+#include <pacv_config.h>
 //PCL
 // #include <pcl/common/centroid.h>
 #include <pcl/filters/voxel_grid.h>
@@ -61,6 +61,8 @@
 #include <algorithm>
 #include <boost/filesystem/path.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
+//ROS
+#include <tf/transform_broadcaster.h>
 //ROS generated
 #include <pacman_vision_comm/start_modeler.h>
 #include <pacman_vision_comm/stop_modeler_recording.h>
@@ -92,12 +94,16 @@ class Modeler: public Module<Modeler>
         ros::ServiceServer srv_stop;
         //marker broadcaster
         ros::Publisher pub_markers;
+        //publisher of model
+        ros::Publisher pub_model;
+        //subscriber to clickedpoints to create a model frame
+        ros::Subscriber sub_clicked;
         //marker
         // std::shared_ptr<visualization_msgs::MarkerArray> marks;
         //start_callback
         bool cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_vision_comm::start_modeler::Response& res);
         //stop_callback
-        bool cb_start(pacman_vision_comm::stop_modeler_recording::Request& req, pacman_vision_comm::stop_modeler_recording::Response& res);
+        bool cb_stop(pacman_vision_comm::stop_modeler_recording::Request& req, pacman_vision_comm::stop_modeler_recording::Response& res);
         //spin once
         void spinOnce();
         // //create new markers from transforms
@@ -105,24 +111,20 @@ class Modeler: public Module<Modeler>
         // //publish markers
         // void publish_markers();
         //Feature comparation
-        typedef search::FlannSearch<pcl::FPFHSignature33, flann::L2<float>> SearchT;
-        typedef typename SearchT::FlannIndexCreatorPtr CreatorT;
-        typedef typename SearchT::KdTreeMultiIndexCreator IndexT;
-        typedef typename SearchT::PointRepresentationPtr RepT;
+        // typedef pcl::search::FlannSearch<pcl::FPFHSignature33, flann::L2<float>> SearchT;
+        // typedef typename SearchT::FlannIndexCreatorPtr CreatorT;
+        // typedef typename SearchT::KdTreeMultiIndexCreator IndexT;
+        // typedef typename SearchT::PointRepresentationPtr RepT;
 
         //processing queues
-        std::deque<PtC> acquisition_q, processing_q;
-        //subscriber to clickedpoints to create a model frame
-        ros::Subscriber sub_clicked;
+        std::deque<PTC> acquisition_q, processing_q;
         //transform broadcaster for model
         tf::TransformBroadcaster tf_broadcaster;
         //model transforms
         Eigen::Matrix4f T_km, T_mk;
-        //publisher of model
-        ros::Publisher pub_model;
 
         //model and downsampled model
-        PtC::Ptr model, model_ds;
+        PTC::Ptr model, model_ds;
         //model features
         pcl::PointCloud<pcl::FPFHSignature33>::Ptr model_f;
         //model normals
@@ -138,7 +140,7 @@ class Modeler: public Module<Modeler>
         pcl::registration::CorrespondenceRejectorDistance cr;
         pcl::GeneralizedIterativeClosestPoint<PT,PT> gicp;
         //Octrees
-        pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
+        // pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd_frames;
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
 

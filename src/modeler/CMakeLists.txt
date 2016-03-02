@@ -49,7 +49,7 @@ set(PACV_MODELER_SUPPORT 1 PARENT_SCOPE)
         pacman_vision_comm_generate_messages_cpp
     )
 
-target_link_libraries(pacv_liblistener
+target_link_libraries(pacv_libmodeler
     ${catkin_LIBRARIES}
     ${PCL_COMMON_LIBRARIES}
     ${PCL_FILTERS_LIBRARIES}
