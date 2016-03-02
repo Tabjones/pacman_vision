@@ -202,7 +202,66 @@ Modeler::spinOnce()
             acquisition_q.push_back(*frame);
         }
     }
-    //TODO add other threads
+    if (acquiring && !processing)
+    {
+        processing = true
+        proc_t = std::thread(&Modeler::processQueue, this);
+    }
+}
+
+void
+Modeler::processQueue()
+{
+    ROS_INFO("[Modeler::%s]\tStarted",__func__);
+    std::size_t acq_size(1);
+    while (acquiring || acq_size>0)
+    {
+        {
+            LOCK guard(mtx_acq);
+            acq_size = acquisition_q.size();
+        }
+        //TODO
+                //Wait for more frames to be acquired
+                std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        PC::Ptr current(new PC);
+        PC::Ptr next_c(new PC);
+        current = fuse_it->makeShared();
+        next_c = fuse_next->makeShared();
+        //Add color filter to try remove hand
+        oct_cd_frames.setInputCloud(current);
+        oct_cd_frames.addPointsFromInputCloud();
+        oct_cd_frames.switchBuffers();
+        oct_cd_frames.setInputCloud(next_c);
+        oct_cd_frames.addPointsFromInputCloud();
+        std::vector<int> changes;
+        oct_cd_frames.getPointIndicesFromNewVoxels(changes);
+        oct_cd_frames.deleteCurrentBuffer();
+        oct_cd_frames.deletePreviousBuffer();
+        if (changes.size() > next_c->size() * 0.1){
+            //from new  frame more than  10% of  points were not  in previous
+            //one, most likely there was a  motion, so we keep the new frame
+            //into sequence and move on.
+            ++fuse_it;
+            ++not_fused;
+            continue;
+        }
+        else{
+            //old and  new frames are  almost equal in point  differences we
+            //can fuse them togheter into a single frame and resample.
+            *current += *next_c;
+            pcl::VoxelGrid<PT> resamp;
+            resamp.setLeafSize(leaf_f,leaf_f,leaf_f);
+            resamp.setInputCloud(current);
+            LOCK guard(mtx_seq);
+            resamp.filter(*fuse_it);
+            cloud_sequence.erase(fuse_next);
+        }
+    queue_fusion->callAvailable(ros::WallDuration(0));
+    boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+    }//EndWhile
+    nh_fusion.shutdown();
+    return;
+
 }
 } //namespace
 
@@ -658,69 +717,6 @@ Modeler::spinOnce()
 //     nh_fusion = ros::NodeHandle(nh, "frame_fusion");
 //     queue_fusion.reset(new ros::CallbackQueue);
 //     nh_fusion.setCallbackQueue(&(*this->queue_fusion));
-//     ROS_INFO("[InHandModeler][%s]\tStarting Frame Fusion",__func__);
-//     while (do_frame_fusion)
-//     {
-//         std::list<PC>::iterator fuse_next = ++fuse_it;
-//         --fuse_it;
-//         std::list<PC>::iterator end;
-//         {
-//             LOCK guard(mtx_seq);
-//             end = cloud_sequence.end();
-//         }
-//         if (fuse_next == end){
-//             if (!do_acquisition){
-//                 //finished traversing sequence, let's get out of here
-//                 ROS_INFO("[InHandModeler][%s]\tFinished Frame Fusion",__func__);
-//                 done_frame_fusion = true;
-//                 //Leave do_frame_fusion = true so thread wont start again
-//                 //It will get reset by a new start anyway
-//                 break;
-//             }
-//             else{
-//                 //Wait for more frames to be acquired
-//                 boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-//                 continue;
-//             }
-//         }
-//         PC::Ptr current(new PC);
-//         PC::Ptr next_c(new PC);
-//         current = fuse_it->makeShared();
-//         next_c = fuse_next->makeShared();
-//         //Add color filter to try remove hand
-//         oct_cd_frames.setInputCloud(current);
-//         oct_cd_frames.addPointsFromInputCloud();
-//         oct_cd_frames.switchBuffers();
-//         oct_cd_frames.setInputCloud(next_c);
-//         oct_cd_frames.addPointsFromInputCloud();
-//         std::vector<int> changes;
-//         oct_cd_frames.getPointIndicesFromNewVoxels(changes);
-//         oct_cd_frames.deleteCurrentBuffer();
-//         oct_cd_frames.deletePreviousBuffer();
-//         if (changes.size() > next_c->size() * 0.1){
-//             //from new  frame more than  10% of  points were not  in previous
-//             //one, most likely there was a  motion, so we keep the new frame
-//             //into sequence and move on.
-//             ++fuse_it;
-//             ++not_fused;
-//             continue;
-//         }
-//         else{
-//             //old and  new frames are  almost equal in point  differences we
-//             //can fuse them togheter into a single frame and resample.
-//             *current += *next_c;
-//             pcl::VoxelGrid<PT> resamp;
-//             resamp.setLeafSize(leaf_f,leaf_f,leaf_f);
-//             resamp.setInputCloud(current);
-//             LOCK guard(mtx_seq);
-//             resamp.filter(*fuse_it);
-//             cloud_sequence.erase(fuse_next);
-//         }
-//     queue_fusion->callAvailable(ros::WallDuration(0));
-//     boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-//     }//EndWhile
-//     nh_fusion.shutdown();
-//     return;
 // }
 //
 // void

@@ -160,6 +160,8 @@ class Modeler: public Module<Modeler>
 
         //init model color for filtering, computed out of first frame
         void computeColorDistribution();
+        //preprocessing queue, consume acquisition_q, produce processing_q
+        void processQueue();
 };
 }//namespace
 #endif
