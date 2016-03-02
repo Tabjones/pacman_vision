@@ -58,13 +58,13 @@ class SensorProcessor;
 class Estimator;
 class Tracker;
 class Listener;
-class InHandModeler;
+class Modeler;
 }
 class BasicNodeGui;
 class EstimatorGui;
 class TrackerGui;
 class ListenerGui;
-class InHandModelerGui;
+class ModelerGui;
 
 class PacmanVision: public QObject
 {
@@ -124,6 +124,8 @@ private slots:
     void onSaveConf(std::string* n);
     //load configuration
     void onLoadConf(std::string* n);
+    //when spawnkill modeler is pressed
+    void onSpawnKillModeler();
 private:
     void initConnections();
     QTimer *service_timer;
@@ -142,11 +144,11 @@ private:
     std::shared_ptr<pacv::Estimator> estimator;
     std::shared_ptr<pacv::Tracker> tracker;
     std::shared_ptr<pacv::Listener> listener;
-    std::shared_ptr<pacv::InHandModeler> modeler;
+    std::shared_ptr<pacv::Modeler> modeler;
     std::shared_ptr<BasicNodeGui> basic_gui;
     std::shared_ptr<EstimatorGui> estimator_gui;
     std::shared_ptr<TrackerGui> tracker_gui;
     std::shared_ptr<ListenerGui> listener_gui;
-    std::shared_ptr<InHandModelerGui> modeler_gui;
+    std::shared_ptr<ModelerGui> modeler_gui;
 };
 #endif

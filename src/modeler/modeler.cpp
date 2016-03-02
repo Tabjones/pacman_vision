@@ -36,7 +36,8 @@ namespace pacv
 {
 
 Modeler::Modeler(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor)
-    :Module<Modeler>(n,ns,stor), oct_cd(0.005), oct_cd_frames(0.005)
+    :Module<Modeler>(n,ns,stor), oct_cd(0.005), oct_cd_frames(0.005), acquiring(false),
+    processing(false), aligning(false)
 {
     config=std::make_shared<ModelerConfig>();
     bool run;
@@ -72,6 +73,10 @@ Modeler::init()
     //add model publisher TODO
     acquisition_q.clear();
     processing_q.clear();
+    align_q.clear();
+    model_cmean.clear();
+    model_cdev.clear();
+    align_q.clear();
     T_km.setIdentity();
     T_mk.setIdentity();
     model = boost::make_shared<PTC>();
@@ -103,12 +108,47 @@ Modeler::deInit()
     model_n.reset();
     teDQ.reset();
     fpfh.reset();
+    acquisition_q.clear();
+    processing_q.clear();
+    align_q.clear();
+    model_cmean.clear();
+    model_cdev.clear();
 }
 
-ModelerConfig::Ptr
-Modeler::getConfig() const
+void
+Modeler::computeColorDistribution()
 {
-    return config;
+    PTC::Ptr frame = boost::make_shared<PTC>();
+    while (frame->empty())
+    {
+        storage->readSceneProcessed(frame);
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    }
+    unsigned int r(0), g(0), b(0);
+    for (const auto& pt: frame->points)
+    {
+        r += pt.r;
+        g += pt.g;
+        b += pt.b;
+    }
+    model_cmean.push_back(std::round(r/frame->size()));
+    model_cmean.push_back(std::round(g/frame->size()));
+    model_cmean.push_back(std::round(b/frame->size()));
+    r=g=b=0;
+    for (const auto& pt: frame->points)
+    {
+        r += std::pow(model_cmean[0] - pt.r, 2);
+        g += std::pow(model_cmean[1] - pt.g, 2);
+        b += std::pow(model_cmean[2] - pt.b, 2);
+    }
+    model_cdev.push_back(std::sqrt(r/frame->size()));
+    model_cdev.push_back(std::sqrt(g/frame->size()));
+    model_cdev.push_back(std::sqrt(b/frame->size()));
+    model_cdev[0] = model_cdev[0] <=0 ? 1 : model_cdev[0];
+    model_cdev[1] = model_cdev[1] <=0 ? 1 : model_cdev[1];
+    model_cdev[2] = model_cdev[2] <=0 ? 1 : model_cdev[2];
+    //push it on the queue since we already acquired one!
+    acquisition_q.push_back(*frame);
 }
 
 bool
@@ -119,39 +159,53 @@ Modeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_vision
         ROS_ERROR("[Modeler::%s]\tNode is globally disabled, this service is suspended!",__func__);
         return false;
     }
-    //TODO
+    if (acquiring){
+        //Modeler is already acquiring
+        ROS_ERROR("[Modeler::%s]\tModeler is already acquiring!",__func__);
+        return false;
+    }
+    ROS_INFO("[Modeler][%s]\tRecord a motion then call stop_modeler_recording service when satisfied",__func__);
+    bool val;
+    config->get("use_color_filtering", val);
+    if ( (model_cdev.empty() || model_cmean.empty()) && val){
+        computeColorDistribution();
+    }
+    acquiring = true;
+    return true;
+}
+
+bool
+Modeler::cb_stop(pacman_vision_comm::stop_modeler_recording::Request &req, pacman_vision_comm::stop_modeler_recording::Response &res)
+{
+    if (isDisabled()){
+        //Module was temporary disabled, notify the sad user, then exit
+        ROS_ERROR("[Modeler::%s]\tNode is globally disabled, this service is suspended!",__func__);
+        return false;
+    }
+    if (!acquiring){
+        //Modeler is already stopped
+        ROS_ERROR("[Modeler::%s]\tModeler is already stopped!",__func__);
+        return false;
+    }
+    acquiring = false;
+    return true;
 }
 
 void
 Modeler::spinOnce()
 {
-    //TODO
+    if (acquiring){
+        PTC::Ptr frame;
+        storage->readSceneProcessed(frame);
+        if (!frame->empty()){
+            LOCK guard(mtx_acq);
+            acquisition_q.push_back(*frame);
+        }
+    }
+    //TODO add other threads
 }
 } //namespace
 
-// InHandModeler::InHandModeler(ros::NodeHandle &n, boost::shared_ptr<Storage> &stor):
-//     has_transform(false), do_acquisition(false), oct_adj(0.003), oct_cd(0.003),
-//     do_alignment(false), oct_cd_frames(0.005), do_frame_fusion(false), leaf(0.005f),
-//     leaf_f(0.003f), frames(0), not_fused(0), done_alignment(false), done_frame_fusion(false)
-// {
-//     this->nh = ros::NodeHandle(n, "in_hand_modeler");
-//     this->queue_ptr.reset(new ros::CallbackQueue);
-//     this->nh.setCallbackQueue(&(*this->queue_ptr));
-//     this->storage = stor;
-//     this->srv_start = nh.advertiseService("start", &InHandModeler::cb_start, this);
-//     this->srv_stop = nh.advertiseService("stop", &InHandModeler::cb_stop, this);
-//     this->model.reset(new PC);
-//     nh.param<bool>("/pacman_vision/ignore_clicked_point",ignore_clicked_point , false);
-//     nh.param<double>("/pacman_vision/model_leaf_size",model_ls, 0.001);
-//     std::string work_dir_s;
-//     nh.param<std::string>("/pacman_vision/work_dir", work_dir_s, "InHandModeler");
-//     work_dir = work_dir_s;
-//     sub_clicked = nh.subscribe(nh.resolveName("/clicked_point"), 1, &InHandModeler::cb_clicked, this);
-//     pub_model = nh.advertise<PC> ("in_hand_model",1);
-//     teDQ.reset(new pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>);
-//     fpfh.reset(new pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33>);
-// }
-//
 // bool
 // InHandModeler::computeModelTransform(PT pt, float nx, float ny, float nz)
 // {
@@ -188,12 +242,6 @@ Modeler::spinOnce()
 //     }
 //     return (true);
 // }
-//
-// bool InHandModeler::saveModel()
-// {
-//     //TODO
-// }
-//
 // void InHandModeler::cb_clicked (const geometry_msgs::PointStamped::ConstPtr& msg)
 // {
 //     #<{(|
@@ -685,14 +733,6 @@ Modeler::spinOnce()
 //         std::string sensor_ref_frame;
 //         this->storage->read_sensor_ref_frame(sensor_ref_frame);
 //         tf_broadcaster.sendTransform(tf::StampedTransform(t_km, ros::Time::now(), sensor_ref_frame.c_str(), "in_hand_model_frame"));
-//     }
-//     if (do_acquisition){
-//         PC::Ptr scene;
-//         this->storage->read_scene_processed(scene);
-//         if (frames < 300)
-//             ++frames;
-//         LOCK guard(mtx_seq);
-//         cloud_sequence.push_back(*scene);
 //     }
 //     if (frames>5 && !do_frame_fusion){
 //         //start fusion of two frames if necessary

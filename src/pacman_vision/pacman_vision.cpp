@@ -55,6 +55,12 @@
 #include <listener_gui.h>
 #endif
 
+//add modeler support
+#ifdef PACV_MODELER_SUPPORT
+#include <modeler/modeler.h>
+// #include <modeler_gui.h>
+#endif
+
 #include <ros/ros.h>
 
 PacmanVision::PacmanVision():
@@ -274,6 +280,24 @@ void PacmanVision::onSpawnKillListener()
 #endif
 }
 
+void PacmanVision::onSpawnKillModeler()
+{
+#ifdef PACV_MODELER_SUPPORT
+    if (modeler->isRunning()){
+        modeler->kill();
+        // modeler_gui->disable();
+        ROS_INFO("[PaCMan Vision]\tKilled Modeler Module.");
+        return;
+    }
+    else{
+        modeler->spawn();
+        // modeler_gui->enable();
+        ROS_INFO("[PaCMan Vision]\tSpawned Modeler Module.");
+        return;
+    }
+#endif
+}
+
 bool
 PacmanVision::init(int argc, char** argv)
 {
@@ -324,8 +348,18 @@ PacmanVision::init(int argc, char** argv)
         if (val && !listener->isRunning())
             onSpawnKillListener();
 #endif
-        //...
+#ifdef PACV_MODELER_SUPPORT
+        ROS_INFO("[PaCMan Vision]\tAdding Modeler Module");
+        modeler = std::make_shared<pacv::Modeler>(basic_node->getNodeHandle(), "in_hand_modeler", storage);
+        modeler->setRate(40.0); //30Hz is enough
+        // modeler_gui = std::make_shared<ListenerGui>(listener->getConfig());
+        // basic_gui->addTab(listener_gui->getWidget(), "Listener Module");
+        bool spawn;
+        modeler->getConfig()->get("spawn", spawn);
+        if (spawn && !modeler->isRunning())
+            onSpawnKillModeler();
 
+#endif
         initConnections();
         ROS_INFO("[PaCMan Vision]\tShowing Gui...");
         basic_gui->show();

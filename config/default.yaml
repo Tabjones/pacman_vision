@@ -47,3 +47,8 @@ tracker: {
     publish_markers: true,
     broadcast_tf: true
 }
+modeler: {
+    spawn: true,
+    use_color_filtering: true,
+    std_dev_multiplier: 3.0
+}

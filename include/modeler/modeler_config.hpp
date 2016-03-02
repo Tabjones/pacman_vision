@@ -43,7 +43,7 @@ class ModelerConfig: public Config<ModelerConfig>
     friend class Config<ModelerConfig>;
     const std::array<std::string,11> valid_keys;
     ModelerConfig():
-    valid_keys {{"spawn", "listen_right_arm", "listen_left_arm", "listen_right_hand",
+    valid_keys {{"spawn", "use_color_filtering", "std_dev_multiplier", "listen_right_hand",
                  "listen_left_hand", "remove_right_arm", "remove_left_arm",
                  "remove_left_hand", "remove_right_hand", "publish_markers",
                  "geometry_scale"}}
@@ -51,7 +51,7 @@ class ModelerConfig: public Config<ModelerConfig>
         //TODO
         //create maps
         map_bool["spawn"] = false;
-        // map_bool["listen_right_arm"] = false;
+        map_bool["use_color_filtering"] = true;
         // map_bool["listen_left_arm"] = false;
         // map_bool["listen_right_hand"] = false;
         // map_bool["listen_left_hand"] = false;
@@ -60,7 +60,7 @@ class ModelerConfig: public Config<ModelerConfig>
         // map_bool["remove_right_hand"] = false;
         // map_bool["remove_left_hand"] = false;
         // map_bool["publish_markers"] = true;
-        // map_double["geometry_scale"] = 1.0;
+        map_double["std_dev_multiplier"] = 3.0;
     }
 };
 }

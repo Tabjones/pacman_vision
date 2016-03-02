@@ -76,7 +76,10 @@ class Modeler: public Module<Modeler>
         Modeler()=delete;
         Modeler(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor);
         typedef std::shared_ptr<Modeler> Ptr;
-        ModelerConfig::Ptr getConfig() const;
+        ModelerConfig::Ptr getConfig() const
+        {
+            return config;
+        }
         //update rosparams
         void updateRosparams();
         //Eigen alignment
@@ -117,7 +120,7 @@ class Modeler: public Module<Modeler>
         // typedef typename SearchT::PointRepresentationPtr RepT;
 
         //processing queues
-        std::deque<PTC> acquisition_q, processing_q;
+        std::deque<PTC> acquisition_q, processing_q, align_q;
         //transform broadcaster for model
         tf::TransformBroadcaster tf_broadcaster;
         //model transforms
@@ -129,6 +132,10 @@ class Modeler: public Module<Modeler>
         pcl::PointCloud<pcl::FPFHSignature33>::Ptr model_f;
         //model normals
         NTC::Ptr model_n;
+        //model color
+        std::vector<unsigned int> model_cmean;
+        std::vector<float> model_cdev;
+        float cdev_mul;
 
         //PCL objects
         //Voxelgrid downsampling
@@ -145,7 +152,14 @@ class Modeler: public Module<Modeler>
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
 
         //Threads stuff
-        std::thread proc_t;
+        std::thread proc_t, align_t;
+        std::mutex mtx_acq, mtx_proc;
+
+        //behaviour
+        bool acquiring, processing, aligning;
+
+        //init model color for filtering, computed out of first frame
+        void computeColorDistribution();
 };
 }//namespace
 #endif
