@@ -96,4 +96,18 @@ crop_a_box(const PXC::ConstPtr source, PXC::Ptr& dest, const Box lim, const bool
     cb.setNegative(remove_inside);
     cb.filter (*dest);
 }
+
+void convertUint8ToDouble(uint8_t b, double &d)
+{
+    uint64_t b_64 = (uint64_t)b;
+    d = static_cast<double>(b_64);
+}
+
+void castColorToDouble(const PT &pt, double &r, double &g, double &b)
+{
+    convertUint8ToDouble(pt.r, r);
+    convertUint8ToDouble(pt.g, g);
+    convertUint8ToDouble(pt.b, b);
+}
+
 }

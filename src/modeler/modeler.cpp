@@ -36,7 +36,7 @@ namespace pacv
 {
 
 Modeler::Modeler(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor)
-    :Module<Modeler>(n,ns,stor), oct_cd(0.005), oct_cd_frames(0.005), acquiring(false),
+    :Module<Modeler>(n,ns,stor), oct_cd(0.01), oct_cd_frames(0.01), acquiring(false),
     processing(false), aligning(false)
 {
     config=std::make_shared<ModelerConfig>();
@@ -116,39 +116,58 @@ Modeler::deInit()
 }
 
 void
-Modeler::computeColorDistribution()
+Modeler::computeColorDistribution(const PTC &frame)
 {
-    PTC::Ptr frame = boost::make_shared<PTC>();
-    while (frame->empty())
+    double r(0.0), g(0.0), b(0.0);
+    for (const auto& pt: frame.points)
     {
-        storage->readSceneProcessed(frame);
-        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        double rp,gp,bp;
+        castColorToDouble(pt, rp,gp,bp);
+        r += rp;
+        g += gp;
+        b += bp;
     }
-    unsigned int r(0), g(0), b(0);
-    for (const auto& pt: frame->points)
+    model_cmean.push_back(r/frame.size());
+    model_cmean.push_back(g/frame.size());
+    model_cmean.push_back(b/frame.size());
+    r=g=b=0.0;
+    for (const auto& pt: frame.points)
     {
-        r += pt.r;
-        g += pt.g;
-        b += pt.b;
+        double rp,gp,bp;
+        castColorToDouble(pt, rp,gp,bp);
+        r += std::pow(model_cmean[0] - rp, 2);
+        g += std::pow(model_cmean[1] - gp, 2);
+        b += std::pow(model_cmean[2] - bp, 2);
     }
-    model_cmean.push_back(std::round(r/frame->size()));
-    model_cmean.push_back(std::round(g/frame->size()));
-    model_cmean.push_back(std::round(b/frame->size()));
-    r=g=b=0;
-    for (const auto& pt: frame->points)
-    {
-        r += std::pow(model_cmean[0] - pt.r, 2);
-        g += std::pow(model_cmean[1] - pt.g, 2);
-        b += std::pow(model_cmean[2] - pt.b, 2);
-    }
-    model_cdev.push_back(std::sqrt(r/frame->size()));
-    model_cdev.push_back(std::sqrt(g/frame->size()));
-    model_cdev.push_back(std::sqrt(b/frame->size()));
-    model_cdev[0] = model_cdev[0] <=0 ? 1 : model_cdev[0];
-    model_cdev[1] = model_cdev[1] <=0 ? 1 : model_cdev[1];
-    model_cdev[2] = model_cdev[2] <=0 ? 1 : model_cdev[2];
-    //push it on the queue since we already acquired one!
-    acquisition_q.push_back(*frame);
+    model_cdev.push_back(std::sqrt(r/frame.size()));
+    model_cdev.push_back(std::sqrt(g/frame.size()));
+    model_cdev.push_back(std::sqrt(b/frame.size()));
+    // std::cout<<"mean R "<<model_cmean[0]<<" stdDev R "<<model_cdev[0]<<std::endl;
+    // std::cout<<"mean G "<<model_cmean[1]<<" stdDev G "<<model_cdev[1]<<std::endl;
+    // std::cout<<"mean B "<<model_cmean[2]<<" stdDev B "<<model_cdev[2]<<std::endl;
+}
+bool
+Modeler::colorMetricInclusion(const PT &pt)
+{
+    config->get("color_std_dev_multiplier", cdev_mul);
+    double rM, rm, gM, gm, bM, bm, r,b,g;
+    castColorToDouble(pt, r,g,b);
+    rM =  (model_cmean[0] + model_cdev[0]*cdev_mul);
+    rm =  (model_cmean[0] - model_cdev[0]*cdev_mul);
+    gM =  (model_cmean[1] + model_cdev[1]*cdev_mul);
+    gm =  (model_cmean[1] - model_cdev[1]*cdev_mul);
+    bM =  (model_cmean[2] + model_cdev[2]*cdev_mul);
+    bm =  (model_cmean[2] - model_cdev[2]*cdev_mul);
+    // std::cout<<"rM "<<rM<<" rm "<<rm<<" r "<<r<<std::endl;
+    // std::cout<<"gM "<<gM<<" gm "<<gm<<" g "<<g<<std::endl;
+    // std::cout<<"bM "<<rM<<" bm "<<rm<<" b "<<b<<std::endl;
+    if (r > rM || r < rm )
+        return false;
+    if (g > gM || g < gm )
+        return false;
+    if (b > bM || b < bm )
+        return false;
+    return true;
 }
 
 bool
@@ -165,10 +184,17 @@ Modeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_vision
         return false;
     }
     ROS_INFO("[Modeler][%s]\tRecord a motion then call stop_modeler_recording service when satisfied",__func__);
-    bool val;
-    config->get("use_color_filtering", val);
-    if ( (model_cdev.empty() || model_cmean.empty()) && val){
-        computeColorDistribution();
+    bool c_fil;
+    config->get("use_color_filtering", c_fil);
+    if (c_fil){
+        PTC::Ptr frame = boost::make_shared<PTC>();
+        while (frame->empty()){
+            storage->readSceneProcessed(frame);
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        }
+        computeColorDistribution(*frame);
+        LOCK guard(mtx_acq);
+        acquisition_q.push_back(*frame);
     }
     acquiring = true;
     return true;
@@ -204,8 +230,13 @@ Modeler::spinOnce()
     }
     if (acquiring && !processing)
     {
-        processing = true
+        processing = true;
         proc_t = std::thread(&Modeler::processQueue, this);
+    }
+    if (!acquiring && processing)
+    {
+        processing = false;
+        proc_t.join();
     }
 }
 
@@ -214,75 +245,136 @@ Modeler::processQueue()
 {
     ROS_INFO("[Modeler::%s]\tStarted",__func__);
     std::size_t acq_size(1);
+    PTC::Ptr current;
     while (acquiring || acq_size>0)
     {
-        PTC::Ptr current = boost::make_shared<PTC>();
-        {
-            LOCK guard(mtx_acq);
-            acq_size = acquisition_q.size();
-            if (acq_size > 0){
-                *current = acquisition_q.front();
-                acquisition_q.pop_front();
-            }
-        }
-        if (acq_size <= 0){
-            //Wait for more frames to be acquired
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
-            continue;
-        }
+        PTC::Ptr next;
         mtx_acq.lock();
         acq_size = acquisition_q.size();
         mtx_acq.unlock();
-        if (acq_size <= 0){
-            while(acq_size <=0 && acquiring)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(30));
-                LOCK guard (mtx_acq);
-                acq_size = acquisition_q.size();
-            }
-            if (!acquiring && current){
-                LOCK guard (mtx_proc);
-                processing_q.push_back(*current);
-                continue;
-            }
+        if (acq_size > 0 && !current){
+            current = boost::make_shared<PTC>();
+            mtx_acq.lock();
+            *current = acquisition_q.front();
+            acquisition_q.pop_front();
+            acq_size = acquisition_q.size();
+            mtx_acq.unlock();
         }
-        //TODO HERE
+        if (acq_size >0 && current && !next){
+            next = boost::make_shared<PTC>();
+            mtx_acq.lock();
+            *next = acquisition_q.front();
+            mtx_acq.unlock();
+        }
+        if (!current || !next){
+            //Wait for more frames to be acquired
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            LOCK guard(mtx_acq);
+            acq_size = acquisition_q.size();
+            continue;
+        }
         //remove similar frames
         oct_cd_frames.setInputCloud(current);
         oct_cd_frames.addPointsFromInputCloud();
         oct_cd_frames.switchBuffers();
-        oct_cd_frames.setInputCloud(next_c);
+        oct_cd_frames.setInputCloud(next);
         oct_cd_frames.addPointsFromInputCloud();
         std::vector<int> changes;
         oct_cd_frames.getPointIndicesFromNewVoxels(changes);
         oct_cd_frames.deleteCurrentBuffer();
         oct_cd_frames.deletePreviousBuffer();
-        if (changes.size() > next_c->size() * 0.1){
-            //from new  frame more than  10% of  points were not  in previous
+        bool color_f;
+        config->get("use_color_filtering", color_f);
+        if (changes.size() > next->size() * 0.15){
+            //from next frame more than  10% of  points were not  in current
             //one, most likely there was a  motion, so we keep the new frame
-            //into sequence and move on.
-            ++fuse_it;
-            ++not_fused;
-            continue;
+            //into sequence and move on, while processing it.
+            if (color_f){
+                pcl::IndicesPtr kept_points = boost::make_shared<std::vector<int>>();
+                for (std::size_t i=0; i< current->points.size(); ++i)
+                {
+                    if (colorMetricInclusion(current->points[i]))
+                        kept_points->push_back(i);
+                }
+                pcl::ExtractIndices<PT> eif;
+                PTC filtered;
+                eif.setInputCloud(current);
+                eif.setIndices(kept_points);
+                eif.filter(filtered);
+                pcl::StatisticalOutlierRemoval<PT> sor;
+                sor.setInputCloud(filtered.makeShared());
+                sor.setMeanK(20);
+                sor.setStddevMulThresh(1.5);
+                PTC fil;
+                sor.filter(fil);
+                // computeColorDistribution(filtered);
+                current.reset();
+                LOCK guard(mtx_proc);
+                processing_q.push_back(fil);
+            }
+            else{
+                LOCK guard(mtx_proc);
+                processing_q.push_back(*current);
+                current.reset();
+            }
         }
         else{
-            //old and  new frames are  almost equal in point  differences we
-            //can fuse them togheter into a single frame and resample.
-            *current += *next_c;
-            pcl::VoxelGrid<PT> resamp;
-            resamp.setLeafSize(leaf_f,leaf_f,leaf_f);
-            resamp.setInputCloud(current);
-            LOCK guard(mtx_seq);
-            resamp.filter(*fuse_it);
-            cloud_sequence.erase(fuse_next);
+            //old and  new frames are  almost equal in point  differences
+            //we can remove the new frame and wait for more informative one.
+            LOCK guard(mtx_acq);
+            acquisition_q.pop_front();
         }
-    queue_fusion->callAvailable(ros::WallDuration(0));
-    boost::this_thread::sleep(boost::posix_time::milliseconds(10));
     }//EndWhile
-    nh_fusion.shutdown();
-    return;
+    //if a current frame remained alone, we just push it
+    if (current){
+        bool color_f;
+        config->get("use_color_filtering", color_f);
+        if (color_f){
+            pcl::IndicesPtr kept_points = boost::make_shared<std::vector<int>>();
+            for (std::size_t i=0; i< current->points.size(); ++i)
+            {
+                if (colorMetricInclusion(current->points[i]))
+                    kept_points->push_back(i);
+            }
+            pcl::ExtractIndices<PT> eif;
+            PTC filtered;
+            eif.setInputCloud(current);
+            eif.setIndices(kept_points);
+            eif.filter(filtered);
+            pcl::StatisticalOutlierRemoval<PT> sor;
+            sor.setInputCloud(filtered.makeShared());
+            sor.setMeanK(20);
+            sor.setStddevMulThresh(1.3);
+            PTC fil;
+            sor.filter(fil);
+            LOCK guard(mtx_proc);
+            processing_q.push_back(fil);
+        }
+        else{
+            LOCK guard(mtx_proc);
+            processing_q.push_back(*current);
+        }
+    }
+    ROS_INFO("[Modeler::%s]\tStopped",__func__);
 
+    //Add debug visualization
+    pcl::visualization::PCLVisualizer viz;
+    viz.addPointCloud<PT>(processing_q.front().makeShared());
+    viz.spinOnce(500);
+    for (size_t i=1; i<processing_q.size(); ++i)
+    {
+        viz.updatePointCloud<PT>(processing_q[i].makeShared());
+        viz.spinOnce(500);
+    }
+    viz.close();
+    ///////////////////////////
 }
+
+void
+Modeler::alignQueue()
+{
+}
+
 } //namespace
 
 // bool
@@ -375,88 +467,6 @@ Modeler::processQueue()
 //      *     ROS_INFO("[InHandModeler][%s]Ignoring clicked point as requested or because already started processing...", __func__);
 //      * }
 //      |)}>#
-// }
-//
-// bool
-// InHandModeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_vision_comm::start_modeler::Response& res)
-// {
-//     #<{(|
-//      * if (!has_transform){
-//      *     ROS_ERROR("[InHandModeler][%s]\tNo model transform defined, please click and publish a point in rviz", __func__);
-//      *     return (false);
-//      * }
-//      |)}>#
-//     if (do_alignment || do_acquisition || do_frame_fusion){
-//         ROS_ERROR("[InHandModeler][%s]\talignment is already started!", __func__);
-//         return (false);
-//     }
-//     ROS_INFO("[InHandModeler][%s]\tRecord a motion then call stop service when satisfied",__func__);
-//     // ///////////////////////Init Registration////////////////////////////////////
-//     // //RANSAC maximum iterations
-//     // alignment.setMaximumIterations(50000);
-//     // #<{(|
-//     //  * The number of point correspondences  to sample between source and target.
-//     //  * At minimum, 3 points are required to calculate a pose.
-//     //  |)}>#
-//     // alignment.setNumberOfSamples(3);
-//     // #<{(|
-//     //  * Instead of matching  each source FPFH descriptor to  its nearest matching
-//     //  * feature  in the  target, we  can  choose between  the N  best matches  at
-//     //  * random.  This increases  the  iterations necessary,  but  also makes  the
-//     //  * algorithm robust towards outlier matches.
-//     //  |)}>#
-//     // alignment.setCorrespondenceRandomness(5);
-//     // //Use  dual quaternion  method to  estimate a  rigid transformation  between
-//     // //correspondences.
-//     // //alignment.setTransformationEstimation(teDQ);
-//     // #<{(|
-//     //  * The alignment  class uses the CorrespondenceRejectorPoly  class for early
-//     //  * elimination of bad poses  based on pose-invariant geometric consistencies
-//     //  * of  the inter-distances  between sampled  points  on the  source and  the
-//     //  * target. The closer  this value is set  to 1, the more  greedy and thereby
-//     //  * fast  the algorithm  becomes. However,  this also  increases the  risk of
-//     //  * eliminating good poses when noise is present.
-//     //  |)}>#
-//     // alignment.setSimilarityThreshold(0.9f);
-//     // // Reject correspondences more distant than this value.
-//     // // This is heuristically set to 10 times point density
-//     // alignment.setMaxCorrespondenceDistance(2.5f * 0.005f);
-//     // #<{(|
-//     //  * In many  practical scenarios,  large parts  of the  source in  the target
-//     //  * scene are not visible, either due to clutter, occlusions or both. In such
-//     //  * cases, we  need to allow  for pose hypotheses that  do not align  all the
-//     //  * source  points to  the target  scene.  The absolute  number of  correctly
-//     //  * aligned points is determined using the inlier threshold, and if the ratio
-//     //  * of this number to the total number of points in the source is higher than
-//     //  * the specified inlier fraction, we accept a pose hypothesis as valid.
-//     //  |)}>#
-//     // alignment.setInlierFraction(0.25f);
-//     //
-//     //initialize the model with first cloud from sequence
-//     model.reset(new PC);
-//     model_ds.reset(new PC);
-//     cloud_sequence.clear();
-//     // pcl::copyPointCloud(*cloud_sequence.front(), *model);
-//     // vg.setInputCloud(model);
-//     // vg.setLeafSize(model_ls, model_ls, model_ls);
-//     // vg.filter(*model_ds);
-//     //start acquiring sequence
-//     do_acquisition = true;
-//     do_alignment = do_frame_fusion = false;
-//     done_alignment = done_frame_fusion = false;
-//     return (true);
-// }
-//
-// bool
-// InHandModeler::cb_stop(pacman_vision_comm::stop_modeler::Request& req, pacman_vision_comm::stop_modeler::Response& res)
-// {
-//     if(!do_acquisition){
-//         ROS_ERROR("[InHandModeler][%s]\tAcquisition is already stopped!", __func__);
-//         return (false);
-//     }
-//     do_acquisition = false;
-//     ROS_INFO("[InHandModeler][%s]\tPlease wait for processing to end...",__func__);
-//     return (true);
 // }
 //
 // void

@@ -39,6 +39,8 @@
 //PCL
 // #include <pcl/common/centroid.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/eigen.h>
 #include <pcl/correspondence.h>
@@ -133,9 +135,9 @@ class Modeler: public Module<Modeler>
         //model normals
         NTC::Ptr model_n;
         //model color
-        std::vector<unsigned int> model_cmean;
-        std::vector<float> model_cdev;
-        float cdev_mul;
+        std::vector<double> model_cmean;
+        std::vector<double> model_cdev;
+        double cdev_mul;
 
         //PCL objects
         //Voxelgrid downsampling
@@ -159,9 +161,13 @@ class Modeler: public Module<Modeler>
         bool acquiring, processing, aligning;
 
         //init model color for filtering, computed out of first frame
-        void computeColorDistribution();
-        //preprocessing queue, consume acquisition_q, produce processing_q
+        void computeColorDistribution(const PTC &frame);
+        //tell if a point is inside the color distribution
+        bool colorMetricInclusion(const PT &pt);
+        //preprocessing queue thread, consume acquisition_q, produce processing_q
         void processQueue();
+        //align queue thread, consume processing_q, produce align_q
+        void alignQueue();
 };
 }//namespace
 #endif

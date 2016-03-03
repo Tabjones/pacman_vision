@@ -78,6 +78,9 @@ void crop_a_box(const PXC::ConstPtr source, PXC::Ptr &dest, const Box lim,
         const bool remove_inside=false,
         const Eigen::Matrix4f& trans=Eigen::Matrix4f::Identity(),
         const bool keep_organized=false);
+
+void convertUint8ToDouble(uint8_t b, double &d);
+void castColorToDouble(const PT &pt, double &r, double &g, double &b);
 }
 #endif
 
