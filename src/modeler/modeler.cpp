@@ -216,18 +216,38 @@ Modeler::processQueue()
     std::size_t acq_size(1);
     while (acquiring || acq_size>0)
     {
+        PTC::Ptr current = boost::make_shared<PTC>();
         {
             LOCK guard(mtx_acq);
             acq_size = acquisition_q.size();
+            if (acq_size > 0){
+                *current = acquisition_q.front();
+                acquisition_q.pop_front();
+            }
         }
-        //TODO
-                //Wait for more frames to be acquired
+        if (acq_size <= 0){
+            //Wait for more frames to be acquired
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            continue;
+        }
+        mtx_acq.lock();
+        acq_size = acquisition_q.size();
+        mtx_acq.unlock();
+        if (acq_size <= 0){
+            while(acq_size <=0 && acquiring)
+            {
                 std::this_thread::sleep_for(std::chrono::milliseconds(30));
-        PC::Ptr current(new PC);
-        PC::Ptr next_c(new PC);
-        current = fuse_it->makeShared();
-        next_c = fuse_next->makeShared();
-        //Add color filter to try remove hand
+                LOCK guard (mtx_acq);
+                acq_size = acquisition_q.size();
+            }
+            if (!acquiring && current){
+                LOCK guard (mtx_proc);
+                processing_q.push_back(*current);
+                continue;
+            }
+        }
+        //TODO HERE
+        //remove similar frames
         oct_cd_frames.setInputCloud(current);
         oct_cd_frames.addPointsFromInputCloud();
         oct_cd_frames.switchBuffers();
