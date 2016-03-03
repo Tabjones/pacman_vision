@@ -238,6 +238,15 @@ Modeler::spinOnce()
         processing = false;
         proc_t.join();
     }
+    if (acquiring && processing && !aligning){
+        aligning = true;
+        align_t = std::thread(&Modeler::alignQueue, this);
+    }
+    if (!acquiring && !processing && aligning)
+    {
+        aligning = false;
+        align_t.join(); //this could block too much, TODO rethink a better way
+    }
 }
 
 void
@@ -357,22 +366,55 @@ Modeler::processQueue()
     }
     ROS_INFO("[Modeler::%s]\tStopped",__func__);
 
-    //Add debug visualization
-    pcl::visualization::PCLVisualizer viz;
-    viz.addPointCloud<PT>(processing_q.front().makeShared());
-    viz.spinOnce(500);
-    for (size_t i=1; i<processing_q.size(); ++i)
-    {
-        viz.updatePointCloud<PT>(processing_q[i].makeShared());
-        viz.spinOnce(500);
-    }
-    viz.close();
+    //debug visualization
+    // pcl::visualization::PCLVisualizer viz;
+    // viz.addPointCloud<PT>(processing_q.front().makeShared());
+    // viz.spinOnce(500);
+    // for (size_t i=1; i<processing_q.size(); ++i)
+    // {
+    //     viz.updatePointCloud<PT>(processing_q[i].makeShared());
+    //     viz.spinOnce(500);
+    // }
+    // viz.close();
     ///////////////////////////
 }
 
 void
 Modeler::alignQueue()
 {
+    ROS_INFO("[Modeler::%s]\tStarted",__func__);
+    std::size_t proc_size(1);
+    PTC::Ptr current;
+    while (acquiring || proc_size>0)
+    {
+        PTC::Ptr next;
+        mtx_proc.lock();
+        proc_size = acquisition_q.size();
+        mtx_proc.unlock();
+        if (proc_size > 0 && !current){
+            current = boost::make_shared<PTC>();
+            mtx_proc.lock();
+            *current = processing_q.front();
+            processing_q.pop_front();
+            proc_size = processing_q.size();
+            mtx_proc.unlock();
+        }
+        if (proc_size >0 && current && !next){
+            next = boost::make_shared<PTC>();
+            mtx_proc.lock();
+            *next = processing_q.front();
+            mtx_proc.unlock();
+        }
+        if (!current || !next){
+            //Wait for more frames to be processed
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            LOCK guard(mtx_proc);
+            proc_size = processing_q.size();
+            continue;
+        }
+        gicp.setInputTarget(current);
+        gicp.setInputSource(next);
+    }//EndWhile
 }
 
 } //namespace
