@@ -43,26 +43,26 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/eigen.h>
-#include <pcl/correspondence.h>
+// #include <pcl/correspondence.h>
 #include <pcl/octree/octree_pointcloud_adjacency.h>
 #include <pcl/octree/octree_pointcloud_changedetector.h>
 #include <pcl_ros/transforms.h>
-#include <pcl/features/multiscale_feature_persistence.h>
+#include <pcl/keypoints/uniform_sampling.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/fpfh_omp.h>
 #include <pcl/search/flann_search.h>
 #include <pcl/search/impl/flann_search.hpp>
 // #include <pcl/registration/sample_consensus_prerejective.h>
-#include <pcl/registration/transformation_estimation_dual_quaternion.h>
-#include <pcl/registration/correspondence_rejection_distance.h>
+// #include <pcl/registration/transformation_estimation_dual_quaternion.h>
+// #include <pcl/registration/correspondence_rejection_distance.h>
 #include <pcl/registration/gicp.h>
+// #include <pcl/registration/icp.h>
 #include <pcl/visualization/pcl_visualizer.h>
 //general utilities
 #include <ctime>
 #include <deque>
 #include <algorithm>
 #include <boost/filesystem/path.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
 //ROS
 #include <tf/transform_broadcaster.h>
 //ROS generated
@@ -129,11 +129,11 @@ class Modeler: public Module<Modeler>
         Eigen::Matrix4f T_km, T_mk;
 
         //model and downsampled model
-        PTC::Ptr model, model_ds;
-        //model features
-        pcl::PointCloud<pcl::FPFHSignature33>::Ptr model_f;
-        //model normals
-        NTC::Ptr model_n;
+        PTC::Ptr model_c, model_ds;
+        //frame features during alignment
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr frame_f;
+        //frame keypoints indices
+        pcl::IndicesPtr frame_k;
         //model color
         std::vector<double> model_cmean;
         std::vector<double> model_cdev;
@@ -143,22 +143,29 @@ class Modeler: public Module<Modeler>
         //Voxelgrid downsampling
         pcl::VoxelGrid<PT> vg;
         //registration stuff
-        pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
+        // pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
         pcl::NormalEstimationOMP<PT, NT> ne;
-        pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33>::Ptr fpfh;
-        pcl::registration::CorrespondenceRejectorDistance cr;
+        pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33> fpfh;
+        pcl::UniformSampling<PT> us;
+        // pcl::registration::CorrespondenceRejectorDistance cr;
         pcl::GeneralizedIterativeClosestPoint<PT,PT> gicp;
+        pcl::IterativeClosestPoint<PT,PT> icp;
         //Octrees
         // pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd_frames;
         pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
+        //Feature comparation
+        typedef pcl::search::FlannSearch<pcl::FPFHSignature33, flann::L2<float>> SearchT;
+        typedef typename SearchT::FlannIndexCreatorPtr CreatorT;
+        typedef typename SearchT::KdTreeMultiIndexCreator IndexT;
+        typedef typename SearchT::PointRepresentationPtr RepT;
 
         //Threads stuff
-        std::thread proc_t, align_t;
-        std::mutex mtx_acq, mtx_proc, mtx_align;
+        std::thread proc_t, align_t, model_t;
+        std::mutex mtx_acq, mtx_proc, mtx_align, mtx_model;
 
         //behaviour
-        bool acquiring, processing, aligning;
+        bool acquiring, processing, aligning, modeling;
 
         //init model color for filtering, computed out of first frame
         void computeColorDistribution(const PTC &frame);
@@ -168,6 +175,16 @@ class Modeler: public Module<Modeler>
         void processQueue();
         //align queue thread, consume processing_q, produce align_q
         void alignQueue();
+        //compute features from a frame and store them in class
+        //writes frame_f frame_n frame_k
+        void computeFrameFeatures(const PTC::Ptr &frame);
+        //compare feature from class to those passed as argument, return pair of matching indices: search,class
+        std::pair<std::vector<int>,std::vector<int>>
+        compareFeatures(const pcl::PointCloud<pcl::FPFHSignature33>::Ptr &search_features, const float dist_thresh=125.0f, const int k_nn=1);
+        //compose the model, consuming align_q
+        void model();
+        //publish model as it is being created
+        void publishModel();
 };
 }//namespace
 #endif

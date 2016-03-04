@@ -36,8 +36,8 @@ namespace pacv
 {
 
 Modeler::Modeler(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor)
-    :Module<Modeler>(n,ns,stor), oct_cd(0.01), oct_cd_frames(0.01), acquiring(false),
-    processing(false), aligning(false)
+    :Module<Modeler>(n,ns,stor), oct_cd(0.5), oct_cd_frames(0.003), acquiring(false),
+    processing(false), aligning(false), modeling(false)
 {
     config=std::make_shared<ModelerConfig>();
     bool run;
@@ -69,8 +69,8 @@ Modeler::init()
     srv_stop = nh->advertiseService("stop_recording", &Modeler::cb_stop, this);
     std::string mark_topic(getFatherNamespace()+"/markers");
     pub_markers = nh->advertise<visualization_msgs::MarkerArray>(mark_topic, 1);
+    pub_model = nh->advertise<PTC>("model", 1);
     //add subscriber TODO
-    //add model publisher TODO
     acquisition_q.clear();
     processing_q.clear();
     align_q.clear();
@@ -79,12 +79,10 @@ Modeler::init()
     align_q.clear();
     T_km.setIdentity();
     T_mk.setIdentity();
-    model = boost::make_shared<PTC>();
     model_ds = boost::make_shared<PTC>();
-    model_f = boost::make_shared<pcl::PointCloud<pcl::FPFHSignature33>>();
-    model_n = boost::make_shared<NTC>();
-    teDQ = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>>();
-    fpfh = boost::make_shared<pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33>>();
+    frame_f = boost::make_shared<pcl::PointCloud<pcl::FPFHSignature33>>();
+    frame_k = boost::make_shared<std::vector<int>>();
+    // teDQ = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>>();
     //init node params
     for (auto key: config->valid_keys)
     {
@@ -102,12 +100,11 @@ Modeler::init()
 void
 Modeler::deInit()
 {
-    model.reset();
+    model_c.reset();
     model_ds.reset();
-    model_f.reset();
-    model_n.reset();
-    teDQ.reset();
-    fpfh.reset();
+    frame_f.reset();
+    frame_k.reset();
+    // teDQ.reset();
     acquisition_q.clear();
     processing_q.clear();
     align_q.clear();
@@ -233,30 +230,35 @@ Modeler::spinOnce()
         processing = true;
         proc_t = std::thread(&Modeler::processQueue, this);
     }
-    if (!acquiring && processing)
-    {
-        processing = false;
+    if (!acquiring && !processing && proc_t.joinable())
         proc_t.join();
-    }
     if (acquiring && processing && !aligning){
         aligning = true;
         align_t = std::thread(&Modeler::alignQueue, this);
     }
-    if (!acquiring && !processing && aligning)
-    {
-        aligning = false;
-        align_t.join(); //this could block too much, TODO rethink a better way
+    if (!acquiring && !aligning && align_t.joinable())
+        align_t.join();
+    if (acquiring && aligning && !modeling){
+        modeling = true;
+        model_t = std::thread(&Modeler::model, this);
     }
+    if (!acquiring && !modeling && model_t.joinable())
+        model_t.join();
+    publishModel();
 }
 
 void
 Modeler::processQueue()
 {
     ROS_INFO("[Modeler::%s]\tStarted",__func__);
-    std::size_t acq_size(1);
+    std::size_t acq_size(0);
     PTC::Ptr current;
     while (acquiring || acq_size>0)
     {
+        if (this->isDisabled()){
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            continue;
+        }
         PTC::Ptr next;
         mtx_acq.lock();
         acq_size = acquisition_q.size();
@@ -294,8 +296,8 @@ Modeler::processQueue()
         oct_cd_frames.deletePreviousBuffer();
         bool color_f;
         config->get("use_color_filtering", color_f);
-        if (changes.size() > next->size() * 0.15){
-            //from next frame more than  10% of  points were not  in current
+        if (changes.size() > next->size() * 0.1){
+            //from next frame more than  5% of  points were not  in current
             //one, most likely there was a  motion, so we keep the new frame
             //into sequence and move on, while processing it.
             if (color_f){
@@ -312,8 +314,8 @@ Modeler::processQueue()
                 eif.filter(filtered);
                 pcl::StatisticalOutlierRemoval<PT> sor;
                 sor.setInputCloud(filtered.makeShared());
-                sor.setMeanK(20);
-                sor.setStddevMulThresh(1.5);
+                sor.setMeanK(50);
+                sor.setStddevMulThresh(2.0);
                 PTC fil;
                 sor.filter(fil);
                 computeColorDistribution(fil);
@@ -352,8 +354,8 @@ Modeler::processQueue()
             eif.filter(filtered);
             pcl::StatisticalOutlierRemoval<PT> sor;
             sor.setInputCloud(filtered.makeShared());
-            sor.setMeanK(20);
-            sor.setStddevMulThresh(1.3);
+            sor.setMeanK(50);
+            sor.setStddevMulThresh(2.0);
             PTC fil;
             sor.filter(fil);
             LOCK guard(mtx_proc);
@@ -365,6 +367,7 @@ Modeler::processQueue()
         }
     }
     ROS_INFO("[Modeler::%s]\tStopped",__func__);
+    processing = false;
 
     //debug visualization
     // pcl::visualization::PCLVisualizer viz;
@@ -380,16 +383,81 @@ Modeler::processQueue()
 }
 
 void
+Modeler::computeFrameFeatures(const PTC::Ptr &frame)
+{
+    NTC::Ptr frame_n = boost::make_shared<NTC>();
+    frame_f = boost::make_shared<pcl::PointCloud<pcl::FPFHSignature33>>();
+    frame_k = boost::make_shared<std::vector<int>>();
+    //detect keypoints
+    us.setInputCloud(frame);
+    us.setRadiusSearch(0.015);
+    pcl::PointCloud<int> tmp;
+    us.compute(tmp);
+    for (const auto& k: tmp.points)
+        frame_k->push_back(k);
+    //estimate normals
+    ne.setRadiusSearch(0.015f);
+    ne.useSensorOriginAsViewPoint();
+    // ne.setIndices(frame_k);
+    ne.setInputCloud(frame);
+    ne.compute(*frame_n);
+    //feature estimation
+    fpfh.setInputCloud(frame);
+    fpfh.setIndices(frame_k);
+    fpfh.setInputNormals(frame_n);
+    fpfh.setRadiusSearch(0.03);
+    fpfh.compute(*frame_f);
+}
+
+std::pair<std::vector<int>,std::vector<int>>
+Modeler::compareFeatures(const pcl::PointCloud<pcl::FPFHSignature33>::Ptr &search_features, const float dist_thresh, const int k_nn)
+{
+    SearchT tree (true, CreatorT(new IndexT(4)));
+    tree.setPointRepresentation (RepT(new pcl::DefaultFeatureRepresentation<pcl::FPFHSignature33>));
+    tree.setChecks(256);
+    tree.setInputCloud(search_features);
+    //Search frame features over search features
+    //If frame features are n, these will be n*k_nn matrices
+    std::vector<std::vector<int>> k_idx;
+    std::vector<std::vector<float>> k_dist;
+    tree.nearestKSearch (*frame_f, std::vector<int>(), k_nn, k_idx, k_dist);
+    //apply distance threshold
+    //these contain index of features in search_features that have distance
+    //less than thresh to each frame_f, recording which frame_f matches with search_f
+    std::vector<int> frame_idx, search_idx;
+    for(size_t i=0; i < k_idx.size(); ++i)
+    {
+        for(size_t j=0; j < k_idx[i].size(); ++j)
+        {
+            if (k_dist[i][j] < dist_thresh){
+                frame_idx.push_back(i);
+                search_idx.push_back(k_idx[i][j]);
+            }
+            else{
+                //break, since other neighbors have bigger distance
+                //it's pointless to check them
+                break;
+            }
+        }
+    }
+    return std::make_pair(search_idx, frame_idx);
+}
+
+void
 Modeler::alignQueue()
 {
     ROS_INFO("[Modeler::%s]\tStarted",__func__);
-    std::size_t proc_size(1);
+    std::size_t proc_size(0);
     PTC::Ptr current;
     while (acquiring || proc_size>0)
     {
+        if (this->isDisabled()){
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            continue;
+        }
         PTC::Ptr next;
         mtx_proc.lock();
-        proc_size = acquisition_q.size();
+        proc_size = processing_q.size();
         mtx_proc.unlock();
         if (proc_size > 0 && !current){
             current = boost::make_shared<PTC>();
@@ -398,6 +466,7 @@ Modeler::alignQueue()
             processing_q.pop_front();
             proc_size = processing_q.size();
             mtx_proc.unlock();
+            computeFrameFeatures(current);
         }
         if (proc_size >0 && current && !next){
             next = boost::make_shared<PTC>();
@@ -412,20 +481,27 @@ Modeler::alignQueue()
             proc_size = processing_q.size();
             continue;
         }
-        gicp.setInputTarget(current);
-        gicp.setInputSource(next);
-        gicp.setCorrespondenceRandomness(30);
-        gicp.setMaximumOptimizerIterations(1000);
-        gicp.setEuclideanFitnessEpsilon(1e-5);
-        gicp.setMaximumIterations(500);
-        gicp.setTransformationEpsilon(1e-5);
-        gicp.setMaxCorrespondenceDistance(0.015);
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr target_f = boost::make_shared<pcl::PointCloud<pcl::FPFHSignature33>>(*frame_f);
+        pcl::IndicesPtr target_k = boost::make_shared<std::vector<int>>(*frame_k);
+        computeFrameFeatures(next);
+        std::pair<std::vector<int>, std::vector<int>> corr = compareFeatures(target_f);
+        //recurse from feature correspondences to point correspondences
+        std::vector<int> target_idx, source_idx;
+        for(const auto& fid: corr.first)
+            target_idx.push_back(target_k->at(fid));
+        for(const auto& fid: corr.second)
+            source_idx.push_back(frame_k->at(fid));
+        std::cout<<target_idx.size()<<" = "<<source_idx.size()<<std::endl;
         PTC aligned;
-        gicp.align(aligned);
+        Eigen::Matrix4f trans(Eigen::Matrix4f::Identity());
+        gicp.estimateRigidTransformationBFGS(*next, source_idx, *current, target_idx, trans);
+        pcl::transformPointCloud(*next, aligned, trans);
         LOCK guard (mtx_proc);
         processing_q.front() = aligned;
         LOCK guard_a (mtx_align);
         align_q.push_back(*current);
+        current.reset();
+        std::cout<<proc_size<<std::endl;
     }//EndWhile
     //if a current frame remained alone, we just push it
     if (current){
@@ -433,19 +509,94 @@ Modeler::alignQueue()
         align_q.push_back(*current);
     }
     ROS_INFO("[Modeler::%s]\tStopped",__func__);
+    aligning = false;
+
     //debug visualization
-    pcl::visualization::PCLVisualizer viz;
-    viz.addPointCloud<PT>(align_q.front().makeShared());
-    viz.spinOnce(500);
-    for (size_t i=1; i<align_q.size(); ++i)
-    {
-        viz.updatePointCloud<PT>(align_q[i].makeShared());
-        viz.spinOnce(500);
-    }
-    viz.close();
+    // pcl::visualization::PCLVisualizer viz;
+    // viz.addPointCloud<PT>(align_q.front().makeShared());
+    // viz.spinOnce(500);
+    // for (size_t i=1; i<align_q.size(); ++i)
+    // {
+    //     viz.updatePointCloud<PT>(align_q[i].makeShared());
+    //     viz.spinOnce(500);
+    // }
+    // viz.close();
     ///////////////////////////
 }
 
+void
+Modeler::model()
+{
+    ROS_INFO("[Modeler::%s]\tStarted",__func__);
+    std::size_t align_size(0);
+    //debug visualization
+    while (acquiring || align_size>0)
+    {
+        if (this->isDisabled()){
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            continue;
+        }
+        PTC::Ptr current;
+        mtx_align.lock();
+        align_size = align_q.size();
+        mtx_align.unlock();
+        if (align_size > 0){
+            if (!model_c){
+                model_c = boost::make_shared<PTC>();
+                LOCK guard(mtx_align);
+                *model_c = align_q.front();
+                *model_ds = *model_c;
+                align_q.pop_front();
+                continue;
+            }
+            current = boost::make_shared<PTC>();
+            LOCK guard (mtx_align);
+            *current = align_q.front();
+            align_q.pop_front();
+        }
+        if (!current){
+            //Wait for more frames to be aligned
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            LOCK guard(mtx_align);
+            align_size = processing_q.size();
+            continue;
+        }
+        // icp.setInputTarget(model_ds);
+        // icp.setInputSource(current);
+        // icp.setEuclideanFitnessEpsilon(1e-5);
+        // icp.setMaximumIterations(100);
+        // icp.setTransformationEpsilon(1e-5);
+        // icp.setMaxCorrespondenceDistance(0.01);
+        // icp.setTransformationEstimation(teDQ);
+        // PTC aligned;
+        // icp.align(aligned); //for some reason this does not transform it
+        // pcl::transformPointCloud(*current, aligned, icp.getFinalTransformation());
+        *model_c += *current;
+        vg.setInputCloud(model_c);
+        double leaf;
+        config->get("model_ds_leaf", leaf);
+        vg.setLeafSize(leaf,leaf,leaf);
+        PTC ds;
+        vg.filter(ds);
+        pcl::StatisticalOutlierRemoval<PT> sor;
+        sor.setInputCloud(ds.makeShared());
+        sor.setMeanK(50);
+        sor.setStddevMulThresh(1.5);
+        LOCK guard(mtx_model);
+        sor.filter(*model_ds);
+    }//EndWhile
+    ROS_INFO("[Modeler::%s]\tStopped",__func__);
+    aligning = false;
+}
+
+void
+Modeler::publishModel()
+{
+    LOCK guard(mtx_model);
+    if (model_ds)
+        if (!model_ds->empty() && pub_model.getNumSubscribers()>0)
+            pub_model.publish(model_ds);
+}
 } //namespace
 
 // bool
@@ -585,88 +736,6 @@ Modeler::alignQueue()
 //             //Leave do_alignment = true so thread wont start again
 //             //It will get reset by a new start anyway
 //             break;
-//         }
-//         //source and target frames
-//         PC::Ptr target(new PC), source(new PC);
-//         //source and target normals
-//         NC::Ptr source_n(new NC), target_n(new NC);
-//         //source and target features
-//         pcl::PointCloud<pcl::FPFHSignature33>::Ptr source_f(new pcl::PointCloud<pcl::FPFHSignature33>);
-//         pcl::PointCloud<pcl::FPFHSignature33>::Ptr target_f(new pcl::PointCloud<pcl::FPFHSignature33>);
-//         //get source and target and downsample them
-//         vg.setLeafSize(leaf, leaf, leaf);
-//         //downsample
-//         vg.setInputCloud(align_it->makeShared());
-//         vg.filter(*target);
-//         //TODO: Need to check later if source and target needs to be switched
-//         //(Fri 06 Nov 2015 08:07:25 PM CET -- tabjones)
-//         //TODO: switched! (Tue 10 Nov 2015 12:21:26 PM CET -- tabjones)
-//         {
-//             LOCK guard(mtx_seq);
-//             vg.setInputCloud(cloud_sequence.front().makeShared());
-//         }
-//         vg.filter(*source);
-//         //estimate normals
-//         ne.setRadiusSearch(3.0f*leaf);
-//         ne.useSensorOriginAsViewPoint();
-//         ne.setInputCloud(target);
-//         ne.compute(*target_n);
-//         ne.setInputCloud(source);
-//         ne.compute(*source_n);
-//         {
-//             LOCK guard(mtx_model);
-//             ne.setInputCloud(model);
-//             ne.compute(*model_n);
-//         }
-//         //initialize feature estimator and compute it for target
-//         // pcl::DefaultFeatureRepresentation<pcl::FPFHSignature33> point_rep;
-//         fpfh->setInputNormals(target_n);
-//         fpfh->setInputCloud(target);
-//         fpfh->setRadiusSearch(5.0f*leaf);
-//         fpfh->compute(*target_f);
-//         //do it again for source
-//         fpfh->setInputNormals(source_n);
-//         fpfh->setInputCloud(source);
-//         fpfh->compute(*source_f);
-//         //do the third time for model
-//         {
-//             LOCK guard(mtx_model);
-//             fpfh->setInputNormals(model_n);
-//             fpfh->setInputCloud(model);
-//             fpfh->compute(*model_f);
-//         }
-//         //filter out source features that are too different from model features
-//         SearchT tree_m (true, CreatorT(new IndexT(4)));
-//         tree_m.setPointRepresentation (RepT(new pcl::DefaultFeatureRepresentation<pcl::FPFHSignature33>));
-//         tree_m.setChecks(256);
-//         tree_m.setInputCloud(model_f);
-//         //Search source features over model features
-//         //If source features are n, these will be n*k_nn matrices
-//         std::vector<std::vector<int>> k_idx_m;
-//         std::vector<std::vector<float>> k_dist_m;
-//         int k_nn(1);
-//         tree_m.nearestKSearch (*source_f, std::vector<int> (), k_nn, k_idx_m, k_dist_m);
-//         //define a distance threshold
-//         float dist_thresh_m = 125.0f;
-//         //this contains index of points in source that have a feature after filtering
-//         std::vector<int> source_p_idx;
-//         for(size_t i=0; i < k_idx_m.size(); ++i)
-//         {
-//             int count (k_nn);
-//             for(size_t k=0; k < k_idx_m[i].size(); ++k)
-//             {
-//                 if (k_dist_m[i][k] > dist_thresh_m){
-//                     count -= (k_nn - k);
-//                     //break, since other neighbors have bigger distance
-//                     //it's pointless to check them
-//                     break;
-//                 }
-//             }
-//             if (count > 0){
-//                 //source feature has some k_nn neighbors in model, under defined
-//                 //threshold, hence we record its index
-//                 source_p_idx.push_back(i);
-//             }
 //         }
 //         //tmp visualization color points that have features in red
 //         uint8_t r=255, g=0, b=0;

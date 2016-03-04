@@ -48,7 +48,8 @@ tracker: {
     broadcast_tf: true
 }
 modeler: {
-    spawn: true,
+    spawn: false,
     use_color_filtering: true,
-    color_std_dev_multiplier: 1.5
+    color_std_dev_multiplier: 1.5,
+    model_ds_leaf: 0.001
 }
