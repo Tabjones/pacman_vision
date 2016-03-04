@@ -316,7 +316,7 @@ Modeler::processQueue()
                 sor.setStddevMulThresh(1.5);
                 PTC fil;
                 sor.filter(fil);
-                // computeColorDistribution(filtered);
+                computeColorDistribution(fil);
                 current.reset();
                 LOCK guard(mtx_proc);
                 processing_q.push_back(fil);
@@ -414,7 +414,36 @@ Modeler::alignQueue()
         }
         gicp.setInputTarget(current);
         gicp.setInputSource(next);
+        gicp.setCorrespondenceRandomness(30);
+        gicp.setMaximumOptimizerIterations(1000);
+        gicp.setEuclideanFitnessEpsilon(1e-5);
+        gicp.setMaximumIterations(500);
+        gicp.setTransformationEpsilon(1e-5);
+        gicp.setMaxCorrespondenceDistance(0.015);
+        PTC aligned;
+        gicp.align(aligned);
+        LOCK guard (mtx_proc);
+        processing_q.front() = aligned;
+        LOCK guard_a (mtx_align);
+        align_q.push_back(*current);
     }//EndWhile
+    //if a current frame remained alone, we just push it
+    if (current){
+        LOCK guard(mtx_align);
+        align_q.push_back(*current);
+    }
+    ROS_INFO("[Modeler::%s]\tStopped",__func__);
+    //debug visualization
+    pcl::visualization::PCLVisualizer viz;
+    viz.addPointCloud<PT>(align_q.front().makeShared());
+    viz.spinOnce(500);
+    for (size_t i=1; i<align_q.size(); ++i)
+    {
+        viz.updatePointCloud<PT>(align_q[i].makeShared());
+        viz.spinOnce(500);
+    }
+    viz.close();
+    ///////////////////////////
 }
 
 } //namespace

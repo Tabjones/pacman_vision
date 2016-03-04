@@ -155,7 +155,7 @@ class Modeler: public Module<Modeler>
 
         //Threads stuff
         std::thread proc_t, align_t;
-        std::mutex mtx_acq, mtx_proc;
+        std::mutex mtx_acq, mtx_proc, mtx_align;
 
         //behaviour
         bool acquiring, processing, aligning;
