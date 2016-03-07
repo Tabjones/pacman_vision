@@ -37,7 +37,7 @@
 #include <modeler/modeler_config.hpp>
 #include <pacv_config.h>
 //PCL
-// #include <pcl/common/centroid.h>
+#include <pcl/common/centroid.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/statistical_outlier_removal.h>
