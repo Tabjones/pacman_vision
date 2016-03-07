@@ -82,7 +82,7 @@ Modeler::init()
     model_ds = boost::make_shared<PTC>();
     frame_f = boost::make_shared<pcl::PointCloud<pcl::FPFHSignature33>>();
     frame_k = boost::make_shared<std::vector<int>>();
-    // teDQ = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>>();
+    teDQ = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>>();
     //init node params
     for (auto key: config->valid_keys)
     {
@@ -104,7 +104,7 @@ Modeler::deInit()
     model_ds.reset();
     frame_f.reset();
     frame_k.reset();
-    // teDQ.reset();
+    teDQ.reset();
     acquisition_q.clear();
     processing_q.clear();
     align_q.clear();
@@ -491,11 +491,26 @@ Modeler::alignQueue()
             target_idx.push_back(target_k->at(fid));
         for(const auto& fid: corr.second)
             source_idx.push_back(frame_k->at(fid));
-        std::cout<<target_idx.size()<<" = "<<source_idx.size()<<std::endl;
+        pcl::CorrespondencesPtr corr_s_t = boost::make_shared<pcl::Correspondences>();
+        if (target_idx.size() != source_idx.size()){
+            ROS_ERROR("[Modeler::%s]\tCorrespondences size mismatch",__func__);
+            //add error handling! TODO
+            return;
+        }
+        for(size_t i=0; i < target_idx.size(); ++i)
+        {
+            PT p1 (next->points[source_idx[i]]);
+            PT p2 (current->points[target_idx[i]]);
+            float dist = std::sqrt(std::pow(p1.x - p2.x,2)+ std::pow(p1.y - p2.y,2)+ std::pow(p1.z - p2.z,2));
+            //Add a correspondence
+            pcl::Correspondence cor(source_idx[i], target_idx[i], dist);
+            corr_s_t->push_back(cor);
+        }
+        //Estimate the rigid transformation of source -> target
+        Eigen::Matrix4f frame_trans;
+        teDQ->estimateRigidTransformation(*next, *current, *corr_s_t, frame_trans);
         PTC aligned;
-        Eigen::Matrix4f trans(Eigen::Matrix4f::Identity());
-        gicp.estimateRigidTransformationBFGS(*next, source_idx, *current, target_idx, trans);
-        pcl::transformPointCloud(*next, aligned, trans);
+        pcl::transformPointCloud(*next, aligned, frame_trans);
         LOCK guard (mtx_proc);
         processing_q.front() = aligned;
         LOCK guard_a (mtx_align);

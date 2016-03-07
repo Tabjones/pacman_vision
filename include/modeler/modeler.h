@@ -43,7 +43,7 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/eigen.h>
-// #include <pcl/correspondence.h>
+#include <pcl/correspondence.h>
 #include <pcl/octree/octree_pointcloud_adjacency.h>
 #include <pcl/octree/octree_pointcloud_changedetector.h>
 #include <pcl_ros/transforms.h>
@@ -53,7 +53,7 @@
 #include <pcl/search/flann_search.h>
 #include <pcl/search/impl/flann_search.hpp>
 // #include <pcl/registration/sample_consensus_prerejective.h>
-// #include <pcl/registration/transformation_estimation_dual_quaternion.h>
+#include <pcl/registration/transformation_estimation_dual_quaternion.h>
 // #include <pcl/registration/correspondence_rejection_distance.h>
 #include <pcl/registration/gicp.h>
 // #include <pcl/registration/icp.h>
@@ -115,11 +115,6 @@ class Modeler: public Module<Modeler>
         // void create_markers();
         // //publish markers
         // void publish_markers();
-        //Feature comparation
-        // typedef pcl::search::FlannSearch<pcl::FPFHSignature33, flann::L2<float>> SearchT;
-        // typedef typename SearchT::FlannIndexCreatorPtr CreatorT;
-        // typedef typename SearchT::KdTreeMultiIndexCreator IndexT;
-        // typedef typename SearchT::PointRepresentationPtr RepT;
 
         //processing queues
         std::deque<PTC> acquisition_q, processing_q, align_q;
@@ -143,7 +138,7 @@ class Modeler: public Module<Modeler>
         //Voxelgrid downsampling
         pcl::VoxelGrid<PT> vg;
         //registration stuff
-        // pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
+        pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
         pcl::NormalEstimationOMP<PT, NT> ne;
         pcl::FPFHEstimationOMP<PT, NT, pcl::FPFHSignature33> fpfh;
         pcl::UniformSampling<PT> us;
