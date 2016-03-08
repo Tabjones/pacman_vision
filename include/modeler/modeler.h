@@ -130,9 +130,9 @@ class Modeler: public Module<Modeler>
         //frame keypoints indices
         pcl::IndicesPtr frame_k;
         //model color
-        std::vector<double> model_cmean;
-        std::vector<double> model_cdev;
-        double cdev_mul;
+        double mean_L, mean_a, mean_b;
+        double model_mean_dE, model_stddev_dE;
+        double stddev_mul;
 
         //PCL objects
         //Voxelgrid downsampling

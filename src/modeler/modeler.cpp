@@ -74,8 +74,6 @@ Modeler::init()
     acquisition_q.clear();
     processing_q.clear();
     align_q.clear();
-    model_cmean.clear();
-    model_cdev.clear();
     align_q.clear();
     T_km.setIdentity();
     T_mk.setIdentity();
@@ -95,6 +93,7 @@ Modeler::init()
         else
             ROS_WARN("[Modeler::%s]\tKey:%s not found on parameter server",__func__,key.c_str());
     }
+    // testDeltaE();  //tmp test
 }
 
 void
@@ -108,66 +107,55 @@ Modeler::deInit()
     acquisition_q.clear();
     processing_q.clear();
     align_q.clear();
-    model_cmean.clear();
-    model_cdev.clear();
 }
 
 void
 Modeler::computeColorDistribution(const PTC &frame)
 {
-    model_cmean.clear();
-    model_cdev.clear();
-    double r(0.0), g(0.0), b(0.0);
+    model_mean_dE = 0.0;
+    mean_L = mean_a = mean_b = 0.0;
+    std::vector<double> color_dists;
+    //calculate mean color of the frame
     for (const auto& pt: frame.points)
     {
-        double rp,gp,bp;
-        castColorToDouble(pt, rp,gp,bp);
-        r += rp;
-        g += gp;
-        b += bp;
+        double L, a, b;
+        convertPCLColorToCIELAB(pt, L, a, b);
+        mean_L += L;
+        mean_a += a;
+        mean_b += b;
     }
-    model_cmean.push_back(r/frame.points.size());
-    model_cmean.push_back(g/frame.points.size());
-    model_cmean.push_back(b/frame.points.size());
-    r=g=b=0.0;
+    mean_L /= frame.size();
+    mean_a /= frame.size();
+    mean_b /= frame.size();
+    //calculate mean deltaE of points from mean color
     for (const auto& pt: frame.points)
     {
-        double rp,gp,bp;
-        castColorToDouble(pt, rp,gp,bp);
-        r += std::pow(model_cmean[0] - rp, 2);
-        g += std::pow(model_cmean[1] - gp, 2);
-        b += std::pow(model_cmean[2] - bp, 2);
+        double L, a, b;
+        convertPCLColorToCIELAB(pt, L,a,b);
+        color_dists.push_back(deltaE(mean_L,mean_a,mean_b, L,a,b));
+        model_mean_dE += color_dists.back();
     }
-    r /= frame.points.size()-1;
-    g /= frame.points.size()-1;
-    b /= frame.points.size()-1;
-    model_cdev.push_back(std::sqrt(r));
-    model_cdev.push_back(std::sqrt(g));
-    model_cdev.push_back(std::sqrt(b));
-    std::cout<<"mean R "<<model_cmean[0]<<" stdDev R "<<model_cdev[0]<<std::endl;
-    std::cout<<"mean G "<<model_cmean[1]<<" stdDev G "<<model_cdev[1]<<std::endl;
-    std::cout<<"mean B "<<model_cmean[2]<<" stdDev B "<<model_cdev[2]<<std::endl;
+    model_mean_dE /= color_dists.size();
+    model_stddev_dE = 0.0;
+    //calculate standard deviation of distance distribution
+    for (const auto& d: color_dists)
+        model_stddev_dE += std::pow(model_mean_dE - d, 2);
+    model_stddev_dE /= color_dists.size();
+    model_stddev_dE = std::sqrt(model_stddev_dE);
+    std::cout<<"mean L "<<mean_L<<" mean a "<<mean_a<<" mean_b "<<mean_b<<std::endl;
+    std::cout<<"mean deltaE "<<model_mean_dE<<" std Dev deltaE "<<model_stddev_dE<<std::endl;
 }
 bool
 Modeler::colorMetricInclusion(const PT &pt)
 {
-    config->get("color_std_dev_multiplier", cdev_mul);
-    double rM, rm, gM, gm, bM, bm, r,b,g;
-    castColorToDouble(pt, r,g,b);
-    rM =  (model_cmean[0] + model_cdev[0]*cdev_mul);
-    rm =  (model_cmean[0] - model_cdev[0]*cdev_mul);
-    gM =  (model_cmean[1] + model_cdev[1]*cdev_mul);
-    gm =  (model_cmean[1] - model_cdev[1]*cdev_mul);
-    bM =  (model_cmean[2] + model_cdev[2]*cdev_mul);
-    bm =  (model_cmean[2] - model_cdev[2]*cdev_mul);
-    // std::cout<<"rM "<<rM<<" rm "<<rm<<" r "<<r<<std::endl;
-    // std::cout<<"gM "<<gM<<" gm "<<gm<<" g "<<g<<std::endl;
-    // std::cout<<"bM "<<rM<<" bm "<<rm<<" b "<<b<<std::endl;
-    if (r > rM || r < rm )
-        return false;
-    else if (g > gM || g < gm )
-        return false;
-    else if (b > bM || b < bm )
+    config->get("color_std_dev_multiplier", stddev_mul);
+    double dEM, dEm;
+    dEM =  model_mean_dE + model_stddev_dE*stddev_mul;
+    dEm =  model_mean_dE - model_stddev_dE*stddev_mul;
+    double L,a,b;
+    convertPCLColorToCIELAB(pt, L,a,b);
+    double dE = deltaE(mean_L, mean_a, mean_b, L, a, b);
+    if (dE > dEM || dE < dEm )
         return false;
     else
         return true;
