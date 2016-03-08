@@ -428,12 +428,12 @@ Modeler::alignQueue()
             mtx_proc.lock();
             pcl::copyPointCloud(processing_q.front(), tmp);
             processing_q.pop_front();
+            proc_size = processing_q.size();
+            mtx_proc.unlock();
             if (tmp.empty()){
                 current.reset();
                 continue;
             }
-            proc_size = processing_q.size();
-            mtx_proc.unlock();
             Eigen::Vector4f centroid;
             pcl::compute3DCentroid(tmp, centroid);
             pcl::demeanPointCloud(tmp, centroid, *current);
@@ -495,21 +495,21 @@ Modeler::alignQueue()
         // teDQ->estimateRigidTransformation(*next, *current, *corr_s_t, frame_trans);
         icp.setInputTarget(current);
         icp.setInputSource(next);
-        icp.setEuclideanFitnessEpsilon(2e-5);
+        icp.setEuclideanFitnessEpsilon(1e-9);
         icp.setMaximumIterations(50);
-        icp.setTransformationEpsilon(1e-7);
-        icp.setMaxCorrespondenceDistance(0.1);
+        icp.setTransformationEpsilon(1e-9);
+        // icp.setMaxCorrespondenceDistance(0.1);
         icp.setUseReciprocalCorrespondences(true);
         icp.setTransformationEstimation(teDQ);
-        PTC aligned;
-        icp.align(aligned, T_mk); //for some reason this does not transform it
+        PTC::Ptr aligned = boost::make_shared<PTC>();
+        icp.align(*aligned, T_mk); //for some reason this does not transform it
         Eigen::Matrix4f t = icp.getFinalTransformation();
         std::cout<<t<<std::endl;
         // Eigen::Matrix4f inv_t = t.inverse();
-        // pcl::transformPointCloud(*next, aligned, t);
+        pcl::transformPointCloud(*next, *aligned, t);
         LOCK guard_a (mtx_align);
         align_q.push_back(*current);
-        pcl::copyPointCloud(aligned, *current);
+        current = aligned;
     }//EndWhile
     //if a current frame remained alone, we just push it
     if (current){
