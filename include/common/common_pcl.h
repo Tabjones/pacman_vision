@@ -79,8 +79,46 @@ void crop_a_box(const PXC::ConstPtr source, PXC::Ptr &dest, const Box lim,
         const Eigen::Matrix4f& trans=Eigen::Matrix4f::Identity(),
         const bool keep_organized=false);
 
+///color cast to double
 void convertUint8ToDouble(uint8_t b, double &d);
+///color cast to double
 void castColorToDouble(const PT &pt, double &r, double &g, double &b);
+///Convert from RGB to XYZ colorspace
+void Rgb2Xyz(double *x, double *y, double *z, double r, double g, double b)
+{
+	r = INVGAMMACORRECTION(r);
+	g = INVGAMMACORRECTION(g);
+	b = INVGAMMACORRECTION(b);
+	*x = (double)(0.4123955889674142161*r + 0.3575834307637148171*g + 0.1804926473817015735*b);
+	*y = (double)(0.2125862307855955516*r + 0.7151703037034108499*g + 0.07220049864333622685*b);
+	*z = (double)(0.01929721549174694484*r + 0.1191838645808485318*g + 0.9504971251315797660*b);
 }
+void Xyz2Lab(num *L, num *a, num *b, num X, num Y, num Z)
+{
+	X /= WHITEPOINT_X;
+	Y /= WHITEPOINT_Y;
+	Z /= WHITEPOINT_Z;
+	X = LABF(X);
+	Y = LABF(Y);
+	Z = LABF(Z);
+	*L = 116*Y - 16;
+	*a = 500*(X - Y);
+	*b = 200*(Y - Z);
+}
+#define INVGAMMACORRECTION(t)	\
+	(((t) <= 0.0404482362771076) ? \
+	((t)/12.92) : pow(((t) + 0.055)/1.055, 2.4))
+}
+/** @brief XYZ color of the D65 white point */
+#define WHITEPOINT_X	0.950456
+#define WHITEPOINT_Y	1.0
+#define WHITEPOINT_Z	1.088754
+/**
+ * @brief CIE L*a*b* f function (used to convert XYZ to L*a*b*)
+ * http://en.wikipedia.org/wiki/Lab_color_space
+ */
+#define LABF(t)	\
+	((t >= 8.85645167903563082e-3) ? \
+	pow(t,0.333333333333333) : (841.0/108.0)*(t) + (4.0/29.0))
 #endif
 

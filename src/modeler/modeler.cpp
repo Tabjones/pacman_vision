@@ -505,16 +505,17 @@ Modeler::alignQueue()
         // //Estimate the rigid transformation of source -> target
         // Eigen::Matrix4f frame_trans;
         // teDQ->estimateRigidTransformation(*next, *current, *corr_s_t, frame_trans);
-        gicp.setInputTarget(current);
-        gicp.setInputSource(next);
-        gicp.setEuclideanFitnessEpsilon(2e-5);
-        gicp.setMaximumIterations(50);
-        gicp.setTransformationEpsilon(1e-7);
-        gicp.setMaxCorrespondenceDistance(0.1);
-        gicp.setUseReciprocalCorrespondences(true);
+        icp.setInputTarget(current);
+        icp.setInputSource(next);
+        icp.setEuclideanFitnessEpsilon(2e-5);
+        icp.setMaximumIterations(50);
+        icp.setTransformationEpsilon(1e-7);
+        icp.setMaxCorrespondenceDistance(0.1);
+        icp.setUseReciprocalCorrespondences(true);
+        icp.setTransformationEstimation(teDQ);
         PTC aligned;
-        gicp.align(aligned, T_mk); //for some reason this does not transform it
-        Eigen::Matrix4f t = gicp.getFinalTransformation();
+        icp.align(aligned, T_mk); //for some reason this does not transform it
+        Eigen::Matrix4f t = icp.getFinalTransformation();
         std::cout<<t<<std::endl;
         // Eigen::Matrix4f inv_t = t.inverse();
         // pcl::transformPointCloud(*next, aligned, t);
@@ -605,7 +606,7 @@ Modeler::model()
             pcl::StatisticalOutlierRemoval<PT> sor;
             sor.setInputCloud(ds.makeShared());
             sor.setMeanK(50);
-            sor.setStddevMulThresh(1.5);
+            sor.setStddevMulThresh(3.0);
             LOCK guard(mtx_model);
             sor.filter(*model_ds);
         }
