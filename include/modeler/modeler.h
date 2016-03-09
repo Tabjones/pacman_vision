@@ -128,9 +128,9 @@ class Modeler: public Module<Modeler>
 
         //PCL objects
         //registration stuff
-        pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ, teDQ_m;
+        pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
         // pcl::registration::CorrespondenceRejectorDistance cr;
-        pcl::IterativeClosestPoint<PT,PT> icp, icp_m;
+        pcl::IterativeClosestPoint<PT,PT> icp;
         //Octrees
         // pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
         // pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
@@ -146,10 +146,13 @@ class Modeler: public Module<Modeler>
         void computeColorDistribution(const PTC &frame);
         //tell if a point is inside the color distribution
         bool colorMetricInclusion(const PT &pt);
-        //preprocessing queue thread, consume acquisition_q, produce processing_q
+        //processing queue thread, consume acquisition_q and builds the model
         void processQueue();
+        //check if two frames are too similar to each other, return true if similar
+        bool checkFramesSimilarity(PTC::Ptr current, PTC::Ptr next, float factor=0.1);
         //align frames
-        void alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned);
+        Eigen::Matrix4f alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const float dist=0.1,
+                const bool refine=false);
         //compose the model, consuming align_q
         void model();
         //publish model as it is being created

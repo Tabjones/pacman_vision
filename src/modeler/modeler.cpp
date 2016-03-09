@@ -36,8 +36,7 @@ namespace pacv
 {
 
 Modeler::Modeler(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor)
-    :Module<Modeler>(n,ns,stor), acquiring(false), processing(false),
-    aligning(false), modeling(false)
+    :Module<Modeler>(n,ns,stor), acquiring(false), processing(false)
 {
     config=std::make_shared<ModelerConfig>();
     bool run;
@@ -72,14 +71,10 @@ Modeler::init()
     pub_model = nh->advertise<PTC>("model", 1);
     //add subscriber TODO
     acquisition_q.clear();
-    processing_q.clear();
-    align_q.clear();
-    align_q.clear();
     T_km.setIdentity();
     T_mk.setIdentity();
     model_ds = boost::make_shared<PTC>();
     teDQ = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>>();
-    teDQ_m = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>>();
     //init node params
     for (auto key: config->valid_keys)
     {
@@ -101,10 +96,7 @@ Modeler::deInit()
     model_c.reset();
     model_ds.reset();
     teDQ.reset();
-    teDQ_m.reset();
     acquisition_q.clear();
-    processing_q.clear();
-    align_q.clear();
 }
 
 void
@@ -220,6 +212,25 @@ Modeler::spinOnce()
     publishModel();
 }
 
+bool
+Modeler::checkFramesSimilarity(PTC::Ptr current, PTC::Ptr next, float factor)
+{
+    pcl::octree::OctreePointCloudChangeDetector<PT> octcd(0.01);
+    octcd.setInputCloud(current);
+    octcd.addPointsFromInputCloud();
+    octcd.switchBuffers();
+    octcd.setInputCloud(next);
+    octcd.addPointsFromInputCloud();
+    std::vector<int> changes;
+    octcd.getPointIndicesFromNewVoxels(changes);
+    if (changes.size() <= next->size() * factor)
+        //less than factor% points are changed, frames are similar
+        return true;
+    else
+        //more than factor% points are changed, frames are different
+        return false;
+}
+
 void
 Modeler::processQueue()
 {
@@ -227,16 +238,14 @@ Modeler::processQueue()
         std::this_thread::sleep_for(std::chrono::milliseconds(30));
     ROS_INFO("[Modeler::%s]\tStarted",__func__);
     std::size_t acq_size(1);
-    processing_q.clear();
     T_frames.setZero();
     pcl::StatisticalOutlierRemoval<PT> sor;
-    PTC pr;
     PTC::Ptr current = boost::make_shared<PTC>();
     sor.setInputCloud(model_c);
     sor.setMeanK(50);
     sor.setStddevMulThresh(2.0);
-    sor.filter(pr);
-    pcl::copyPointCloud(pr, *current);
+    sor.filter(*current);
+    pcl::copyPointCloud(*current, *model_c);
     bool color_f;
     config->get("use_color_filtering", color_f);
     if (color_f)
@@ -284,19 +293,10 @@ Modeler::processQueue()
             sor.filter(*front_ptr);
         }
         //remove similar frames
-        pcl::octree::OctreePointCloudChangeDetector<PT> octcd(0.01);
-        octcd.setInputCloud(current);
-        octcd.addPointsFromInputCloud();
-        octcd.switchBuffers();
-        octcd.setInputCloud(front_ptr);
-        octcd.addPointsFromInputCloud();
-        std::vector<int> changes;
-        octcd.getPointIndicesFromNewVoxels(changes);
-        if (changes.size() <= front_ptr->size() * 0.1){
+        if (checkFramesSimilarity(current, front_ptr))
             //old and  new frames are  almost equal in point  differences
             //we can remove the new frame and wait for more informative one.
             continue;
-        }
         //Align front frame over current frame
         PTC::Ptr target = boost::make_shared<PTC>();
         if (T_frames.isZero()){
@@ -310,18 +310,47 @@ Modeler::processQueue()
         }
         else
             pcl::copyPointCloud(*current,*target);
-        //TODO
+        PTC::Ptr aligned;
+        //this also updates T_frames
+        alignFrames(target, front_ptr, aligned);
+        //compose the model
+        PTC::Ptr refined;
+        alignFrames(model_c, aligned, refined, 0.01, true);
+        *model_c += *refined;
+        pcl::VoxelGrid<PT> vg;
+        vg.setInputCloud(model_c);
+        double leaf;
+        config->get("model_ds_leaf", leaf);
+        vg.setLeafSize(leaf,leaf,leaf);
+        PTC ds;
+        vg.filter(ds);
+        sor.setInputCloud(ds.makeShared());
+        sor.setMeanK(50);
+        sor.setStddevMulThresh(3.0);
+        current = aligned;
+        LOCK guard(mtx_model);
+        sor.filter(*model_ds);
     }//EndWhile
-    //last frame, we just push it
+    //last frame
     if (current){
         if (!current->empty()){
-            LOCK guard(mtx_proc);
-            PTC proc;
-            pcl::copyPointCloud(*current, proc);
-            processing_q.push_back(proc);
+            PTC::Ptr refined;
+            alignFrames(model_c, current, refined, 0.01, true);
+            *model_c += *refined;
+            pcl::VoxelGrid<PT> vg;
+            vg.setInputCloud(model_c);
+            double leaf;
+            config->get("model_ds_leaf", leaf);
+            vg.setLeafSize(leaf,leaf,leaf);
+            PTC ds;
+            vg.filter(ds);
+            sor.setInputCloud(ds.makeShared());
+            sor.setMeanK(50);
+            sor.setStddevMulThresh(3.0);
+            LOCK guard (mtx_model);
+            sor.filter(*model_ds);
         }
     }
-    acquire_ptr.reset();
     ROS_INFO("[Modeler::%s]\tStopped",__func__);
     processing = false;
 
@@ -338,159 +367,23 @@ Modeler::processQueue()
     ///////////////////////////
 }
 
-void
-Modeler::alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned)
+Eigen::Matrix4f
+Modeler::alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const float dist, const bool refine)
 {
-    align_q.clear();
-    ROS_INFO("[Modeler::%s]\tStarted",__func__);
-    std::size_t proc_size(1);
-    while (processing || proc_size>0)
-    {
-        if (this->isDisabled()){
-            std::this_thread::sleep_for(std::chrono::milliseconds(300));
-            continue;
-        }
-        PTC::Ptr front_ptr;
-        mtx_proc.lock();
-        proc_size = processing_q.size();
-        mtx_proc.unlock();
-        if (proc_size > 0 && !front_ptr){
-            front_ptr = boost::make_shared<PTC>();
-            LOCK guard (mtx_proc);
-            pcl::copyPointCloud(processing_q.front(), *front_ptr);
-            processing_q.pop_front();
-            proc_size = processing_q.size();
-        }
-        if (!front_ptr){
-            //Wait for more frames to be processed
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
-            LOCK guard(mtx_proc);
-            proc_size = processing_q.size();
-            continue;
-        }
-        icp.setInputTarget(current);
-        icp.setInputSource(front_ptr);
-        icp.setEuclideanFitnessEpsilon(1e-9);
-        icp.setMaximumIterations(50);
-        icp.setTransformationEpsilon(1e-9);
-        // icp.setMaxCorrespondenceDistance(0.1);
-        icp.setUseReciprocalCorrespondences(true);
-        icp.setTransformationEstimation(teDQ);
-        PTC::Ptr aligned = boost::make_shared<PTC>();
+    icp.setInputTarget(target);
+    icp.setInputSource(source);
+    icp.setEuclideanFitnessEpsilon(1e-9);
+    icp.setMaximumIterations(50);
+    icp.setTransformationEpsilon(1e-9);
+    icp.setMaxCorrespondenceDistance(dist);
+    icp.setUseReciprocalCorrespondences(true);
+    icp.setTransformationEstimation(teDQ);
+    aligned = boost::make_shared<PTC>();
+    if (refine)
+        icp.align(*aligned);
+    else
         icp.align(*aligned, T_frames);
-        T_frames = icp.getFinalTransformation();
-        // std::cout<<T_mk<<std::endl;
-        // Eigen::Matrix4f inv_t = t.inverse();
-        // pcl::transformPointCloud(*next, *aligned, T_frames);
-        if (!model_c){
-            model_c = boost::make_shared<PTC>();
-            pcl::copyPointCloud(*current, *model_c);
-        }
-        else{
-            LOCK guard_a (mtx_align);
-            PTC ali;
-            pcl::copyPointCloud(*current, ali);
-            align_q.push_back(ali);
-        }
-        pcl::copyPointCloud(*aligned, *current);
-    }//EndWhile
-    //just push last frame
-    if (current){
-        if (!current->empty()){
-            LOCK guard(mtx_align);
-            PTC ali;
-            pcl::copyPointCloud(*current, ali);
-            align_q.push_back(ali);
-        }
-    }
-    process_ptr.reset();
-    ROS_INFO("[Modeler::%s]\tStopped",__func__);
-    aligning = false;
-
-    //debug visualization
-    // pcl::visualization::PCLVisualizer viz;
-    // viz.addPointCloud<PT>(align_q.front().makeShared());
-    // viz.spinOnce(500);
-    // for (size_t i=1; i<align_q.size(); ++i)
-    // {
-    //     viz.updatePointCloud<PT>(align_q[i].makeShared());
-    //     viz.spinOnce(500);
-    // }
-    // viz.close();
-    ///////////////////////////
-}
-
-void
-Modeler::model()
-{
-    while (!model_c)
-        std::this_thread::sleep_for(std::chrono::milliseconds(30));
-    pcl::VoxelGrid<PT> vg;
-    vg.setInputCloud(model_c);
-    double leaf;
-    config->get("model_ds_leaf", leaf);
-    vg.setLeafSize(leaf,leaf,leaf);
-    PTC ds;
-    vg.filter(ds);
-    pcl::StatisticalOutlierRemoval<PT> sor;
-    sor.setInputCloud(ds.makeShared());
-    sor.setMeanK(50);
-    sor.setStddevMulThresh(3.0);
-    mtx_model.lock();
-    sor.filter(*model_ds);
-    mtx_model.unlock();
-    ROS_INFO("[Modeler::%s]\tStarted",__func__);
-    std::size_t align_size(1);
-    //debug visualization
-    while (aligning || align_size>0)
-    {
-        if (this->isDisabled()){
-            std::this_thread::sleep_for(std::chrono::milliseconds(300));
-            continue;
-        }
-        mtx_align.lock();
-        align_size = align_q.size();
-        mtx_align.unlock();
-        PTC::Ptr front_ptr;
-        if (align_size > 0 && !front_ptr){
-            front_ptr = boost::make_shared<PTC>();
-            LOCK guard (mtx_align);
-            pcl::copyPointCloud(align_q.front(), *front_ptr);
-            align_q.pop_front();
-            align_size = align_q.size();
-        }
-        if (!front_ptr || !model_ds || !model_c){
-        //Wait for more frames to be aligned
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            LOCK guard(mtx_align);
-            align_size = align_q.size();
-            continue;
-        }
-        icp_m.setInputTarget(model_ds);
-        icp_m.setInputSource(front_ptr);
-        icp_m.setEuclideanFitnessEpsilon(2e-5);
-        icp_m.setMaximumIterations(20);
-        icp_m.setTransformationEpsilon(1e-7);
-        icp_m.setMaxCorrespondenceDistance(0.01);
-        icp_m.setUseReciprocalCorrespondences(true);
-        icp_m.setTransformationEstimation(teDQ_m);
-        PTC aligned;
-        icp_m.align(aligned);
-        // pcl::transformPointCloud(*current, aligned, icp_m.getFinalTransformation());
-        *model_c += aligned;
-        vg.setInputCloud(model_c);
-        config->get("model_ds_leaf", leaf);
-        vg.setLeafSize(leaf,leaf,leaf);
-        PTC ds;
-        vg.filter(ds);
-        sor.setInputCloud(ds.makeShared());
-        sor.setMeanK(50);
-        sor.setStddevMulThresh(3.0);
-        LOCK guard(mtx_model);
-        sor.filter(*model_ds);
-    }//EndWhile
-    ROS_INFO("[Modeler::%s]\tStopped",__func__);
-    modeling = false;
+    return icp.getFinalTransformation();
 }
 
 void
