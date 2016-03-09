@@ -111,11 +111,13 @@ class Modeler: public Module<Modeler>
         // void publish_markers();
 
         //processing queues
-        std::deque<PTC> acquisition_q, processing_q, align_q;
+        std::deque<PTC> acquisition_q;
         //transform broadcaster for model
         tf::TransformBroadcaster tf_broadcaster;
         //model transforms
         Eigen::Matrix4f T_km, T_mk;
+        //incremental frame transforms
+        Eigen::Matrix4f T_frames;
 
         //model and downsampled model
         PTC::Ptr model_c, model_ds;
@@ -125,23 +127,20 @@ class Modeler: public Module<Modeler>
         double stddev_mul;
 
         //PCL objects
-        //Voxelgrid downsampling
-        pcl::VoxelGrid<PT> vg;
         //registration stuff
-        pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
+        pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ, teDQ_m;
         // pcl::registration::CorrespondenceRejectorDistance cr;
-        pcl::IterativeClosestPoint<PT,PT> icp;
+        pcl::IterativeClosestPoint<PT,PT> icp, icp_m;
         //Octrees
         // pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
-        pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd_frames;
         // pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
 
         //Threads stuff
-        std::thread proc_t, align_t, model_t;
-        std::mutex mtx_acq, mtx_proc, mtx_align, mtx_model;
+        std::thread proc_t;
+        std::mutex mtx_acq, mtx_model;
 
         //behaviour
-        bool acquiring, processing, aligning, modeling;
+        bool acquiring, processing;
 
         //init model color for filtering, computed out of first frame
         void computeColorDistribution(const PTC &frame);
@@ -149,8 +148,8 @@ class Modeler: public Module<Modeler>
         bool colorMetricInclusion(const PT &pt);
         //preprocessing queue thread, consume acquisition_q, produce processing_q
         void processQueue();
-        //align queue thread, consume processing_q, produce align_q
-        void alignQueue();
+        //align frames
+        void alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned);
         //compose the model, consuming align_q
         void model();
         //publish model as it is being created
