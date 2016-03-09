@@ -36,7 +36,7 @@ namespace pacv
 {
 
 Modeler::Modeler(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor)
-    :Module<Modeler>(n,ns,stor), oct_cd(0.5), oct_cd_frames(0.01), acquiring(false),
+    :Module<Modeler>(n,ns,stor), oct_cd_frames(0.01), acquiring(false),
     processing(false), aligning(false), modeling(false)
 {
     config=std::make_shared<ModelerConfig>();
@@ -78,8 +78,6 @@ Modeler::init()
     T_km.setIdentity();
     T_mk.setIdentity();
     model_ds = boost::make_shared<PTC>();
-    frame_f = boost::make_shared<pcl::PointCloud<pcl::FPFHSignature33>>();
-    frame_k = boost::make_shared<std::vector<int>>();
     teDQ = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>>();
     //init node params
     for (auto key: config->valid_keys)
@@ -101,8 +99,6 @@ Modeler::deInit()
 {
     model_c.reset();
     model_ds.reset();
-    frame_f.reset();
-    frame_k.reset();
     teDQ.reset();
     acquisition_q.clear();
     processing_q.clear();
@@ -343,70 +339,6 @@ Modeler::processQueue()
 }
 
 void
-Modeler::computeFrameFeatures(const PTC::Ptr &frame)
-{
-    NTC::Ptr frame_n = boost::make_shared<NTC>();
-    frame_f = boost::make_shared<pcl::PointCloud<pcl::FPFHSignature33>>();
-    frame_k = boost::make_shared<std::vector<int>>();
-    //detect keypoints
-    // us.setInputCloud(frame);
-    // us.setRadiusSearch(0.01f);
-    // pcl::PointCloud<int> tmp;
-    // us.compute(tmp);
-    // for (const auto& k: tmp.points)
-    //     frame_k->push_back(k);
-    //estimate normals
-    ne.setRadiusSearch(0.015f);
-    ne.useSensorOriginAsViewPoint();
-    ne.setInputCloud(frame);
-    ne.compute(*frame_n);
-    //feature estimation
-    fpfh.setInputCloud(frame);
-    // fpfh.setIndices(frame_k);
-    fpfh.setInputNormals(frame_n);
-    fpfh.setRadiusSearch(0.03f);
-    fpfh.compute(*frame_f);
-    if (frame_f->size()<=0)
-        ROS_ERROR("[Modeler::%s]\tComputed empty features...",__func__);
-}
-
-std::pair<std::vector<int>,std::vector<int>>
-Modeler::compareFeatures(const pcl::PointCloud<pcl::FPFHSignature33>::Ptr &search_features, const float dist_thresh, const int k_nn)
-{
-    SearchT tree (true, CreatorT(new IndexT(4)));
-    tree.setPointRepresentation (RepT(new pcl::DefaultFeatureRepresentation<pcl::FPFHSignature33>));
-    tree.setChecks(256);
-    if (search_features->empty())
-        ROS_ERROR("[Modeler::%s]\tEmpty features set",__func__);
-    tree.setInputCloud(search_features);
-    //Search frame features over search features
-    //If frame features are n, these will be n*k_nn matrices
-    std::vector<std::vector<int>> k_idx;
-    std::vector<std::vector<float>> k_dist;
-    tree.nearestKSearch (*frame_f, std::vector<int>(), k_nn, k_idx, k_dist);
-    //apply distance threshold
-    //these contain index of features in search_features that have distance
-    //less than thresh to each frame_f, recording which frame_f matches with search_f
-    std::vector<int> frame_idx, search_idx;
-    for(size_t i=0; i < k_idx.size(); ++i)
-    {
-        for(size_t j=0; j < k_idx[i].size(); ++j)
-        {
-            if (k_dist[i][j] < dist_thresh){
-                frame_idx.push_back(i);
-                search_idx.push_back(k_idx[i][j]);
-            }
-            else{
-                //break, since other neighbors have bigger distance
-                //it's pointless to check them
-                break;
-            }
-        }
-    }
-    return std::make_pair(search_idx, frame_idx);
-}
-
-void
 Modeler::alignQueue()
 {
     ROS_INFO("[Modeler::%s]\tStarted",__func__);
@@ -459,40 +391,6 @@ Modeler::alignQueue()
             proc_size = processing_q.size();
             continue;
         }
-        // computeFrameFeatures(current);
-        // pcl::PointCloud<pcl::FPFHSignature33>::Ptr target_f = boost::make_shared<pcl::PointCloud<pcl::FPFHSignature33>>();
-        // pcl::copyPointCloud(*frame_f, *target_f);
-        // pcl::IndicesPtr target_k = boost::make_shared<std::vector<int>>(*frame_k);
-        // computeFrameFeatures(next);
-        // std::pair<std::vector<int>, std::vector<int>> corr =
-        //     compareFeatures(target_f, 200, 5);
-        // //recurse from feature correspondences to point correspondences
-        // std::vector<int> target_idx, source_idx;
-        // for(const auto& fid: corr.first)
-        //     target_idx.push_back(fid);
-        //     // target_idx.push_back(target_k->at(fid));
-        // for(const auto& fid: corr.second)
-        //     source_idx.push_back(fid);
-        //     // source_idx.push_back(frame_k->at(fid));
-        // pcl::CorrespondencesPtr corr_s_t = boost::make_shared<pcl::Correspondences>();
-        // if (target_idx.size() != source_idx.size() || target_idx.size()<4){
-        //     ROS_ERROR("[Modeler::%s]\tCorrespondences size mismatch",__func__);
-        //     //add error handling! TODO
-        //     next.reset();
-        //     continue;
-        // }
-        // for(size_t i=0; i < target_idx.size(); ++i)
-        // {
-        //     PT p1 (next->points[source_idx[i]]);
-        //     PT p2 (current->points[target_idx[i]]);
-        //     float dist = std::sqrt(std::pow(p1.x - p2.x,2)+ std::pow(p1.y - p2.y,2)+ std::pow(p1.z - p2.z,2));
-        //     //Add a correspondence
-        //     pcl::Correspondence cor(source_idx[i], target_idx[i], dist);
-        //     corr_s_t->push_back(cor);
-        // }
-        // //Estimate the rigid transformation of source -> target
-        // Eigen::Matrix4f frame_trans;
-        // teDQ->estimateRigidTransformation(*next, *current, *corr_s_t, frame_trans);
         icp.setInputTarget(current);
         icp.setInputSource(next);
         icp.setEuclideanFitnessEpsilon(1e-9);
@@ -503,10 +401,10 @@ Modeler::alignQueue()
         icp.setTransformationEstimation(teDQ);
         PTC::Ptr aligned = boost::make_shared<PTC>();
         icp.align(*aligned, T_mk); //for some reason this does not transform it
-        Eigen::Matrix4f t = icp.getFinalTransformation();
-        std::cout<<t<<std::endl;
+        T_mk = icp.getFinalTransformation();
+        std::cout<<T_mk<<std::endl;
         // Eigen::Matrix4f inv_t = t.inverse();
-        pcl::transformPointCloud(*next, *aligned, t);
+        pcl::transformPointCloud(*next, *aligned, T_mk);
         LOCK guard_a (mtx_align);
         align_q.push_back(*current);
         current = aligned;
