@@ -90,35 +90,19 @@ Visualization Manager:
       Use rainbow: true
       Value: false
     - Class: rviz/TF
-      Enabled: true
+      Enabled: false
       Frame Timeout: 1
       Frames:
         All Enabled: true
-        camera_depth_frame:
-          Value: true
-        camera_depth_optical_frame:
-          Value: true
-        camera_link:
-          Value: true
-        camera_rgb_frame:
-          Value: true
-        camera_rgb_optical_frame:
-          Value: true
       Marker Scale: 0.5
       Name: Transformations
       Show Arrows: false
       Show Axes: true
       Show Names: true
       Tree:
-        camera_link:
-          camera_depth_frame:
-            camera_depth_optical_frame:
-              {}
-          camera_rgb_frame:
-            camera_rgb_optical_frame:
-              {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /pacman_vision/markers
@@ -137,7 +121,7 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: ""
+      Color Transformer: RGB8
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -146,12 +130,12 @@ Visualization Manager:
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: InHandModel
-      Position Transformer: ""
+      Position Transformer: XYZ
       Queue Size: 1
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.003
-      Style: Flat Squares
+      Style: Points
       Topic: /pacman_vision/in_hand_modeler/model
       Use Fixed Frame: true
       Use rainbow: true
@@ -180,22 +164,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.976714
+      Distance: 0.880249
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.0448089
-        Y: -0.01465
-        Z: 0.0197674
+        X: -0.00133536
+        Y: -0.0107029
+        Z: -0.0299942
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -0.9798
+      Pitch: -1.3798
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.70146
+      Yaw: 3.41147
     Saved: ~
 Window Geometry:
   Displays:

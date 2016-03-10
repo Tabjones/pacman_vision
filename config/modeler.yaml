@@ -14,7 +14,7 @@ limit_zmin: 0.3
 listener: {geometry_scale: 1.1, listen_left_arm: false, listen_left_hand: false, listen_right_arm: false,
   listen_right_hand: false, publish_markers: true, remove_left_arm: false, remove_left_hand: false,
   remove_right_arm: false, remove_right_hand: false, spawn: false}
-modeler: {color_std_dev_multiplier: 0.8, model_ds_leaf: 0.003,
+in_hand_modeler: {color_std_dev_multiplier: 1.0, model_ds_leaf: 0.005,
   spawn: true, use_color_filtering: true}
 plane_tolerance: 0.005
 publish_limits: true

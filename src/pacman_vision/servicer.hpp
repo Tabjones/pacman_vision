@@ -41,7 +41,7 @@
 #include <pacman_vision_comm/grasp_verification.h>
 #include <pacman_vision_comm/get_cloud_in_hand.h>
 #include <pacman_vision_comm/start_modeler.h>
-#include <pacman_vision_comm/stop_modeler.h>
+#include <pacman_vision_comm/stop_modeler_recording.h>
 
 #include <thread>
 

@@ -61,7 +61,7 @@ class ModelerConfig: public Config<ModelerConfig>
         // map_bool["remove_left_hand"] = false;
         // map_bool["publish_markers"] = true;
         map_double["color_std_dev_multiplier"] = 1.0;
-        map_double["model_ds_leaf"] = 0.001;
+        map_double["model_ds_leaf"] = 0.003;
         // map_int["color_k_neigh"] = 20;
     }
 };

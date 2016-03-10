@@ -117,7 +117,9 @@ class Modeler: public Module<Modeler>
         //model transforms
         Eigen::Matrix4f T_km, T_mk;
         //incremental frame transforms
-        Eigen::Matrix4f T_frames;
+        Eigen::Matrix4f T_remean, T_sm;
+        //first acquired frame
+        PTC::Ptr first_frame;
 
         //model and downsampled model
         PTC::Ptr model_c, model_ds;
@@ -152,9 +154,9 @@ class Modeler: public Module<Modeler>
         //check if two frames are too similar to each other, return true if similar
         bool checkFramesSimilarity(PTC::Ptr current, PTC::Ptr next, float factor=0.1);
         //align frames
-        Eigen::Matrix4f alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const float dist=0.1);
+        Eigen::Matrix4f alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.1);
         //refines frames on model
-        void refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const float dist=0.01);
+        Eigen::Matrix4f refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const Eigen::Matrix4f &guess, const float dist=0.005);
         //publish model as it is being created
         void publishModel();
 };
