@@ -50,7 +50,7 @@
 // #include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
 // #include <pcl/registration/correspondence_rejection_distance.h>
-#include <pcl/registration/icp.h>
+#include <pcl/registration/gicp.h>
 #include <pcl/visualization/pcl_visualizer.h>
 //general utilities
 #include <ctime>
@@ -131,6 +131,7 @@ class Modeler: public Module<Modeler>
         pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
         // pcl::registration::CorrespondenceRejectorDistance cr;
         pcl::IterativeClosestPoint<PT,PT> icp;
+        pcl::GeneralizedIterativeClosestPoint<PT,PT> gicp;
         //Octrees
         // pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
         // pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
@@ -151,10 +152,9 @@ class Modeler: public Module<Modeler>
         //check if two frames are too similar to each other, return true if similar
         bool checkFramesSimilarity(PTC::Ptr current, PTC::Ptr next, float factor=0.1);
         //align frames
-        Eigen::Matrix4f alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const float dist=0.1,
-                const bool refine=false);
-        //compose the model, consuming align_q
-        void model();
+        Eigen::Matrix4f alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const float dist=0.1);
+        //refines frames on model
+        void refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const float dist=0.01);
         //publish model as it is being created
         void publishModel();
 };

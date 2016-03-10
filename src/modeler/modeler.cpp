@@ -315,7 +315,7 @@ Modeler::processQueue()
         alignFrames(target, front_ptr, aligned);
         //compose the model
         PTC::Ptr refined;
-        alignFrames(model_c, aligned, refined, 0.01, true);
+        refineFrames(aligned, refined);
         *model_c += *refined;
         pcl::VoxelGrid<PT> vg;
         vg.setInputCloud(model_c);
@@ -335,7 +335,7 @@ Modeler::processQueue()
     if (current){
         if (!current->empty()){
             PTC::Ptr refined;
-            alignFrames(model_c, current, refined, 0.01, true);
+            refineFrames(current, refined);
             *model_c += *refined;
             pcl::VoxelGrid<PT> vg;
             vg.setInputCloud(model_c);
@@ -368,22 +368,34 @@ Modeler::processQueue()
 }
 
 Eigen::Matrix4f
-Modeler::alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const float dist, const bool refine)
+Modeler::alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const float dist)
 {
-    icp.setInputTarget(target);
-    icp.setInputSource(source);
-    icp.setEuclideanFitnessEpsilon(1e-9);
-    icp.setMaximumIterations(50);
+    gicp.setInputTarget(target);
+    gicp.setInputSource(source);
+    gicp.setEuclideanFitnessEpsilon(1e-9);
+    gicp.setMaximumIterations(50);
+    gicp.setTransformationEpsilon(1e-9);
+    gicp.setMaxCorrespondenceDistance(dist);
+    gicp.setUseReciprocalCorrespondences(true);
+    gicp.setTransformationEstimation(teDQ);
+    aligned = boost::make_shared<PTC>();
+    gicp.align(*aligned, T_frames);
+    return gicp.getFinalTransformation();
+}
+
+void
+Modeler::refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const float dist)
+{
+    icp.setInputTarget(model_ds);
+    icp.setInputSource(frame);
+    icp.setEuclideanFitnessEpsilon(5e-5);
+    icp.setMaximumIterations(10);
     icp.setTransformationEpsilon(1e-9);
     icp.setMaxCorrespondenceDistance(dist);
     icp.setUseReciprocalCorrespondences(true);
     icp.setTransformationEstimation(teDQ);
-    aligned = boost::make_shared<PTC>();
-    if (refine)
-        icp.align(*aligned);
-    else
-        icp.align(*aligned, T_frames);
-    return icp.getFinalTransformation();
+    refined = boost::make_shared<PTC>();
+    icp.align(*refined);
 }
 
 void
