@@ -66,6 +66,8 @@ Modeler::init()
     }
     srv_start = nh->advertiseService("start", &Modeler::cb_start, this);
     srv_stop = nh->advertiseService("stop_recording", &Modeler::cb_stop, this);
+    srv_reset = nh->advertiseService("reset_model", &Modeler::cb_reset_model, this);
+    srv_save = nh->advertiseService("save_model", &Modeler::cb_save_model, this);
     std::string mark_topic(getFatherNamespace()+"/markers");
     pub_markers = nh->advertise<visualization_msgs::MarkerArray>(mark_topic, 1);
     pub_model = nh->advertise<PTC>("model", 1);
@@ -75,6 +77,7 @@ Modeler::init()
     T_mk.setIdentity();
     model_ds = boost::make_shared<PTC>();
     model_c = boost::make_shared<PTC>();
+    T_ms.setZero();
     teDQ = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>>();
     //init node params
     for (auto key: config->valid_keys)
@@ -99,6 +102,61 @@ Modeler::deInit()
     teDQ.reset();
     acquisition_q.clear();
     first_frame.reset();
+    T_ms.setZero();
+}
+
+bool
+Modeler::cb_reset_model(pacman_vision_comm::reset_model::Request& req, pacman_vision_comm::reset_model::Response& res)
+{
+    if (isDisabled()){
+        //Module was temporary disabled, notify the sad user, then exit
+        ROS_ERROR("[Modeler::%s]\tNode is globally disabled, this service is suspended!",__func__);
+        return false;
+    }
+    if(acquiring){
+        ROS_WARN("[Modeler::%s]\tModeler is still acquiring, call stop_recording first!",__func__);
+        return false;
+    }
+    if (!acquiring && processing && proc_t.joinable()){
+        ROS_INFO("[Modeler::%s]\tStopping processing ...",__func__);
+        mtx_acq.lock();
+        acquisition_q.clear();
+        mtx_acq.unlock();
+        proc_t.join();
+    }
+    T_ms.setZero();
+    model_c = boost::make_shared<PTC>();
+    model_ds = boost::make_shared<PTC>();
+    return true;
+}
+
+bool
+Modeler::cb_save_model(pacman_vision_comm::save_model::Request& req, pacman_vision_comm::save_model::Response& res)
+{
+    if (isDisabled()){
+        //Module was temporary disabled, notify the sad user, then exit
+        ROS_ERROR("[Modeler::%s]\tNode is globally disabled, this service is suspended!",__func__);
+        return false;
+    }
+    if (model_ds && !model_ds->empty()){
+        if (!req.model_path.empty()){
+            pcl::PCDWriter writer;
+            if ( writer.writeASCII(req.model_path.c_str(), *model_ds ) ==0 )
+                ROS_INFO("[Modeler::%s]\tModel saved to %s", __func__, req.model_path.c_str());
+            else{
+                ROS_ERROR("[Modeler::%s]\tFailed to save model to %s", __func__, req.model_path.c_str());
+                return false;
+            }
+        }
+        sensor_msgs::PointCloud2 msg;
+        pcl::toROSMsg(*model_ds, msg);
+        res.model = msg;
+        return true;
+    }
+    else{
+        ROS_ERROR("[Modeler::%s]\tModeler does not have a model to save!",__func__);
+        return false;
+    }
 }
 
 void
@@ -239,8 +297,6 @@ Modeler::processQueue()
         std::this_thread::sleep_for(std::chrono::milliseconds(30));
     ROS_INFO("[Modeler::%s]\tStarted",__func__);
     std::size_t acq_size(1);
-    T_remean.setZero();
-    T_sm.setZero();
     pcl::StatisticalOutlierRemoval<PT> sor;
     PTC::Ptr current = boost::make_shared<PTC>();
     sor.setInputCloud(first_frame);
@@ -264,16 +320,15 @@ Modeler::processQueue()
             continue;
         }
         PTC::Ptr front_ptr;
-        mtx_acq.lock();
-        acq_size = acquisition_q.size();
-        mtx_acq.unlock();
         ROS_INFO_THROTTLE(30,"[Modeler::%s]\tStill %d frames left to process",__func__,(int)acq_size);
-        if (acq_size > 0 && !front_ptr){
-            front_ptr = boost::make_shared<PTC>();
+        {
             LOCK guard(mtx_acq);
-            pcl::copyPointCloud(acquisition_q.front(), *front_ptr);
-            acquisition_q.pop_front();
-            acq_size = acquisition_q.size();
+            if (!acquisition_q.empty()){
+                front_ptr = boost::make_shared<PTC>();
+                pcl::copyPointCloud(acquisition_q.front(), *front_ptr);
+                acquisition_q.pop_front();
+                acq_size = acquisition_q.size();
+            }
         }
         if (!front_ptr){
             //Wait for more frames to be acquired
@@ -297,30 +352,33 @@ Modeler::processQueue()
             eif.filter(filtered);
             // sor.setInputCloud(filtered.makeShared());
             // sor.setMeanK(80);
-            // sor.setStddevMulThresh(2.5);
+            // sor.setStddevMulThresh(3.0);
             // sor.filter(*front_ptr);
             pcl::copyPointCloud(filtered, *front_ptr);
         }
         //remove similar frames
-        if (checkFramesSimilarity(current, front_ptr))
+        if (checkFramesSimilarity(current, front_ptr)){
             //old and  new frames are  almost equal in point  differences
             //we can remove the new frame and wait for more informative one.
+            LOCK guard(mtx_acq);
+            acq_size = acquisition_q.size();
             continue;
+        }
         //Align front frame over current frame
         pcl::VoxelGrid<PT> vg;
         Eigen::Vector4f centroid;
-        if (T_remean.isZero()){
+        if (T_ms.isZero()){
             pcl::compute3DCentroid(*current, centroid);
             pcl::demeanPointCloud(*current, centroid, *model_c);
-            T_remean.block<3,3>(0,0) = Eigen::Matrix3f::Identity();
-            T_remean.row(3) = Eigen::Vector4f::Zero();
-            T_remean.col(3) = centroid;
-            T_remean(3,3) = 1;
+            T_ms.block<3,3>(0,0) = Eigen::Matrix3f::Identity();
+            T_ms.row(3) = Eigen::Vector4f::Zero();
+            T_ms.col(3) = -centroid;
+            T_ms(3,3) = 1;
             vg.setInputCloud(model_c);
             double leaf;
             config->get("model_ds_leaf", leaf);
             vg.setLeafSize(leaf,leaf,leaf);
-            PTC ds;
+            // PTC ds;
             // vg.filter(ds);
             // sor.setInputCloud(ds.makeShared());
             // sor.setMeanK(50);
@@ -330,34 +388,23 @@ Modeler::processQueue()
             vg.filter(*model_ds);
         }
         PTC::Ptr aligned;
-        Eigen::Matrix4f T = alignFrames(front_ptr, current, aligned);
+        Eigen::Matrix4f Ticp = alignFrames(front_ptr, current, aligned);
         //compose the model
         // PTC::Ptr refined;
         // refineFrames(aligned, refined);
-        if (T_sm.isZero())
-            T_sm = T*T_remean;
-
         // viz.updatePointCloud<PT>(aligned);
         // viz.spinOnce(500);
-
-        PTC::Ptr model_in_scene;
-        PTC::Ptr model= boost::make_shared<PTC>();
+        // PTC model;
         mtx_model.lock();
-        pcl::copyPointCloud(*model_ds, *model);
+        pcl::copyPointCloud(*model_ds, *model_c);
         mtx_model.unlock();
-        T_sm = alignFrames(aligned, model, model_in_scene, T_sm, 0.02);
-        *model_in_scene += *aligned;
+        T_ms = T_ms * (Ticp.inverse());
+        T_ms = refineFrames(front_ptr, aligned, T_ms, 0.02);
+        *model_c += *aligned;
 
         // viz.updatePointCloud<PT>(model_in_scene.makeShared());
         // viz.spinOnce(2000);
 
-        pcl::compute3DCentroid(*model_in_scene, centroid);
-        pcl::demeanPointCloud(*model_in_scene, centroid, *model_c);
-        T_remean.block<3,3>(0,0) = Eigen::Matrix3f::Identity();
-        T_remean.row(3) = Eigen::Vector4f::Zero();
-        T_remean.col(3) = centroid;
-        T_remean(3,3) = 1;
-        // *model_c += *aligned;
         vg.setInputCloud(model_c);
         double leaf;
         config->get("model_ds_leaf", leaf);
@@ -367,9 +414,8 @@ Modeler::processQueue()
         // LOCK guard(mtx_model);
         // vg.filter(*model_ds);
         sor.setInputCloud(ds.makeShared());
-        sor.setMeanK(80);
-        sor.setStddevMulThresh(3.5);
-        // current = refined;
+        sor.setMeanK(10);
+        sor.setStddevMulThresh(2.0);
         LOCK guard(mtx_model);
         sor.filter(*model_ds);
         current = front_ptr;
@@ -414,37 +460,41 @@ Modeler::processQueue()
 Eigen::Matrix4f
 Modeler::alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const Eigen::Matrix4f &guess, const float dist)
 {
-    icp.setInputTarget(target);
-    icp.setInputSource(source);
-    icp.setEuclideanFitnessEpsilon(1e-7);
-    icp.setMaximumIterations(50);
-    icp.setTransformationEpsilon(1e-9);
-    icp.setMaxCorrespondenceDistance(dist);
-    icp.setUseReciprocalCorrespondences(true);
-    icp.setTransformationEstimation(teDQ);
-    // icp.setCorrespondenceRandomness(10);
-    // icp.setMaximumOptimizerIterations(50);
-    // icp.setRotationEpsilon(1e-5);
+    gicp.setInputTarget(target);
+    gicp.setInputSource(source);
+    gicp.setEuclideanFitnessEpsilon(1e-7);
+    gicp.setMaximumIterations(50);
+    gicp.setTransformationEpsilon(1e-9);
+    gicp.setMaxCorrespondenceDistance(dist);
+    gicp.setUseReciprocalCorrespondences(true);
+    gicp.setTransformationEstimation(teDQ);
+    gicp.setCorrespondenceRandomness(10);
+    gicp.setMaximumOptimizerIterations(50);
+    gicp.setRotationEpsilon(1e-5);
     aligned = boost::make_shared<PTC>();
-    icp.align(*aligned, guess);
+    gicp.align(*aligned, guess);
     // pcl::transformPointCloud(*source, *aligned, icp.getFinalTransformation());
-    return icp.getFinalTransformation();
+    return gicp.getFinalTransformation();
 }
 
 Eigen::Matrix4f
 Modeler::refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const Eigen::Matrix4f &guess,  const float dist)
 {
-    icp.setInputTarget(frame);
-    icp.setInputSource(model_ds);
-    icp.setEuclideanFitnessEpsilon(5e-5);
+    PTC::Ptr model = boost::make_shared<PTC>();
+    mtx_model.lock();
+    pcl::copyPointCloud(*model_ds, *model);
+    mtx_model.unlock();
+
+    icp.setInputTarget(model);
+    icp.setInputSource(frame);
+    icp.setEuclideanFitnessEpsilon(1e-7);
     icp.setMaximumIterations(10);
     icp.setTransformationEpsilon(1e-9);
     icp.setMaxCorrespondenceDistance(dist);
     icp.setUseReciprocalCorrespondences(true);
     icp.setTransformationEstimation(teDQ);
     refined = boost::make_shared<PTC>();
-    icp.align(*refined, guess*T_remean);
-    pcl::transformPointCloud(*model_ds, *refined, icp.getFinalTransformation());
+    icp.align(*refined, guess);
     return icp.getFinalTransformation();
 }
 

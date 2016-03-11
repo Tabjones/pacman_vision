@@ -143,7 +143,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: camera_rgb_optical_frame
+    Fixed Frame: kinect2_rgb_optical_frame
     Frame Rate: 100
   Name: root
   Tools:
@@ -164,22 +164,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.880249
+      Distance: 1.37025
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.00133536
-        Y: -0.0107029
-        Z: -0.0299942
+        X: 0.0228427
+        Y: 0.159328
+        Z: 0.672583
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -1.3798
+      Pitch: -1.19557
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.41147
+      Yaw: 4.71736
     Saved: ~
 Window Geometry:
   Displays:

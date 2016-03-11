@@ -4,21 +4,21 @@ downsampling_leaf_size: 0.005
 estimator: {always_success: true, broadcast_tf: true, cluster_tol: 0.05, iterations: 5,
   neighbors: 20, object_calibration: false, publish_markers: true, rmse_thresh: 0.005,
   spawn: false}
+in_hand_modeler: {color_std_dev_multiplier: 0.9, model_ds_leaf: 0.005, spawn: true,
+  use_color_filtering: true}
 keep_organized: false
-limit_xmax: 0.22
-limit_xmin: -0.2
-limit_ymax: 0.5
-limit_ymin: -0.4
-limit_zmax: 0.85
+limit_xmax: 0.25
+limit_xmin: -0.25
+limit_ymax: 0.30000000000000004
+limit_ymin: -0.30000000000000004
+limit_zmax: 0.95
 limit_zmin: 0.3
 listener: {geometry_scale: 1.1, listen_left_arm: false, listen_left_hand: false, listen_right_arm: false,
   listen_right_hand: false, publish_markers: true, remove_left_arm: false, remove_left_hand: false,
   remove_right_arm: false, remove_right_hand: false, spawn: false}
-in_hand_modeler: {color_std_dev_multiplier: 1.0, model_ds_leaf: 0.005,
-  spawn: true, use_color_filtering: true}
-plane_tolerance: 0.005
+plane_tolerance: 0.014000000000000005
 publish_limits: true
 segmenting: true
 sensor: {broadcast_identity_tf: false, internal: false, name: kinect2_optical_frame,
-  topic: /camera/depth_registered/points}
+  topic: /kinect2/qhd/points}
 tracker: {broadcast_tf: true, publish_bounding_box: true, publish_markers: true, spawn: false}

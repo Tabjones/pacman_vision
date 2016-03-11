@@ -62,6 +62,8 @@
 //ROS generated
 #include <pacman_vision_comm/start_modeler.h>
 #include <pacman_vision_comm/stop_modeler_recording.h>
+#include <pacman_vision_comm/reset_model.h>
+#include <pacman_vision_comm/save_model.h>
 
 namespace pacv
 {
@@ -91,6 +93,8 @@ class Modeler: public Module<Modeler>
         //Service Server
         ros::ServiceServer srv_start;
         ros::ServiceServer srv_stop;
+        ros::ServiceServer srv_reset;
+        ros::ServiceServer srv_save;
         //marker broadcaster
         ros::Publisher pub_markers;
         //publisher of model
@@ -103,6 +107,10 @@ class Modeler: public Module<Modeler>
         bool cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_vision_comm::start_modeler::Response& res);
         //stop_callback
         bool cb_stop(pacman_vision_comm::stop_modeler_recording::Request& req, pacman_vision_comm::stop_modeler_recording::Response& res);
+        //reset_callback
+        bool cb_reset_model(pacman_vision_comm::reset_model::Request& req, pacman_vision_comm::reset_model::Response& res);
+        //save_callback
+        bool cb_save_model(pacman_vision_comm::save_model::Request& req, pacman_vision_comm::save_model::Response& res);
         //spin once
         void spinOnce();
         // //create new markers from transforms
@@ -116,8 +124,8 @@ class Modeler: public Module<Modeler>
         tf::TransformBroadcaster tf_broadcaster;
         //model transforms
         Eigen::Matrix4f T_km, T_mk;
-        //incremental frame transforms
-        Eigen::Matrix4f T_remean, T_sm;
+        //incremental frame transforms, used in alignment
+        Eigen::Matrix4f T_ms;
         //first acquired frame
         PTC::Ptr first_frame;
 
@@ -156,7 +164,7 @@ class Modeler: public Module<Modeler>
         //align frames
         Eigen::Matrix4f alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.1);
         //refines frames on model
-        Eigen::Matrix4f refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const Eigen::Matrix4f &guess, const float dist=0.005);
+        Eigen::Matrix4f refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.005);
         //publish model as it is being created
         void publishModel();
 };
