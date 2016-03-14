@@ -279,9 +279,9 @@ Modeler::spinOnce()
 }
 
 bool
-Modeler::checkFramesSimilarity(PTC::Ptr current, PTC::Ptr next, float factor)
+Modeler::checkFramesSimilarity(PNTC::Ptr current, PNTC::Ptr next, float factor)
 {
-    pcl::octree::OctreePointCloudChangeDetector<PT> octcd(0.01);
+    pcl::octree::OctreePointCloudChangeDetector<PNT> octcd(0.01);
     octcd.setInputCloud(current);
     octcd.addPointsFromInputCloud();
     octcd.switchBuffers();
@@ -304,17 +304,13 @@ Modeler::processQueue()
         std::this_thread::sleep_for(std::chrono::milliseconds(30));
     ROS_INFO("[Modeler::%s]\tStarted",__func__);
     std::size_t acq_size(1);
-    pcl::StatisticalOutlierRemoval<PT> sor;
-    PTC::Ptr current = boost::make_shared<PTC>();
-    sor.setInputCloud(first_frame);
-    sor.setMeanK(80);
-    sor.setStddevMulThresh(2.5);
-    sor.filter(*current);
+    PNTC::Ptr current = boost::make_shared<PNTC>();
     bool color_f;
     config->get("use_color_filtering", color_f);
     if (color_f)
-        computeColorDistribution(*current);
+        computeColorDistribution(*first_frame);
 
+    pcl::copyPointCloud(*first_frame, *current);
     // pcl::visualization::PCLVisualizer viz;
     // viz.addPointCloud<PT>(current);
     // viz.addCoordinateSystem(0.1);
@@ -326,12 +322,12 @@ Modeler::processQueue()
             std::this_thread::sleep_for(std::chrono::milliseconds(300));
             continue;
         }
-        PTC::Ptr front_ptr;
+        PNTC::Ptr front_ptr;
         ROS_INFO_THROTTLE(30,"[Modeler::%s]\tStill %d frames left to process",__func__,(int)acq_size);
         {
             LOCK guard(mtx_acq);
             if (!acquisition_q.empty()){
-                front_ptr = boost::make_shared<PTC>();
+                front_ptr = boost::make_shared<PNTC>();
                 pcl::copyPointCloud(acquisition_q.front(), *front_ptr);
                 acquisition_q.pop_front();
                 acq_size = acquisition_q.size();
@@ -349,11 +345,15 @@ Modeler::processQueue()
             pcl::IndicesPtr kept_points = boost::make_shared<std::vector<int>>();
             for (std::size_t i=0; i< front_ptr->points.size(); ++i)
             {
-                if (colorMetricInclusion(front_ptr->points[i]))
+                PT pt;
+                pt.r = front_ptr->points[i].r;
+                pt.g = front_ptr->points[i].g;
+                pt.b = front_ptr->points[i].b;
+                if (colorMetricInclusion(pt))
                     kept_points->push_back(i);
             }
-            pcl::ExtractIndices<PT> eif;
-            PTC filtered;
+            pcl::ExtractIndices<PNT> eif;
+            PNTC filtered;
             eif.setInputCloud(front_ptr);
             eif.setIndices(kept_points);
             eif.filter(filtered);
@@ -371,6 +371,7 @@ Modeler::processQueue()
             acq_size = acquisition_q.size();
             continue;
         }
+        //TODO here
         //Align front frame over current frame
         pcl::VoxelGrid<PT> vg;
         Eigen::Vector4f centroid;

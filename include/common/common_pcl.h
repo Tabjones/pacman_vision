@@ -58,6 +58,8 @@ typedef pcl::PointCloud<pcl::PointNormal> PNC; ///< Point normal cloud
 typedef pcl::Normal NT; ///< Point type with only normals
 typedef pcl::PointCloud<pcl::Normal> NTC; ///< Normal cloud
 
+typedef pcl::PointXYZRGBNormal PNT;
+typedef pcl::PointCloud<PNT> PNTC;
 
 /*! \brief Crop a source point cloud into dest,  where cropbox is defined by the Box lim.
  *

@@ -167,7 +167,7 @@ class Modeler: public Module<Modeler>
         //processing queue thread, consume acquisition_q and builds the model
         void processQueue();
         //check if two frames are too similar to each other, return true if similar
-        bool checkFramesSimilarity(PTC::Ptr current, PTC::Ptr next, float factor=0.02);
+        bool checkFramesSimilarity(PNTC::Ptr current, PNTC::Ptr next, float factor=0.02);
         //align frames
         Eigen::Matrix4f alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.05);
         //refines frames on model
