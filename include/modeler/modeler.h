@@ -49,7 +49,9 @@
 #include <pcl_ros/transforms.h>
 // #include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
-// #include <pcl/registration/correspondence_rejection_distance.h>
+#include <pcl/registration/correspondence_estimation_backprojection.h>
+#include <pcl/registration/correspondence_estimation_normal_shooting.h>
+#include <pcl/features/normal_3d_omp.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/visualization/pcl_visualizer.h>
 //general utilities

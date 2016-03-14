@@ -460,6 +460,21 @@ Modeler::processQueue()
 Eigen::Matrix4f
 Modeler::alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const Eigen::Matrix4f &guess, const float dist)
 {
+    pcl::NormalEstimationOMP<PT, NT> ne;
+    ne.setRadiusSearch(0.01);
+    ne.useSensorOriginAsViewPoint();
+    ne.setInputCloud(source);
+    NTC source_n;
+    ne.compute(source_n);
+    ne.setInputCloud(target);
+    NTC target_n;
+    ne.compute(target_n);
+    pcl::registration::CorrespondenceEstimationBackProjection<PT,PT,NT>::Ptr cebp =
+        boost::make_shared<pcl::registration::CorrespondenceEstimationBackProjection<PT,PT,NT>>();
+    cebp->setInputSource(source);
+    cebp->setSourceNormals(source_n.makeShared());
+    cebp->setInputTarget(target);
+    cebp->setTargetNormals(target_n.makeShared());
     gicp.setInputTarget(target);
     gicp.setInputSource(source);
     gicp.setEuclideanFitnessEpsilon(1e-7);
@@ -471,6 +486,7 @@ Modeler::alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const 
     gicp.setCorrespondenceRandomness(10);
     gicp.setMaximumOptimizerIterations(50);
     gicp.setRotationEpsilon(1e-5);
+    gicp.setCorrespondenceEstimation(cebp);
     aligned = boost::make_shared<PTC>();
     gicp.align(*aligned, guess);
     // pcl::transformPointCloud(*source, *aligned, icp.getFinalTransformation());
