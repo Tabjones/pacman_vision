@@ -47,12 +47,13 @@
 #include <pcl/octree/octree_pointcloud_adjacency.h>
 #include <pcl/octree/octree_pointcloud_changedetector.h>
 #include <pcl_ros/transforms.h>
+#include <pcl/keypoints/uniform_sampling.h>
 // #include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
 #include <pcl/registration/correspondence_estimation_backprojection.h>
-#include <pcl/registration/correspondence_estimation_normal_shooting.h>
+// #include <pcl/registration/correspondence_estimation_normal_shooting.h>
 #include <pcl/features/normal_3d_omp.h>
-#include <pcl/registration/gicp.h>
+#include <pcl/registration/icp.h>
 #include <pcl/visualization/pcl_visualizer.h>
 //general utilities
 #include <ctime>
@@ -140,10 +141,13 @@ class Modeler: public Module<Modeler>
 
         //PCL objects
         //registration stuff
-        pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr teDQ;
+        pcl::registration::TransformationEstimationDualQuaternion<PN,PN,float>::Ptr teDQ;
+        pcl::registration::CorrespondenceEstimationBackProjection<PN,PN,PN>::Ptr cebp;
         // pcl::registration::CorrespondenceRejectorDistance cr;
+        pcl::IterativeClosestPoint<PN,PN> icp_n;
         pcl::IterativeClosestPoint<PT,PT> icp;
-        pcl::GeneralizedIterativeClosestPoint<PT,PT> gicp;
+        // pcl::GeneralizedIterativeClosestPoint<PT,PT> gicp;
+        double fitness;
         //Octrees
         // pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
         // pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
@@ -154,6 +158,7 @@ class Modeler: public Module<Modeler>
 
         //behaviour
         bool acquiring, processing;
+        bool bad_align;
 
         //init model color for filtering, computed out of first frame
         void computeColorDistribution(const PTC &frame);
@@ -162,13 +167,20 @@ class Modeler: public Module<Modeler>
         //processing queue thread, consume acquisition_q and builds the model
         void processQueue();
         //check if two frames are too similar to each other, return true if similar
-        bool checkFramesSimilarity(PTC::Ptr current, PTC::Ptr next, float factor=0.1);
+        bool checkFramesSimilarity(PTC::Ptr current, PTC::Ptr next, float factor=0.02);
         //align frames
-        Eigen::Matrix4f alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.1);
+        Eigen::Matrix4f alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.05);
         //refines frames on model
         Eigen::Matrix4f refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.005);
         //publish model as it is being created
         void publishModel();
+        //visualizer thread and stuff
+        pcl::PointCloud<pcl::PointXYZRGBA>::Ptr s,t,a;
+        pcl::Correspondences c;
+        std::mutex mtx_viz;
+        std::thread viz_t;
+        bool viz_spin;
+        void spinVisualizer();
 };
 }//namespace
 #endif

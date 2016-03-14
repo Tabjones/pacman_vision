@@ -9,16 +9,16 @@ in_hand_modeler: {color_std_dev_multiplier: 0.9, model_ds_leaf: 0.005, spawn: tr
 keep_organized: false
 limit_xmax: 0.25
 limit_xmin: -0.25
-limit_ymax: 0.30000000000000004
-limit_ymin: -0.30000000000000004
+limit_ymax: 0.3
+limit_ymin: -0.28
 limit_zmax: 0.95
 limit_zmin: 0.3
 listener: {geometry_scale: 1.1, listen_left_arm: false, listen_left_hand: false, listen_right_arm: false,
   listen_right_hand: false, publish_markers: true, remove_left_arm: false, remove_left_hand: false,
   remove_right_arm: false, remove_right_hand: false, spawn: false}
-plane_tolerance: 0.014000000000000005
+plane_tolerance: 0.004999999999999993
 publish_limits: true
 segmenting: true
 sensor: {broadcast_identity_tf: false, internal: false, name: kinect2_optical_frame,
-  topic: /kinect2/qhd/points}
+  topic: /camera/depth_registered/points}
 tracker: {broadcast_tf: true, publish_bounding_box: true, publish_markers: true, spawn: false}

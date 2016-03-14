@@ -143,7 +143,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: kinect2_rgb_optical_frame
+    Fixed Frame: camera_rgb_optical_frame
     Frame Rate: 100
   Name: root
   Tools:

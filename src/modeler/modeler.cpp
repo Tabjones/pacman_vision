@@ -36,7 +36,8 @@ namespace pacv
 {
 
 Modeler::Modeler(const ros::NodeHandle n, const std::string ns, const Storage::Ptr stor)
-    :Module<Modeler>(n,ns,stor), acquiring(false), processing(false)
+    :Module<Modeler>(n,ns,stor), acquiring(false), processing(false), viz_spin(false),
+    fitness(0.0), bad_align(false)
 {
     config=std::make_shared<ModelerConfig>();
     bool run;
@@ -78,7 +79,8 @@ Modeler::init()
     model_ds = boost::make_shared<PTC>();
     model_c = boost::make_shared<PTC>();
     T_ms.setZero();
-    teDQ = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>>();
+    teDQ = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PN,PN,float>>();
+    cebp = boost::make_shared<pcl::registration::CorrespondenceEstimationBackProjection<PN,PN,PN>>();
     //init node params
     for (auto key: config->valid_keys)
     {
@@ -265,9 +267,14 @@ Modeler::spinOnce()
     if (acquiring && !processing){
         processing = true;
         proc_t = std::thread(&Modeler::processQueue, this);
+        viz_spin=true;
+        viz_t = std::thread(&Modeler::spinVisualizer, this);
     }
-    if (!acquiring && !processing && proc_t.joinable())
+    if (!acquiring && !processing && proc_t.joinable()){
         proc_t.join();
+        viz_spin = false;
+        viz_t.join();
+    }
     publishModel();
 }
 
@@ -357,7 +364,7 @@ Modeler::processQueue()
             pcl::copyPointCloud(filtered, *front_ptr);
         }
         //remove similar frames
-        if (checkFramesSimilarity(current, front_ptr)){
+        if (checkFramesSimilarity(current, front_ptr, 0.1)){
             //old and  new frames are  almost equal in point  differences
             //we can remove the new frame and wait for more informative one.
             LOCK guard(mtx_acq);
@@ -388,7 +395,27 @@ Modeler::processQueue()
             vg.filter(*model_ds);
         }
         PTC::Ptr aligned;
-        Eigen::Matrix4f Ticp = alignFrames(front_ptr, current, aligned);
+        Eigen::Matrix4f Ticp = alignFrames(front_ptr, current, aligned, Eigen::Matrix4f::Identity(), 0.03);
+        if (fitness > std::pow(0.02,2) ){
+            std::size_t align_tries(0);
+            while (align_tries<5)
+            {
+                Ticp = alignFrames(front_ptr, current, aligned, Ticp, 0.03);
+                ++align_tries;
+            }
+            //bad alignment throw away this frame, try to align on the next
+            LOCK guard(mtx_acq);
+            acq_size = acquisition_q.size();
+            if (bad_align){
+                //already failed once, give up and get a new pair
+                current = front_ptr;
+                bad_align=false;
+            }
+            else
+                bad_align=true;
+            continue;
+        }
+        T_ms = T_ms * (Ticp.inverse());
         //compose the model
         // PTC::Ptr refined;
         // refineFrames(aligned, refined);
@@ -398,9 +425,11 @@ Modeler::processQueue()
         mtx_model.lock();
         pcl::copyPointCloud(*model_ds, *model_c);
         mtx_model.unlock();
-        T_ms = T_ms * (Ticp.inverse());
-        T_ms = refineFrames(front_ptr, aligned, T_ms, 0.02);
+        T_ms = refineFrames(front_ptr, aligned, T_ms, 0.01);
         *model_c += *aligned;
+        // PTC frame_on_model;
+        // pcl::transformPointCloud(*aligned, frame_on_model, T_ms);
+        // *model_c += frame_on_model;
 
         // viz.updatePointCloud<PT>(model_in_scene.makeShared());
         // viz.spinOnce(2000);
@@ -460,37 +489,112 @@ Modeler::processQueue()
 Eigen::Matrix4f
 Modeler::alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const Eigen::Matrix4f &guess, const float dist)
 {
-    pcl::NormalEstimationOMP<PT, NT> ne;
+    //get a uniform subset of points from source
+    pcl::UniformSampling<PT> us;
+    pcl::search::KdTree<PT>::Ptr tree_s, tree_t;
+    tree_s = boost::make_shared<pcl::search::KdTree<PT>>();
+    tree_t = boost::make_shared<pcl::search::KdTree<PT>>();
+    tree_s->setInputCloud(source);
+    tree_t->setInputCloud(target);
+    us.setRadiusSearch(0.003);
+    us.setSearchMethod(tree_s);
+    us.setInputCloud(source);
+    pcl::PointCloud<int> keyp_idx;
+    PTC::Ptr source_keyp = boost::make_shared<PTC>();
+    us.compute(keyp_idx);
+    for (const auto &i : keyp_idx.points)
+        source_keyp->push_back(source->at(i));
+
+    //compute subset source normals, using the whole surface
+    pcl::NormalEstimationOMP<PT, PN> ne;
     ne.setRadiusSearch(0.01);
     ne.useSensorOriginAsViewPoint();
-    ne.setInputCloud(source);
-    NTC source_n;
-    ne.compute(source_n);
+    ne.setInputCloud(source_keyp);
+    ne.setSearchMethod(tree_s);
+    ne.setSearchSurface(source);
+    PNC::Ptr source_n = boost::make_shared<PNC>();
+    ne.compute(*source_n);
+    for (size_t i=0; i<source_keyp->points.size(); ++i)
+    {
+        source_n->at(i).x = source_keyp->at(i).x;
+        source_n->at(i).y = source_keyp->at(i).y;
+        source_n->at(i).z = source_keyp->at(i).z;
+    }
+    //compute target normal
     ne.setInputCloud(target);
-    NTC target_n;
-    ne.compute(target_n);
-    pcl::registration::CorrespondenceEstimationBackProjection<PT,PT,NT>::Ptr cebp =
-        boost::make_shared<pcl::registration::CorrespondenceEstimationBackProjection<PT,PT,NT>>();
-    cebp->setInputSource(source);
-    cebp->setSourceNormals(source_n.makeShared());
-    cebp->setInputTarget(target);
-    cebp->setTargetNormals(target_n.makeShared());
-    gicp.setInputTarget(target);
-    gicp.setInputSource(source);
-    gicp.setEuclideanFitnessEpsilon(1e-7);
-    gicp.setMaximumIterations(50);
-    gicp.setTransformationEpsilon(1e-9);
-    gicp.setMaxCorrespondenceDistance(dist);
-    gicp.setUseReciprocalCorrespondences(true);
-    gicp.setTransformationEstimation(teDQ);
-    gicp.setCorrespondenceRandomness(10);
-    gicp.setMaximumOptimizerIterations(50);
-    gicp.setRotationEpsilon(1e-5);
-    gicp.setCorrespondenceEstimation(cebp);
+    ne.setSearchMethod(tree_t);
+    ne.setSearchSurface(target);
+    PNC::Ptr target_n = boost::make_shared<PNC>();
+    ne.compute(*target_n);
+    for (size_t i=0; i<target->points.size(); ++i)
+    {
+        target_n->at(i).x = target->at(i).x;
+        target_n->at(i).y = target->at(i).y;
+        target_n->at(i).z = target->at(i).z;
+    }
+    cebp->setInputSource(source_n);
+    cebp->setSourceNormals(source_n);
+    cebp->setInputTarget(target_n);
+    cebp->setTargetNormals(target_n);
+    icp_n.setInputTarget(target_n);
+    icp_n.setInputSource(source_n);
+    icp_n.setEuclideanFitnessEpsilon(1e-6);
+    icp_n.setMaximumIterations(100);
+    icp_n.setTransformationEpsilon(1e-8);
+    icp_n.setMaxCorrespondenceDistance(dist);
+    icp_n.setUseReciprocalCorrespondences(false);
+    icp_n.setTransformationEstimation(teDQ);
+    icp_n.setCorrespondenceEstimation(cebp);
+    // icp.setCorrespondenceRandomness(10);
+    // icp.setMaximumOptimizerIterations(50);
+    // icp.setRotationEpsilon(5e-5);
     aligned = boost::make_shared<PTC>();
-    gicp.align(*aligned, guess);
-    // pcl::transformPointCloud(*source, *aligned, icp.getFinalTransformation());
-    return gicp.getFinalTransformation();
+    PNC ali;
+    icp_n.align(ali, guess);
+
+    //debug viz
+    LOCK guard(mtx_viz);
+    fitness = icp_n.getFitnessScore();
+    s->clear();
+    t->clear();
+    a->clear();
+    for (const auto &pt: source->points)
+    {
+        pcl::PointXYZRGBA p;
+        p.x = pt.x;
+        p.y = pt.y;
+        p.z = pt.z;
+        p.r=255;
+        p.g = 0;
+        p.b = 0;
+        s->push_back(p);
+    }
+    for (const auto &pt: target->points)
+    {
+        pcl::PointXYZRGBA p;
+        p.x = pt.x;
+        p.y = pt.y;
+        p.z = pt.z;
+        p.r = 0;
+        p.g = 0;
+        p.b = 255;
+        t->push_back(p);
+    }
+    for (const auto &pt: ali.points)
+    {
+        pcl::PointXYZRGBA p;
+        p.x = pt.x;
+        p.y = pt.y;
+        p.z = pt.z;
+        p.r = 0;
+        p.g = 255;
+        p.b = 0;
+        a->push_back(p);
+    }
+    // cebp->determineCorrespondences(c, dist);
+    ///////////////////////////
+    pcl::transformPointCloud(*source, *aligned, icp_n.getFinalTransformation());
+    return icp_n.getFinalTransformation();
 }
 
 Eigen::Matrix4f
@@ -503,12 +607,14 @@ Modeler::refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const Eigen::Matrix4f &
 
     icp.setInputTarget(model);
     icp.setInputSource(frame);
-    icp.setEuclideanFitnessEpsilon(1e-7);
+    icp.setEuclideanFitnessEpsilon(1e-9);
     icp.setMaximumIterations(10);
     icp.setTransformationEpsilon(1e-9);
     icp.setMaxCorrespondenceDistance(dist);
-    icp.setUseReciprocalCorrespondences(true);
-    icp.setTransformationEstimation(teDQ);
+    icp.setUseReciprocalCorrespondences(false);
+    pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>::Ptr te =
+        boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PT,PT,float>>();
+    icp.setTransformationEstimation(te);
     refined = boost::make_shared<PTC>();
     icp.align(*refined, guess);
     return icp.getFinalTransformation();
@@ -526,6 +632,39 @@ Modeler::publishModel()
             pub_model.publish(model_ds);
         }
 }
+
+void
+Modeler::spinVisualizer()
+{
+    //debug visualization
+    a=boost::make_shared<pcl::PointCloud<pcl::PointXYZRGBA>>();
+    t=boost::make_shared<pcl::PointCloud<pcl::PointXYZRGBA>>();
+    s=boost::make_shared<pcl::PointCloud<pcl::PointXYZRGBA>>();
+    while (a->empty() || s->empty() || t->empty())
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    pcl::visualization::PCLVisualizer viz;
+    mtx_viz.lock();
+    viz.addPointCloud(s, "source");
+    viz.addPointCloud(t, "target");
+    viz.addPointCloud(a, "aligned");
+    // viz.addCorrespondences<pcl::PointXYZRGBA>(s,t, c, "corrs");
+    std::string text = "Fitness: " + std::to_string(std::sqrt(fitness));
+    viz.addText(text, 30, 30, 1.0, 0.0, 0.8, "fit");
+    mtx_viz.unlock();
+    while(viz_spin){
+        mtx_viz.lock();
+        viz.updatePointCloud(s, "source");
+        viz.updatePointCloud(t, "target");
+        viz.updatePointCloud(a, "aligned");
+        // viz.updateCorrespondences<pcl::PointXYZRGBA>(s, t, c, 1, "corrs");
+        text = "Fitness: " + std::to_string(std::sqrt(fitness));
+        viz.updateText(text, 30,30, "fit");
+        mtx_viz.unlock();
+        viz.spinOnce(300);
+    }
+    viz.close();
+}
+
 } //namespace
 
 // bool
