@@ -71,13 +71,13 @@ Modeler::init()
     srv_save = nh->advertiseService("save_model", &Modeler::cb_save_model, this);
     std::string mark_topic(getFatherNamespace()+"/markers");
     pub_markers = nh->advertise<visualization_msgs::MarkerArray>(mark_topic, 1);
-    pub_model = nh->advertise<PTC>("model", 1);
+    pub_model = nh->advertise<PNTC>("model", 1);
     //add subscriber TODO
     acquisition_q.clear();
     T_km.setIdentity();
     T_mk.setIdentity();
-    model_ds = boost::make_shared<PTC>();
-    model_c = boost::make_shared<PTC>();
+    model_ds = boost::make_shared<PNTC>();
+    model_c = boost::make_shared<PNTC>();
     T_ms.setZero();
     teDQ = boost::make_shared<pcl::registration::TransformationEstimationDualQuaternion<PN,PN,float>>();
     cebp = boost::make_shared<pcl::registration::CorrespondenceEstimationBackProjection<PN,PN,PN>>();
@@ -127,8 +127,8 @@ Modeler::cb_reset_model(pacman_vision_comm::reset_model::Request& req, pacman_vi
         proc_t.join();
     }
     T_ms.setZero();
-    model_c = boost::make_shared<PTC>();
-    model_ds = boost::make_shared<PTC>();
+    model_c = boost::make_shared<PNTC>();
+    model_ds = boost::make_shared<PNTC>();
     return true;
 }
 
@@ -296,6 +296,29 @@ Modeler::checkFramesSimilarity(PNTC::Ptr current, PNTC::Ptr next, float factor)
         //more than factor% points are changed, frames are different
         return false;
 }
+bool
+Modeler::initModel(PTC::Ptr frame)
+{
+    if (!model_c){
+        ROS_ERROR("[Modeler::%s]\tModel pointer empty, something went wrong in node initialization, reset model with service and try again",__func__);
+        return false;
+    }
+    if (!frame){
+        ROS_ERROR("[Modeler::%s]\tFrame pointer empty",__func__);
+        return false;
+    }
+    bool color_f;
+    config->get("use_color_filtering", color_f);
+    if (color_f)
+        computeColorDistribution(*frame);
+    PNTC tmp;
+    pcl::NormalEstimationOMP<PT, PTN> ne;
+    ne.setRadiusSearch(0.01); //TODO make it function of scene leaf size
+    ne.useSensorOriginAsViewPoint();
+    ne.setInputCloud(frame);
+    ne.compute(tmp);
+    //TODO here
+}
 
 void
 Modeler::processQueue()
@@ -303,12 +326,15 @@ Modeler::processQueue()
     while (!first_frame)
         std::this_thread::sleep_for(std::chrono::milliseconds(30));
     ROS_INFO("[Modeler::%s]\tStarted",__func__);
+    if (!initModel()){
+        processing=false;
+        acquiring=false;
+        first_frame.reset();
+        return;
+    }
     std::size_t acq_size(1);
-    PNTC::Ptr current = boost::make_shared<PNTC>();
-    bool color_f;
-    config->get("use_color_filtering", color_f);
-    if (color_f)
-        computeColorDistribution(*first_frame);
+    pcl::compute3DCentroid(*first_frame, centroid);
+    pcl::demeanPointCloud(*current, centroid, *model_c);
 
     pcl::copyPointCloud(*first_frame, *current);
     // pcl::visualization::PCLVisualizer viz;
@@ -376,8 +402,6 @@ Modeler::processQueue()
         pcl::VoxelGrid<PT> vg;
         Eigen::Vector4f centroid;
         if (T_ms.isZero()){
-            pcl::compute3DCentroid(*current, centroid);
-            pcl::demeanPointCloud(*current, centroid, *model_c);
             T_ms.block<3,3>(0,0) = Eigen::Matrix3f::Identity();
             T_ms.row(3) = Eigen::Vector4f::Zero();
             T_ms.col(3) = -centroid;

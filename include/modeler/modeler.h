@@ -133,7 +133,7 @@ class Modeler: public Module<Modeler>
         PTC::Ptr first_frame;
 
         //model and downsampled model
-        PTC::Ptr model_c, model_ds;
+        PNTC::Ptr model_c, model_ds;
         //model color
         double mean_L, mean_a, mean_b;
         double model_mean_dE, model_stddev_dE;
@@ -160,6 +160,8 @@ class Modeler: public Module<Modeler>
         bool acquiring, processing;
         bool bad_align;
 
+        //init model from the first frame
+        bool initModel(PTC::Ptr frame);
         //init model color for filtering, computed out of first frame
         void computeColorDistribution(const PTC &frame);
         //tell if a point is inside the color distribution
