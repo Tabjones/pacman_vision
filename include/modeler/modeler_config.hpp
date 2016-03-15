@@ -41,17 +41,16 @@ class ModelerConfig: public Config<ModelerConfig>
     public:
     typedef std::shared_ptr<ModelerConfig> Ptr;
     friend class Config<ModelerConfig>;
-    const std::array<std::string,11> valid_keys;
+    const std::array<std::string,5> valid_keys;
     ModelerConfig():
     valid_keys {{"spawn", "use_color_filtering", "color_std_dev_multiplier", "model_ds_leaf",
-                 "color_k_neigh", "remove_right_arm", "remove_left_arm",
-                 "remove_left_hand", "remove_right_hand", "publish_markers",
-                 "geometry_scale"}}
+                 "use_gicp"}}
     {
         //TODO
         //create maps
         map_bool["spawn"] = false;
         map_bool["use_color_filtering"] = true;
+        map_bool["use_gicp"] = false;
         // map_bool["listen_left_arm"] = false;
         // map_bool["listen_right_hand"] = false;
         // map_bool["listen_left_hand"] = false;

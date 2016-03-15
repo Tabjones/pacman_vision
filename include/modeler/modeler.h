@@ -54,6 +54,7 @@
 // #include <pcl/registration/correspondence_estimation_normal_shooting.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/registration/icp.h>
+#include <pcl/registration/gicp.h>
 #include <pcl/visualization/pcl_visualizer.h>
 //general utilities
 #include <ctime>
@@ -141,12 +142,11 @@ class Modeler: public Module<Modeler>
 
         //PCL objects
         //registration stuff
-        pcl::registration::TransformationEstimationDualQuaternion<PN,PN,float>::Ptr teDQ;
-        pcl::registration::CorrespondenceEstimationBackProjection<PN,PN,PN>::Ptr cebp;
+        pcl::registration::TransformationEstimationDualQuaternion<PNT,PNT,float>::Ptr teDQ;
+        pcl::registration::CorrespondenceEstimationBackProjection<PNT,PNT,PNT>::Ptr cebp;
         // pcl::registration::CorrespondenceRejectorDistance cr;
-        pcl::IterativeClosestPoint<PN,PN> icp_n;
-        pcl::IterativeClosestPoint<PT,PT> icp;
-        // pcl::GeneralizedIterativeClosestPoint<PT,PT> gicp;
+        pcl::IterativeClosestPoint<PNT,PNT> icp;
+        pcl::GeneralizedIterativeClosestPoint<PNT,PNT> gicp;
         double fitness;
         //Octrees
         // pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
@@ -168,16 +168,17 @@ class Modeler: public Module<Modeler>
         bool colorMetricInclusion(const PT &pt);
         //processing queue thread, consume acquisition_q and builds the model
         void processQueue();
-        //check if two frames are too similar to each other, return true if similar
-        bool checkFramesSimilarity(PNTC::Ptr current, PNTC::Ptr next, float factor=0.02);
-        //align frames
-        Eigen::Matrix4f alignFrames(PTC::Ptr target, PTC::Ptr source, PTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.05);
+        //check if a frame is too similar to the model, return true if similar
+        bool checkFrameSimilarity(PTC::Ptr frame, float factor=0.02);
+        //align a frame over the model
+        Eigen::Matrix4f alignFrame(PTC::Ptr frame, PNTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.05);
         //refines frames on model
-        Eigen::Matrix4f refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.005);
+        // Eigen::Matrix4f refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.005);
         //publish model as it is being created
         void publishModel();
         //visualizer thread and stuff
         pcl::PointCloud<pcl::PointXYZRGBA>::Ptr s,t,a;
+        PNC::Ptr ns,nt;
         pcl::Correspondences c;
         std::mutex mtx_viz;
         std::thread viz_t;
