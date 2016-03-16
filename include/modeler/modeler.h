@@ -48,6 +48,7 @@
 #include <pcl/octree/octree_pointcloud_changedetector.h>
 #include <pcl_ros/transforms.h>
 #include <pcl/keypoints/uniform_sampling.h>
+#include <pcl/segmentation/conditional_euclidean_clustering.h>
 // #include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
 #include <pcl/registration/correspondence_estimation_backprojection.h>
@@ -71,6 +72,10 @@
 
 namespace pacv
 {
+    double normal_similarity_thresh;
+    //Conditional clustering function
+    bool enforceNormalSimilarity (const PNT& pa, const PNT& pb, float squared_distance);
+
 class Modeler: public Module<Modeler>
 {
     friend class Module<Modeler>;
@@ -148,10 +153,6 @@ class Modeler: public Module<Modeler>
         pcl::IterativeClosestPoint<PNT,PNT> icp;
         pcl::GeneralizedIterativeClosestPoint<PNT,PNT> gicp;
         double fitness;
-        //Octrees
-        // pcl::octree::OctreePointCloudAdjacency<PT> oct_adj;
-        // pcl::octree::OctreePointCloudChangeDetector<PT> oct_cd;
-
         //Threads stuff
         std::thread proc_t;
         std::mutex mtx_acq, mtx_model;
@@ -171,7 +172,7 @@ class Modeler: public Module<Modeler>
         //check if a frame is too similar to the model, return true if similar
         bool checkFrameSimilarity(PTC::Ptr frame, float factor=0.02);
         //align a frame over the model
-        Eigen::Matrix4f alignFrame(PTC::Ptr frame, PNTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.05);
+        Eigen::Matrix4f alignFrame(PNTC::Ptr frame, PNTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.05);
         //refines frames on model
         // Eigen::Matrix4f refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.005);
         //publish model as it is being created

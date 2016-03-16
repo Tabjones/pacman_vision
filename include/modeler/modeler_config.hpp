@@ -41,10 +41,10 @@ class ModelerConfig: public Config<ModelerConfig>
     public:
     typedef std::shared_ptr<ModelerConfig> Ptr;
     friend class Config<ModelerConfig>;
-    const std::array<std::string,5> valid_keys;
+    const std::array<std::string,6> valid_keys;
     ModelerConfig():
     valid_keys {{"spawn", "use_color_filtering", "color_std_dev_multiplier", "model_ds_leaf",
-                 "use_gicp"}}
+                 "use_gicp", "normals_ang_thresh"}}
     {
         //TODO
         //create maps
@@ -61,6 +61,7 @@ class ModelerConfig: public Config<ModelerConfig>
         // map_bool["publish_markers"] = true;
         map_double["color_std_dev_multiplier"] = 1.0;
         map_double["model_ds_leaf"] = 0.003;
+        map_double["normals_ang_thresh"] = 30.0;
         // map_int["color_k_neigh"] = 20;
     }
 };
