@@ -72,7 +72,7 @@
 
 namespace pacv
 {
-    double normal_similarity_thresh;
+    double normal_similarity_thresh, curv_thresh;
     //Conditional clustering function
     bool enforceNormalSimilarity (const PNT& pa, const PNT& pb, float squared_distance);
 
@@ -140,10 +140,6 @@ class Modeler: public Module<Modeler>
 
         //model and downsampled model
         PNTC::Ptr model_c, model_ds;
-        //model color
-        double mean_L, mean_a, mean_b;
-        double model_mean_dE, model_stddev_dE;
-        double stddev_mul;
 
         //PCL objects
         //registration stuff
@@ -163,10 +159,6 @@ class Modeler: public Module<Modeler>
 
         //init model from the first frame
         bool initModel(PTC::Ptr frame);
-        //init model color for filtering, computed out of first frame
-        void computeColorDistribution(const PTC &frame);
-        //tell if a point is inside the color distribution
-        bool colorMetricInclusion(const PT &pt);
         //processing queue thread, consume acquisition_q and builds the model
         void processQueue();
         //check if a frame is too similar to the model, return true if similar

@@ -6,8 +6,8 @@ downsampling_leaf_size: 0.003
 estimator: {always_success: true, broadcast_tf: true, cluster_tol: 0.05, iterations: 5,
   neighbors: 20, object_calibration: false, publish_markers: true, rmse_thresh: 0.005,
   spawn: false}
-in_hand_modeler: {color_std_dev_multiplier: 0.9, model_ds_leaf: 0.003, normals_ang_thresh: 10.0,
-  spawn: true, use_color_filtering: true, use_gicp: false}
+in_hand_modeler: {model_ds_leaf: 0.001, normals_ang_thresh: 10.0,
+spawn: true, use_gicp: false, curvature_thresh: 0.2}
 keep_organized: false
 limit_xmax: 0.25
 limit_xmin: -0.15

@@ -161,58 +161,6 @@ Modeler::cb_save_model(pacman_vision_comm::save_model::Request& req, pacman_visi
     }
 }
 
-void
-Modeler::computeColorDistribution(const PTC &frame)
-{
-    model_mean_dE = 0.0;
-    mean_L = mean_a = mean_b = 0.0;
-    std::vector<double> color_dists;
-    //calculate mean color of the frame
-    for (const auto& pt: frame.points)
-    {
-        double L, a, b;
-        convertPCLColorToCIELAB(pt, L, a, b);
-        mean_L += L;
-        mean_a += a;
-        mean_b += b;
-    }
-    mean_L /= frame.size();
-    mean_a /= frame.size();
-    mean_b /= frame.size();
-    //calculate mean deltaE of points from mean color
-    for (const auto& pt: frame.points)
-    {
-        double L, a, b;
-        convertPCLColorToCIELAB(pt, L,a,b);
-        color_dists.push_back(deltaE(mean_L,mean_a,mean_b, L,a,b));
-        model_mean_dE += color_dists.back();
-    }
-    model_mean_dE /= color_dists.size();
-    model_stddev_dE = 0.0;
-    //calculate standard deviation of distance distribution
-    for (const auto& d: color_dists)
-        model_stddev_dE += std::pow(model_mean_dE - d, 2);
-    model_stddev_dE /= color_dists.size();
-    model_stddev_dE = std::sqrt(model_stddev_dE);
-    // std::cout<<"mean L "<<mean_L<<" mean a "<<mean_a<<" mean_b "<<mean_b<<std::endl;
-    // std::cout<<"mean deltaE "<<model_mean_dE<<" std Dev deltaE "<<model_stddev_dE<<std::endl;
-}
-bool
-Modeler::colorMetricInclusion(const PT &pt)
-{
-    config->get("color_std_dev_multiplier", stddev_mul);
-    double dEM, dEm;
-    dEM =  model_mean_dE + model_stddev_dE*stddev_mul;
-    dEm =  model_mean_dE - model_stddev_dE*stddev_mul;
-    double L,a,b;
-    convertPCLColorToCIELAB(pt, L,a,b);
-    double dE = deltaE(mean_L, mean_a, mean_b, L, a, b);
-    if (dE > dEM || dE < dEm )
-        return false;
-    else
-        return true;
-}
-
 bool
 Modeler::cb_start(pacman_vision_comm::start_modeler::Request& req, pacman_vision_comm::start_modeler::Response& res)
 {
@@ -315,10 +263,6 @@ Modeler::initModel(PTC::Ptr frame)
         ROS_ERROR("[Modeler::%s]\tFrame pointer empty",__func__);
         return false;
     }
-    bool color_f;
-    config->get("use_color_filtering", color_f);
-    if (color_f)
-        computeColorDistribution(*frame);
     PNTC tmp;
     pcl::NormalEstimationOMP<PT, PNT> ne;
     ne.setRadiusSearch(0.01); //TODO make it function of scene leaf size
@@ -377,10 +321,12 @@ enforceNormalSimilarity (const PNT& pa, const PNT& pb, float squared_distance)
     Eigen::Map<const Eigen::Vector3f> na = pa.normal;
     Eigen::Map<const Eigen::Vector3f> nb = pb.normal;
     float cos_angle = na.dot(nb);
-    if (cos_angle >= normal_similarity_thresh)
-        return true;
-    else
-        return false;
+    float curv_dist = std::fabs(pa.curvature - pb.curvature);
+    if (squared_distance <= 1e-4){
+        if (cos_angle >= normal_similarity_thresh && curv_dist <= curv_thresh)
+            return true;
+    }
+    return false;
 }
 
 void
@@ -421,31 +367,6 @@ Modeler::processQueue()
             acq_size = acquisition_q.size();
             continue;
         }
-        bool color_f;
-        config->get("use_color_filtering", color_f);
-        if (color_f){
-            pcl::IndicesPtr kept_points = boost::make_shared<std::vector<int>>();
-            for (std::size_t i=0; i< front_ptr->points.size(); ++i)
-            {
-                PT pt;
-                pt.r = front_ptr->points[i].r;
-                pt.g = front_ptr->points[i].g;
-                pt.b = front_ptr->points[i].b;
-                if (colorMetricInclusion(pt))
-                    kept_points->push_back(i);
-            }
-            pcl::ExtractIndices<PT> eif;
-            PTC filtered;
-            eif.setInputCloud(front_ptr);
-            eif.setIndices(kept_points);
-            eif.filter(filtered);
-            pcl::StatisticalOutlierRemoval<PT> sor;
-            sor.setInputCloud(filtered.makeShared());
-            sor.setMeanK(50);
-            sor.setStddevMulThresh(5.0);
-            sor.filter(*front_ptr);
-            // pcl::copyPointCloud(filtered, *front_ptr);
-        }
         //remove similar frames
         if (checkFrameSimilarity(front_ptr, 0.05)){
             //this frame does not add much to the model
@@ -458,6 +379,7 @@ Modeler::processQueue()
         //read normals ang threshold
         double ang_thresh;
         config->get("normals_ang_thresh", ang_thresh);
+        config->get("curvature_thresh", curv_thresh);
         normal_similarity_thresh = std::cos(ang_thresh*D2R);
         //compute normals
         pcl::NormalEstimationOMP<PT, PNT> ne;
@@ -491,7 +413,7 @@ Modeler::processQueue()
         cec.setInputCloud(front_with_normals);
         cec.setConditionFunction(&enforceNormalSimilarity);
         cec.setClusterTolerance(0.01);
-        cec.setMinClusterSize(50);
+        cec.setMinClusterSize(10);
         cec.setMaxClusterSize(front_with_normals->size());
         cec.segment(*clusters);
         cec.getRemovedClusters(too_small_clusters, too_big_clusters);
