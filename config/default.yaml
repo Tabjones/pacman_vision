@@ -1,4 +1,6 @@
 cropping: true
+color_dist_thresh: 20.0
+color_filter: false
 downsampling: false
 downsampling_leaf_size: 0.01
 keep_organized: false
@@ -11,6 +13,9 @@ limit_zmin: 0.3
 publish_limits: true
 segmenting: false
 plane_tolerance: 0.005
+outliers_filter: false
+outliers_mean_k: 50
+outliers_std_mul: 2.0
 estimator: {
     spawn: false,
     cluster_tol: 0.05,
@@ -47,9 +52,9 @@ tracker: {
     publish_markers: true,
     broadcast_tf: true
 }
-modeler: {
+in_hand_modeler: {
     spawn: false,
-    use_color_filtering: true,
-    color_std_dev_multiplier: 1.5,
-    model_ds_leaf: 0.001
+    model_ds_leaf: 0.003,
+    normals_ang_thresh: 10.0,
+    use_gicp: false
 }

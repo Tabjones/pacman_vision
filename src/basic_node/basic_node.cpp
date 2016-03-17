@@ -37,7 +37,7 @@
 namespace pacv
 {
 BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor):
-        Module<BasicNode>(ns,stor)
+        Module<BasicNode>(ns,stor), was_color_filtering(false)
 {
     scene_processed = boost::make_shared<PTC>();
     config = std::make_shared<BasicConfig>();
@@ -177,6 +177,22 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
 }
 
 void
+BasicNode::remove_outliers(const PTC::ConstPtr source, PTC::Ptr &dest)
+{
+    if (!dest)
+        dest=boost::make_shared<PTC>();
+    pcl::StatisticalOutlierRemoval<PT> sor;
+    int k;
+    double std_mul;
+    config->get("outliers_mean_k", k);
+    config->get("outliers_std_mul", std_mul);
+    sor.setInputCloud(source);
+    sor.setMeanK(k);
+    sor.setStddevMulThresh(std_mul);
+    sor.filter(*dest);
+}
+
+void
 BasicNode::downsamp_scene(const PTC::ConstPtr source, PTC::Ptr &dest){
     //cannot keep organized cloud after voxelgrid
     if (!dest)
@@ -236,6 +252,43 @@ BasicNode::segment_scene(const PTC::ConstPtr source, PTC::Ptr &dest)
      * }
      */
 }
+
+void
+BasicNode::extract_principal_color(const PTC::ConstPtr scene)
+{
+    //for now just compute the mean color...
+    //in the future we can create some palette and let the user choose
+    mean_L = mean_a = mean_b = 0.0;
+    for (const auto& pt: scene->points)
+    {
+        double L, a, b;
+        convertPCLColorToCIELAB(pt, L, a, b);
+        mean_L += L;
+        mean_a += a;
+        mean_b += b;
+    }
+    mean_L /= scene->size();
+    mean_a /= scene->size();
+    mean_b /= scene->size();
+}
+
+void
+BasicNode::apply_color_filter(const PTC::ConstPtr source, PTC::Ptr &dest)
+{
+    if (!dest)
+        dest=boost::make_shared<PTC>();
+    double thresh;
+    config->get("color_dist_thresh", thresh);
+    for (std::size_t i=0; i< source->size(); ++i)
+    {
+        double L,a,b;
+        convertPCLColorToCIELAB(source->points[i], L,a,b);
+        double dE = deltaE(mean_L, mean_a, mean_b, L,a,b);
+        if ( dE <= thresh )
+            dest->push_back(source->points[i]);
+    }
+}
+
 void
 BasicNode::process_scene()
 {
@@ -246,10 +299,19 @@ BasicNode::process_scene()
         return;
     if(source->empty())
         return;
-    bool crop, downsamp, segment;
+    bool crop, downsamp, segment, outliers, color;
     config->get("cropping", crop);
     config->get("downsampling", downsamp);
     config->get("segmenting", segment);
+    config->get("outliers_filter", outliers);
+    config->get("color_filter", color);
+    if (color && !was_color_filtering){
+        //we compute a new color model
+        PTC::Ptr last_processed_scene;
+        storage->readSceneProcessed(last_processed_scene);
+        extract_principal_color(last_processed_scene);
+    }
+    was_color_filtering = color;
     PTC::Ptr tmp = boost::make_shared<PTC>();
     PTC::Ptr dest;
     if (crop){
@@ -274,6 +336,7 @@ BasicNode::process_scene()
         if(dest->empty())
             return;
     }
+    //check if we need the plane segmentation
     if (segment){
         if (dest){
             //means we have performed at least one filter before this
@@ -283,6 +346,32 @@ BasicNode::process_scene()
         }
         else
             segment_scene(source, dest);
+        if(dest->empty())
+            return;
+    }
+    //check if we need to apply a color filter
+    if (color){
+        if (dest){
+            //means we have performed at least one filter before this
+            apply_color_filter(dest, tmp);
+            dest = tmp;
+            tmp = boost::make_shared<PTC>();
+        }
+        else
+            apply_color_filter(source, dest);
+        if(dest->empty())
+            return;
+    }
+    //check if we need to remove outliers
+    if (outliers){
+        if (dest){
+            //means we have performed at least one filter before this
+            remove_outliers(dest, tmp);
+            dest = tmp;
+            tmp = boost::make_shared<PTC>();
+        }
+        else
+            remove_outliers(source, dest);
         if(dest->empty())
             return;
     }

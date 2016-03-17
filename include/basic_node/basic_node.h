@@ -49,6 +49,7 @@
 //PCL
 #include <pcl/io/pcd_io.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/sample_consensus/method_types.h>
@@ -96,6 +97,10 @@ class BasicNode: public Module<BasicNode>
 #ifdef PACV_LISTENER_SUPPORT
         ListenerConfig::Ptr list_config;
 #endif
+        //color filtering behaviour
+        bool was_color_filtering;
+        //mena CIELab color found
+        double mean_L, mean_a, mean_b;
         //Message Publisher to republish processed scene
         ros::Publisher pub_scene;
         //publisher for markers
@@ -118,7 +123,10 @@ class BasicNode: public Module<BasicNode>
         void spin();
         void spinOnce();
         void downsamp_scene(const PTC::ConstPtr source, PTC::Ptr &dest);
+        void remove_outliers(const PTC::ConstPtr source, PTC::Ptr &dest);
         void segment_scene(const PTC::ConstPtr source, PTC::Ptr &dest);
+        void extract_principal_color(const PTC::ConstPtr scene);
+        void apply_color_filter(const PTC::ConstPtr source, PTC::Ptr &dest);
         void publish_markers();
         //Create a box marker
         /* TODO move into listener, handle realtime cropping with services OR conditional variable

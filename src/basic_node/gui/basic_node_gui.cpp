@@ -80,11 +80,22 @@ void BasicNodeGui::init()
     ui->OrganizedButt->setChecked(value);
     s_config->get("broadcast_identity_tf", value);
     ui->BrdButt->setChecked(value);
+    config->get("outliers_filter", value);
+    ui->OutiliersButt->setChecked(value);
+    config->get("color_filter", value);
+    ui->ColorButt->setChecked(value);
+    int ouk;
+    config->get("outliers_mean_k", ouk);
+    ui->OutliersK->setValue(ouk);
     double ls,pt;
     config->get("downsampling_leaf_size", ls);
     config->get("plane_tolerance", pt);
     ui->Leaf->setValue(ls);
     ui->Plane->setValue(pt);
+    config->get("outliers_std_mul", ls);
+    ui->OutliersS->setValue(ls);
+    config->get("color_dist_thresh",pt);
+    ui->Color->setValue(pt);
     config->get("filter_limits", lim);
     ui->Xmin->setValue(lim.x1);
     ui->Xmax->setValue(lim.x2);
@@ -443,4 +454,47 @@ void BasicNodeGui::on_LoadConfB_clicked()
         emit loadConf(fn);
     }
     ui->LoadConfB->setDisabled(false);
+}
+
+void BasicNodeGui::on_ColorButt_clicked(bool checked)
+{
+    if(checked){
+        ui->ColorF->setDisabled(false);
+        //color_filter=true
+        config->set("color_filter", true);
+    }
+    if(!checked){
+        ui->ColorF->setDisabled(true);
+        //color_filter=false
+        config->set("color_filter", false);
+    }
+}
+
+void BasicNodeGui::on_OutiliersButt_clicked(bool checked)
+{
+    if(checked){
+        ui->OutliersKF->setDisabled(false);
+        ui->OutliersSF->setDisabled(false);
+        config->set("outliers_filter", true);
+    }
+    if(!checked){
+        ui->OutliersKF->setDisabled(true);
+        ui->OutliersSF->setDisabled(true);
+        config->set("outliers_filter", false);
+    }
+}
+
+void BasicNodeGui::on_OutliersK_valueChanged(int arg1)
+{
+   config->set("outliers_mean_k", arg1);
+}
+
+void BasicNodeGui::on_OutliersS_valueChanged(double arg1)
+{
+   config->set("outliers_std_mul", arg1);
+}
+
+void BasicNodeGui::on_Color_valueChanged(double arg1)
+{
+   config->set("color_dist_thresh", arg1);
 }

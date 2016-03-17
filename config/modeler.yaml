@@ -1,3 +1,5 @@
+color_dist_thresh: 20.0
+color_filter: false
 cropping: true
 downsampling: true
 downsampling_leaf_size: 0.003
@@ -8,7 +10,7 @@ in_hand_modeler: {color_std_dev_multiplier: 0.9, model_ds_leaf: 0.003, normals_a
   spawn: true, use_color_filtering: true, use_gicp: false}
 keep_organized: false
 limit_xmax: 0.25
-limit_xmin: -0.25
+limit_xmin: -0.15
 limit_ymax: 0.3
 limit_ymin: -0.28
 limit_zmax: 0.95
@@ -16,7 +18,10 @@ limit_zmin: 0.3
 listener: {geometry_scale: 1.1, listen_left_arm: false, listen_left_hand: false, listen_right_arm: false,
   listen_right_hand: false, publish_markers: true, remove_left_arm: false, remove_left_hand: false,
   remove_right_arm: false, remove_right_hand: false, spawn: false}
-plane_tolerance: 0.015000000000000006
+outliers_filter: true
+outliers_mean_k: 50
+outliers_std_mul: 2.0
+plane_tolerance: 0.015
 publish_limits: true
 segmenting: true
 sensor: {broadcast_identity_tf: false, internal: false, name: kinect2_optical_frame,

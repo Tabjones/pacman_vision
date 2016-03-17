@@ -90,6 +90,16 @@ private slots:
     void on_SaveConfB_clicked();
     void on_LoadConfB_clicked();
 
+    void on_ColorButt_clicked(bool checked);
+
+    void on_OutiliersButt_clicked(bool checked);
+
+    void on_OutliersK_valueChanged(int arg1);
+
+    void on_OutliersS_valueChanged(double arg1);
+
+    void on_Color_valueChanged(double arg1);
+
 private:
     Ui::BasicNodeGui *ui;
     pacv::Box lim;
