@@ -49,6 +49,7 @@
 #include <pcl_ros/transforms.h>
 #include <pcl/keypoints/uniform_sampling.h>
 #include <pcl/segmentation/conditional_euclidean_clustering.h>
+#include <pcl/segmentation/impl/supervoxel_clustering.hpp>
 // #include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
 #include <pcl/registration/correspondence_estimation_backprojection.h>
@@ -164,7 +165,7 @@ class Modeler: public Module<Modeler>
         //check if a frame is too similar to the model, return true if similar
         bool checkFrameSimilarity(PTC::Ptr frame, float factor=0.02);
         //align a frame over the model
-        Eigen::Matrix4f alignFrame(PNTC::Ptr frame, PNTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.05);
+        Eigen::Matrix4f alignFrame(PNTC::Ptr frame, PNTC::Ptr &aligned, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.05, const bool force_no_normals=false);
         //refines frames on model
         // Eigen::Matrix4f refineFrames(PTC::Ptr frame, PTC::Ptr &refined, const Eigen::Matrix4f &guess=Eigen::Matrix4f::Identity(), const float dist=0.005);
         //publish model as it is being created

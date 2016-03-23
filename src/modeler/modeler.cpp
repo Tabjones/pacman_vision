@@ -234,7 +234,7 @@ Modeler::checkFrameSimilarity(PTC::Ptr frame, float factor)
         LOCK guard(mtx_model);
         pcl::copyPointCloud(*model_ds, model);
     }
-    pcl::octree::OctreePointCloudChangeDetector<PT> octcd(0.005);
+    pcl::octree::OctreePointCloudChangeDetector<PT> octcd(0.005);  //TODO need to be function of scene leaf size
     octcd.setInputCloud(model.makeShared());
     octcd.addPointsFromInputCloud();
     octcd.switchBuffers();
@@ -308,8 +308,8 @@ Modeler::initModel(PTC::Ptr frame)
     PNTC ds;
     vg.filter(ds);
     sor.setInputCloud(ds.makeShared());
-    sor.setMeanK(50);
-    sor.setStddevMulThresh(3.0);
+    sor.setMeanK(100);
+    sor.setStddevMulThresh(10.0);
     LOCK guard(mtx_model);
     sor.filter(*model_ds);
     return true;
@@ -322,10 +322,10 @@ enforceNormalSimilarity (const PNT& pa, const PNT& pb, float squared_distance)
     Eigen::Map<const Eigen::Vector3f> nb = pb.normal;
     float cos_angle = na.dot(nb);
     float curv_dist = std::fabs(pa.curvature - pb.curvature);
-    if (squared_distance <= 1e-4){
+    // if (squared_distance <= 1e-4){
         if (cos_angle >= normal_similarity_thresh && curv_dist <= curv_thresh)
             return true;
-    }
+    // }
     return false;
 }
 
@@ -368,7 +368,7 @@ Modeler::processQueue()
             continue;
         }
         //remove similar frames
-        if (checkFrameSimilarity(front_ptr, 0.05)){
+        if (checkFrameSimilarity(front_ptr, 0.1)){
             //this frame does not add much to the model
             //we can skip it and wait for a more informative one.
             LOCK guard(mtx_acq);
@@ -399,58 +399,93 @@ Modeler::processQueue()
         }
         PNTC::Ptr aligned;
         //get rough transform estimate to use as guess
-        T_ms = alignFrame(front_with_normals, aligned, T_ms, 0.1);
+        // T_ms = alignFrame(front_with_normals, aligned, T_ms, 0.1);
         //get a model copy
         mtx_model.lock();
         pcl::copyPointCloud(*model_ds, *model_c);
         mtx_model.unlock();
 
         //clusterize the frame and align each one on model
-        pcl::ConditionalEuclideanClustering<PNT> cec (true);
+        // pcl::SupervoxelClustering<PT> svc(0.005, 0.15, true);
+        // NTC::Ptr normals = boost::make_shared<NTC>();
+        // for (const auto &pt: front_with_normals->points)
+        // {
+        //     NT n;
+        //     n.normal_x = pt.normal_x;
+        //     n.normal_y = pt.normal_y;
+        //     n.normal_z = pt.normal_z;
+        //     normals->push_back(n);
+        // }
+        // std::map<uint32_t, pcl::Supervoxel<PT>::Ptr> clusters;
+        // svc.setInputCloud(front_ptr);
+        // svc.setNormalCloud(normals);
+        // svc.setColorImportance(0.3);
+        // svc.setSpatialImportance(0.5);
+        // svc.setNormalImportance(0.5);
+        // svc.extract(clusters);
+        // svc.refineSupervoxels(2, clusters);
+        pcl::ConditionalEuclideanClustering<PNT> cec (false);
         pcl::IndicesClustersPtr clusters = boost::make_shared<pcl::IndicesClusters>();
-        pcl::IndicesClustersPtr too_small_clusters = boost::make_shared<pcl::IndicesClusters>();
-        pcl::IndicesClustersPtr too_big_clusters = boost::make_shared<pcl::IndicesClusters>();
+        // pcl::IndicesClustersPtr too_small_clusters = boost::make_shared<pcl::IndicesClusters>();
+        // pcl::IndicesClustersPtr too_big_clusters = boost::make_shared<pcl::IndicesClusters>();
         cec.setInputCloud(front_with_normals);
         cec.setConditionFunction(&enforceNormalSimilarity);
         cec.setClusterTolerance(0.01);
-        cec.setMinClusterSize(10);
+        cec.setMinClusterSize(100);
         cec.setMaxClusterSize(front_with_normals->size());
         cec.segment(*clusters);
-        cec.getRemovedClusters(too_small_clusters, too_big_clusters);
-        PNTC ali;
-        mtx_viz.lock();
-        a->clear();
-        mtx_viz.unlock();
+        // cec.getRemovedClusters(too_small_clusters, too_big_clusters);
+        // PNTC ali;
+        // for (auto it=clusters.begin(); it!=clusters.end(); ++it)
+        // {
+        std::vector<double> fits;
+        std::vector<PNTC> aligns;
+        Eigen::MatrixX4f trans;
+        trans.resize(4*clusters->size(), 4);
+        aligns.resize(clusters->size());
+        size_t i (0);
         for (const auto &cl: *clusters)
         {
             PNTC::Ptr cluster = boost::make_shared<PNTC>();
             pcl::copyPointCloud(*front_with_normals, cl, *cluster);
-            alignFrame(cluster, aligned, T_ms, 0.05);
-            ali += *aligned;
-            LOCK guard(mtx_viz);
-            uint8_t r = std::rand() % 256;
-            uint8_t g = std::rand() % 256;
-            for (const auto &pt: aligned->points)
-            {
-                pcl::PointXYZRGBA p;
-                p.x = pt.x;
-                p.y = pt.y;
-                p.z = pt.z;
-                p.r = r;
-                p.g = g;
-                p.b = 0;
-                p.a = 255;
-                a->push_back(p);
+            Eigen::Matrix4f T = alignFrame(cluster, aligned, T_ms, 0.05);
+            trans.block<4,4>(i*4,0)=alignFrame(front_with_normals, aligned, T, 0.007, true);
+            fits.push_back(fitness);
+            pcl::copyPointCloud(*aligned, aligns[i]);
+            ++i;
+        }
+        i=0;
+        double min=500;
+        for(size_t k=0; k<fits.size(); ++k)
+        {
+            if(fits[k]<=min){
+                min=fits[k];
+                i=k;
             }
         }
+        *model_c += aligns[i];
+        T_ms = trans.block<4,4>(i*4,0);
 
         {
             //debug viz
             LOCK guard(mtx_viz);
             s->clear();
             t->clear();
+            a->clear();
             ns = boost::make_shared<PNC>();
             nt = boost::make_shared<PNC>();
+            for (const auto &pt: aligns[i].points)
+            {
+                pcl::PointXYZRGBA p;
+                p.x = pt.x;
+                p.y = pt.y;
+                p.z = pt.z;
+                p.r = 0;
+                p.g = 255;
+                p.b = 0;
+                p.a = 255;
+                a->push_back(p);
+            }
             for (const auto &pt: front_with_normals->points)
             {
                 pcl::PointXYZRGBA p;
@@ -504,7 +539,7 @@ Modeler::processQueue()
         //     continue;
         // }
         ////Merge into model
-        *model_c += ali;
+        // *model_c += ali;
         pcl::VoxelGrid<PNT> vg;
         pcl::StatisticalOutlierRemoval<PNT> sor;
         vg.setInputCloud(model_c);
@@ -515,8 +550,8 @@ Modeler::processQueue()
         PNTC ds;
         vg.filter(ds);
         sor.setInputCloud(ds.makeShared());
-        sor.setMeanK(50);
-        sor.setStddevMulThresh(5.0);
+        sor.setMeanK(100);
+        sor.setStddevMulThresh(10.0);
         LOCK guard(mtx_model);
         sor.filter(*model_ds);
     }//EndWhile
@@ -526,7 +561,7 @@ Modeler::processQueue()
 }
 
 Eigen::Matrix4f
-Modeler::alignFrame(PNTC::Ptr source, PNTC::Ptr &aligned, const Eigen::Matrix4f &guess, const float dist)
+Modeler::alignFrame(PNTC::Ptr source, PNTC::Ptr &aligned, const Eigen::Matrix4f &guess, const float dist, const bool force_no_normals)
 {
     PNTC::Ptr model = boost::make_shared<PNTC>();
     {
@@ -570,7 +605,8 @@ Modeler::alignFrame(PNTC::Ptr source, PNTC::Ptr &aligned, const Eigen::Matrix4f 
         icp.setMaxCorrespondenceDistance(dist);
         icp.setUseReciprocalCorrespondences(false);
         icp.setTransformationEstimation(teDQ);
-        icp.setCorrespondenceEstimation(cebp);
+        if (!force_no_normals)
+            icp.setCorrespondenceEstimation(cebp);
         icp.align(*aligned, guess);
         pcl::transformPointCloudWithNormals(*source, *aligned, icp.getFinalTransformation());
         LOCK guard(mtx_viz);
