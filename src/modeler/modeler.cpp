@@ -227,25 +227,18 @@ Modeler::spinOnce()
 }
 
 bool
-Modeler::checkFrameSimilarity(PTC::Ptr frame, float factor)
+Modeler::checkFrameSimilarity(PTC::Ptr frame, PTC::Ptr next, float factor)
 {
-    PTC model;
-    {
-        LOCK guard(mtx_model);
-        pcl::copyPointCloud(*model_ds, model);
-    }
     pcl::octree::OctreePointCloudChangeDetector<PT> octcd(0.005);  //TODO need to be function of scene leaf size
-    octcd.setInputCloud(model.makeShared());
+    octcd.setInputCloud(frame);
     octcd.addPointsFromInputCloud();
     octcd.switchBuffers();
-    PTC frame_in_M;
-    pcl::transformPointCloud(*frame, frame_in_M, T_ms);
-    octcd.setInputCloud(frame_in_M.makeShared());
+    octcd.setInputCloud(next);
     octcd.addPointsFromInputCloud();
     std::vector<int> changes;
     octcd.getPointIndicesFromNewVoxels(changes);
     //changes contains points that were not in previous buffer (i.e. model)
-    if (changes.size() <= model.size() * factor)
+    if (changes.size() <= next->points.size() * factor)
         //less than factor% points are changed, this frame is uninportant
         return true;
     else
@@ -350,7 +343,7 @@ Modeler::processQueue()
             continue;
         }
         PTC::Ptr front_ptr;
-        ROS_INFO_THROTTLE(30,"[Modeler::%s]\tStill %d frames left to process",__func__,(int)acq_size);
+        ROS_INFO_DELAYED_THROTTLE(30,"[Modeler::%s]\tStill %d frames left to process",__func__,(int)acq_size);
         {
             LOCK guard(mtx_acq);
             if (!acquisition_q.empty()){
@@ -367,13 +360,20 @@ Modeler::processQueue()
             acq_size = acquisition_q.size();
             continue;
         }
-        //remove similar frames
-        if (checkFrameSimilarity(front_ptr, 0.1)){
-            //this frame does not add much to the model
-            //we can skip it and wait for a more informative one.
+        {
             LOCK guard(mtx_acq);
-            acq_size = acquisition_q.size();
-            continue;
+            PTC::Ptr next_ptr = boost::make_shared<PTC>();
+            if (!acquisition_q.empty()){
+                //remove similar frames
+                pcl::copyPointCloud(acquisition_q.front(), *next_ptr);
+                if (checkFrameSimilarity(front_ptr, next_ptr, 0.1)){
+                    //this frame does not add much to the model
+                    //we can skip it and wait for a more informative one.
+                    acquisition_q.pop_front();
+                    acq_size = acquisition_q.size();
+                    continue;
+                }
+            }
         }
         //Align front frame over the model
         //read normals ang threshold
