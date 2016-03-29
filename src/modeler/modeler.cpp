@@ -448,7 +448,7 @@ Modeler::processQueue()
         {
             PNTC::Ptr cluster = boost::make_shared<PNTC>();
             pcl::copyPointCloud(*front_with_normals, cl, *cluster);
-            Eigen::Matrix4f T = alignFrame(cluster, aligned, T_ms, 0.05);
+            Eigen::Matrix4f T = alignFrame(cluster, aligned, T_ms, 0.05, true);
             trans.block<4,4>(i*4,0)=alignFrame(front_with_normals, aligned, T, 0.007, true);
             fits.push_back(fitness);
             pcl::copyPointCloud(*aligned, aligns[i]);
