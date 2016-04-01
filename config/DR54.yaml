@@ -5,15 +5,15 @@ estimator: {always_success: true, broadcast_tf: true, cluster_tol: 0.05, iterati
   neighbors: 20, object_calibration: false, publish_markers: true, rmse_thresh: 0.005,
   spawn: false}
 keep_organized: false
-limit_xmax: 0.2
+limit_xmax: 0.30000000000000004
 limit_xmin: -0.2
-limit_ymax: 0.1
-limit_ymin: -0.3
+limit_ymax: 0.4
+limit_ymin: -0.30000000000000004
 limit_zmax: 1.0
 limit_zmin: 0.4
-listener: {geometry_scale: 1.4000000000000004, listen_left_arm: true, listen_left_hand: true,
-  listen_right_arm: true, listen_right_hand: false, publish_markers: true, remove_left_arm: true,
-  remove_left_hand: true, remove_right_arm: true, remove_right_hand: false, spawn: true}
+listener: {geometry_scale: 1.4, listen_left_arm: true, listen_left_hand: true, listen_right_arm: true,
+  listen_right_hand: false, publish_markers: true, remove_left_arm: true, remove_left_hand: true,
+  remove_right_arm: true, remove_right_hand: false, spawn: true}
 plane_tolerance: 0.005
 publish_limits: true
 segmenting: false
