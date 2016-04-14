@@ -126,6 +126,8 @@ private slots:
     void onLoadConf(std::string* n);
     //when spawnkill modeler is pressed
     void onSpawnKillModeler();
+    //When color of color filter changes
+    void onColorChange(double r, double g, double b);
 private:
     void initConnections();
     QTimer *service_timer;

@@ -60,6 +60,7 @@ signals:
     void reset();
     void saveConf(std::string* );
     void loadConf(std::string* );
+    void colorChange(double, double, double);
 
 private slots:
     void on_MasterDisable_clicked(bool checked);
@@ -99,6 +100,8 @@ private slots:
     void on_OutliersS_valueChanged(double arg1);
 
     void on_Color_valueChanged(double arg1);
+
+    void on_ColorSelectB_pressed();
 
 private:
     Ui::BasicNodeGui *ui;

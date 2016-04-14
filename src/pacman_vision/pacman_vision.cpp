@@ -106,6 +106,7 @@ PacmanVision::initConnections()
     connect (&(*basic_gui), SIGNAL( reset() ), this, SLOT( onReset() ));
     connect (&(*basic_gui), SIGNAL( saveConf(std::string*) ), this, SLOT(onSaveConf(std::string*) ));
     connect (&(*basic_gui), SIGNAL( loadConf(std::string*) ), this, SLOT(onLoadConf(std::string*) ));
+    connect (&(*basic_gui), SIGNAL( colorChange(double, double, double) ), this, SLOT(onColorChange(double,double,double) ));
 #ifdef PACV_RECOGNITION_SUPPORT
     connect (estimator_gui->getRunButt(), SIGNAL( clicked()), this, SLOT( onSpawnKillEstimator() ));
     connect (estimator_gui->getEstButt(), SIGNAL( clicked()), this, SLOT( onPoseEstimation() ));
@@ -402,6 +403,12 @@ PacmanVision::postSaveCloud()
         //reactivate the gui button
         basic_gui->getSaveButt()->setDisabled(false);
     }
+}
+
+void
+PacmanVision::onColorChange(double r, double g, double b)
+{
+    basic_node->setFilterColor(r,g,b);
 }
 
 void

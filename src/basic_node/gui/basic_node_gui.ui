@@ -21,70 +21,6 @@
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="1" column="1">
-     <widget class="QPushButton" name="LoadConfB">
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>35</height>
-       </size>
-      </property>
-      <property name="font">
-       <font>
-        <family>Oxygen-Sans</family>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="focusPolicy">
-       <enum>Qt::NoFocus</enum>
-      </property>
-      <property name="acceptDrops">
-       <bool>false</bool>
-      </property>
-      <property name="toolTip">
-       <string>Load a Configuration from a yaml file. This will also reset the nodes to match the new configuration.</string>
-      </property>
-      <property name="text">
-       <string>Load Configuration ...</string>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>32</width>
-        <height>32</height>
-       </size>
-      </property>
-      <property name="checkable">
-       <bool>false</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="QPushButton" name="MasterReset">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="toolTip">
-       <string>Reset all nodes and configuration to the last loaded one.</string>
-      </property>
-      <property name="text">
-       <string>    Master Reset</string>
-      </property>
-      <property name="icon">
-       <iconset resource="../../../resources/resources.qrc">
-        <normaloff>:/icons/reset.png</normaloff>:/icons/reset.png</iconset>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>32</width>
-        <height>32</height>
-       </size>
-      </property>
-     </widget>
-    </item>
     <item row="1" column="0">
      <widget class="QPushButton" name="SaveConfB">
       <property name="maximumSize">
@@ -110,6 +46,43 @@
       </property>
       <property name="text">
        <string>Save Current Configuration ...</string>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>32</width>
+        <height>32</height>
+       </size>
+      </property>
+      <property name="checkable">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QPushButton" name="LoadConfB">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>35</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <family>Oxygen-Sans</family>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
+      </property>
+      <property name="acceptDrops">
+       <bool>false</bool>
+      </property>
+      <property name="toolTip">
+       <string>Load a Configuration from a yaml file. This will also reset the nodes to match the new configuration.</string>
+      </property>
+      <property name="text">
+       <string>Load Configuration ...</string>
       </property>
       <property name="iconSize">
        <size>
@@ -151,6 +124,33 @@
       </property>
       <property name="checkable">
        <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QPushButton" name="MasterReset">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>Reset all nodes and configuration to the last loaded one.</string>
+      </property>
+      <property name="text">
+       <string>    Master Reset</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../../resources/resources.qrc">
+        <normaloff>:/icons/reset.png</normaloff>:/icons/reset.png</iconset>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>32</width>
+        <height>32</height>
+       </size>
       </property>
      </widget>
     </item>
@@ -241,7 +241,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1" rowspan="9">
+        <item row="0" column="1" rowspan="11">
          <widget class="Line" name="separator">
           <property name="minimumSize">
            <size>
@@ -1635,44 +1635,7 @@
           </layout>
          </widget>
         </item>
-        <item row="8" column="0">
-         <widget class="QPushButton" name="SaveButt">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>35</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Oxygen-Sans</family>
-            <pointsize>12</pointsize>
-           </font>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::NoFocus</enum>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="toolTip">
-           <string>Save current Processed Scene on user selected location. (By calling service get_scene_processed)</string>
-          </property>
-          <property name="text">
-           <string>Save Processed Scene ...</string>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>32</width>
-            <height>32</height>
-           </size>
-          </property>
-          <property name="checkable">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="2">
+        <item row="8" column="2" rowspan="2">
          <widget class="QFrame" name="ColorF">
           <property name="enabled">
            <bool>false</bool>
@@ -1785,6 +1748,71 @@
           </layout>
          </widget>
         </item>
+        <item row="8" column="3">
+         <widget class="QPushButton" name="ColorSelectB">
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="toolTip">
+           <string>Pick a Color</string>
+          </property>
+          <property name="text">
+           <string notr="true"/>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="3">
+         <widget class="QCheckBox" name="invertColor">
+          <property name="font">
+           <font>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Invert Color Filter</string>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="0">
+         <widget class="QPushButton" name="SaveButt">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Oxygen-Sans</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>Save current Processed Scene on user selected location. (By calling service get_scene_processed)</string>
+          </property>
+          <property name="text">
+           <string>Save Processed Scene ...</string>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>32</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
        </layout>
        <zorder>separator</zorder>
        <zorder>CroppingButt</zorder>
@@ -1792,14 +1820,16 @@
        <zorder>DownsamplingButt</zorder>
        <zorder>CroppingG</zorder>
        <zorder>SaveButt</zorder>
-       <zorder>OrganizedButt</zorder>
        <zorder>ColorButt</zorder>
        <zorder>LeafF</zorder>
        <zorder>PlaneF</zorder>
-       <zorder>OutiliersButt</zorder>
        <zorder>OutliersKF</zorder>
        <zorder>OutliersSF</zorder>
        <zorder>ColorF</zorder>
+       <zorder>invertColor</zorder>
+       <zorder>OutiliersButt</zorder>
+       <zorder>OrganizedButt</zorder>
+       <zorder>ColorSelectB</zorder>
       </widget>
       <widget class="QWidget" name="SensorTab">
        <property name="geometry">

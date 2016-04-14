@@ -85,6 +85,7 @@ class BasicNode: public Module<BasicNode>
         void setConfigFromRosparams();
         ///Save config to rosparams
         void updateRosparams();
+        void setFilterColor(const double r, const double g, const double b);
 #ifdef PACV_LISTENER_SUPPORT
         void setListenerConfig(ListenerConfig::Ptr config)
         {
@@ -99,8 +100,8 @@ class BasicNode: public Module<BasicNode>
 #endif
         //color filtering behaviour
         bool was_color_filtering;
-        //mena CIELab color found
-        double mean_L, mean_a, mean_b;
+        //model CIELab color
+        double ref_L, ref_a, ref_b;
         //Message Publisher to republish processed scene
         ros::Publisher pub_scene;
         //publisher for markers
@@ -125,7 +126,7 @@ class BasicNode: public Module<BasicNode>
         void downsamp_scene(const PTC::ConstPtr source, PTC::Ptr &dest);
         void remove_outliers(const PTC::ConstPtr source, PTC::Ptr &dest);
         void segment_scene(const PTC::ConstPtr source, PTC::Ptr &dest);
-        void extract_principal_color(const PTC::ConstPtr scene);
+        // void extract_principal_color(const PTC::ConstPtr scene);
         void apply_color_filter(const PTC::ConstPtr source, PTC::Ptr &dest);
         void publish_markers();
         //Create a box marker

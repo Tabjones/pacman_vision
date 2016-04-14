@@ -253,23 +253,29 @@ BasicNode::segment_scene(const PTC::ConstPtr source, PTC::Ptr &dest)
      */
 }
 
+// void
+// BasicNode::extract_principal_color(const PTC::ConstPtr scene)
+// {
+//     //for now just compute the mean color...
+//     //in the future we can create some palette and let the user choose
+//     mean_L = mean_a = mean_b = 0.0;
+//     for (const auto& pt: scene->points)
+//     {
+//         double L, a, b;
+//         convertPCLColorToCIELAB(pt, L, a, b);
+//         mean_L += L;
+//         mean_a += a;
+//         mean_b += b;
+//     }
+//     mean_L /= scene->size();
+//     mean_a /= scene->size();
+//     mean_b /= scene->size();
+// }
+
 void
-BasicNode::extract_principal_color(const PTC::ConstPtr scene)
+BasicNode::setFilterColor(const double r, const double g, const double b)
 {
-    //for now just compute the mean color...
-    //in the future we can create some palette and let the user choose
-    mean_L = mean_a = mean_b = 0.0;
-    for (const auto& pt: scene->points)
-    {
-        double L, a, b;
-        convertPCLColorToCIELAB(pt, L, a, b);
-        mean_L += L;
-        mean_a += a;
-        mean_b += b;
-    }
-    mean_L /= scene->size();
-    mean_a /= scene->size();
-    mean_b /= scene->size();
+    convertRGBToCIELAB(r,g,b, ref_L, ref_a, ref_b);
 }
 
 void
@@ -283,8 +289,12 @@ BasicNode::apply_color_filter(const PTC::ConstPtr source, PTC::Ptr &dest)
     {
         double L,a,b;
         convertPCLColorToCIELAB(source->points[i], L,a,b);
-        double dE = deltaE(mean_L, mean_a, mean_b, L,a,b);
-        if ( dE <= thresh )
+        double dE = deltaE(ref_L, ref_a, ref_b, L,a,b);
+        //TODO add invert filter config
+        bool invert(false);
+        if ( dE <= thresh && !invert)
+            dest->push_back(source->points[i]);
+        else if ( dE > thresh && invert)
             dest->push_back(source->points[i]);
     }
 }
@@ -305,13 +315,13 @@ BasicNode::process_scene()
     config->get("segmenting", segment);
     config->get("outliers_filter", outliers);
     config->get("color_filter", color);
-    if (color && !was_color_filtering){
-        //we compute a new color model
-        PTC::Ptr last_processed_scene;
-        storage->readSceneProcessed(last_processed_scene);
-        extract_principal_color(last_processed_scene);
-    }
-    was_color_filtering = color;
+    // if (color && !was_color_filtering){
+    //     //we compute a new color model
+    //     PTC::Ptr last_processed_scene;
+    //     storage->readSceneProcessed(last_processed_scene);
+    //     extract_principal_color(last_processed_scene);
+    // }
+    // was_color_filtering = color;
     PTC::Ptr tmp = boost::make_shared<PTC>();
     PTC::Ptr dest;
     if (crop){

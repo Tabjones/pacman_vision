@@ -31,6 +31,7 @@
 #include <basic_node_gui.h>
 #include <ui_basic_node_gui.h>
 #include <QFileDialog>
+#include <QColorDialog>
 //For modular build macros
 #include <pacv_config.h>
 
@@ -106,6 +107,8 @@ void BasicNodeGui::init()
     std::string name, t;
     s_config->get("topic",t);
     ui->Topic->setText(QString(t.c_str()));
+    ui->ColorSelectB->setStyleSheet("background-color: red");
+    ui->ColorSelectB->update();
 #ifndef PACV_KINECT2_SUPPORT
     value = false;
     ui->Internal->setDisabled(true);
@@ -497,4 +500,18 @@ void BasicNodeGui::on_OutliersS_valueChanged(double arg1)
 void BasicNodeGui::on_Color_valueChanged(double arg1)
 {
    config->set("color_dist_thresh", arg1);
+}
+
+void BasicNodeGui::on_ColorSelectB_pressed()
+{
+    QColor color= QColorDialog::getColor(Qt::red, this);
+    if (!color.isValid())
+        return;
+    QString s("background: #"
+              + QString(color.red() < 16? "0" : "") + QString::number(color.red(),16)
+              + QString(color.green() < 16? "0" : "") + QString::number(color.green(),16)
+              + QString(color.blue() < 16? "0" : "") + QString::number(color.blue(),16) + ";");
+    ui->ColorSelectB->setStyleSheet(s);
+    ui->ColorSelectB->update();
+    emit colorChange(color.redF(), color.greenF(), color.blueF());
 }

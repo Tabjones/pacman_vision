@@ -134,6 +134,8 @@ inline double invGammaCorrection(const double t);
  */
 void convertPCLColorToCIELAB(const PT &pt, double &L, double &a, double &b);
 
+void convertRGBToCIELAB(double rr, double gg, double bb, double &L, double &a, double &b);
+
 /**
  * \brief Calculate the CIEDE2000 color difference from two CIEL*a*b* colors
  *  As in http://www.ece.rochester.edu/~gsharma/ciede2000/ciede2000noteCRNA.pdf

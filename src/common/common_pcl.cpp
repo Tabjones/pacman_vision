@@ -154,9 +154,13 @@ void convertPCLColorToCIELAB(const PT &pt, double &L, double &a, double &b)
     r/=255;
     g/=255;
     bp/=255;
+    convertRGBToCIELAB(r,g,bp, L,a,b);
+}
+void convertRGBToCIELAB(double rr, double gg, double bb, double &L, double &a, double &b)
+{
     double x,y,z;
     //convert to XYZ colorspace
-    rgb2Xyz(r,g,bp, x,y,z);
+    rgb2Xyz(rr,gg,bb, x,y,z);
     //finally get CIEL*a*b* colorspace
     xyz2Lab(x,y,z, L,a,b);
 }
