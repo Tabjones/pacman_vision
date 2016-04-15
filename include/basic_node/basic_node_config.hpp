@@ -42,12 +42,12 @@ class BasicConfig: public Config<BasicConfig>
     typedef std::shared_ptr<BasicConfig> Ptr;
     friend class Config<BasicConfig>;
     Box filter_limits;
-    const std::array<std::string,13> valid_keys;
+    const std::array<std::string,14> valid_keys;
     BasicConfig(): filter_limits(-0.5, -0.5, 0.3, 0.5, 0.5, 2),
     valid_keys {{"cropping", "downsampling", "segmenting", "outliers_filter", "color_filter",
                  "publish_limits", "keep_organized", "downsampling_leaf_size",
                  "plane_tolerance", "filter_limits", "outliers_mean_k", "outliers_std_mul",
-                 "color_dist_thresh"}}
+                 "color_dist_thresh", "invert_color_filter"}}
     {
         //create maps
         map_bool["cropping"] = false;
@@ -57,6 +57,7 @@ class BasicConfig: public Config<BasicConfig>
         map_bool["color_filter"] = false;
         map_bool["publish_limits"] = false;
         map_bool["keep_organized"] = false;
+        map_bool["invert_color_filter"] = false;
         map_double["downsampling_leaf_size"] = 0.01;
         map_int["outliers_mean_k"] = 30;
         map_double["plane_tolerance"] = 0.01;

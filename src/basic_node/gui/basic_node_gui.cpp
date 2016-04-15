@@ -515,3 +515,9 @@ void BasicNodeGui::on_ColorSelectB_pressed()
     ui->ColorSelectB->update();
     emit colorChange(color.redF(), color.greenF(), color.blueF());
 }
+
+void BasicNodeGui::on_invertColor_pressed()
+{
+   bool invert = ui->invertColor->isChecked();
+   config->set("invert_color_filter", invert);
+}

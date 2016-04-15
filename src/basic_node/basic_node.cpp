@@ -290,8 +290,8 @@ BasicNode::apply_color_filter(const PTC::ConstPtr source, PTC::Ptr &dest)
         double L,a,b;
         convertPCLColorToCIELAB(source->points[i], L,a,b);
         double dE = deltaE(ref_L, ref_a, ref_b, L,a,b);
-        //TODO add invert filter config
         bool invert(false);
+        config->get("invert_color_filter", invert);
         if ( dE <= thresh && !invert)
             dest->push_back(source->points[i]);
         else if ( dE > thresh && invert)

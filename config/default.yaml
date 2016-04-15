@@ -1,6 +1,7 @@
 cropping: true
 color_dist_thresh: 20.0
 color_filter: false
+invert_color_filter: false
 downsampling: false
 downsampling_leaf_size: 0.01
 keep_organized: false

@@ -103,6 +103,8 @@ private slots:
 
     void on_ColorSelectB_pressed();
 
+    void on_invertColor_pressed();
+
 private:
     Ui::BasicNodeGui *ui;
     pacv::Box lim;
