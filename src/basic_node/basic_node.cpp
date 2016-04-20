@@ -161,7 +161,9 @@ BasicNode::cb_get_scene(pacman_vision_comm::get_scene::Request& req, pacman_visi
     if (scene_processed){
         sensor_msgs::PointCloud2 msg;
         if (!req.save.empty()){
-            if(pcl::io::savePCDFile( req.save.c_str(), *scene_processed) == 0)
+            pcl::PointCloud<pcl::PointXYZRGBA> cloud;
+            pcl::copyPointCloud(*scene_processed, cloud);
+            if(pcl::io::savePCDFileBinaryCompressed( req.save.c_str(), cloud) == 0)
                 ROS_INFO("[BasicNode::%s]\tScene Processed saved to %s", __func__, req.save.c_str());
             else
                 ROS_ERROR("[BasicNode::%s]\tFailed to save scene to %s", __func__, req.save.c_str());
