@@ -41,6 +41,7 @@ BasicNode::BasicNode(const std::string ns, const Storage::Ptr stor):
 {
     scene_processed = boost::make_shared<PTC>();
     config = std::make_shared<BasicConfig>();
+    box_transform.setIdentity();
     //tmp set param to dump into default
     // nh.setParam("cropping", false);
     // nh.setParam("downsampling", false);
@@ -329,7 +330,13 @@ BasicNode::process_scene()
         bool org;
         config->get("filter_limits", lim);
         config->get("keep_organized", org);
-        crop_a_box(source, dest, lim, false, Eigen::Matrix4f::Identity(), org);
+        std::string  ref_frame, box_frame;
+        config->get("cropping_ref_frame", box_frame);
+        storage->readSensorFrame(ref_frame);
+        if (ref_frame.compare(box_frame)!=0)
+            crop_a_box(source, dest, lim, false, box_transform.inverse(), org);
+        else
+            crop_a_box(source, dest, lim, false, Eigen::Matrix4f::Identity(), org);
         if(dest->empty())
             return;
     }
@@ -494,9 +501,16 @@ BasicNode::update_markers()
     //only update crop limits, plane always gets recomputed if active
     marks=std::make_shared<visualization_msgs::MarkerArray>();
     Box lim;
+    std::string  frame, box_frame;
+    storage->readSensorFrame(frame);
+    config->get("cropping_ref_frame", box_frame);
     visualization_msgs::Marker mark_lim;
     config->get("filter_limits", lim);
     create_box_marker(lim, mark_lim, false);
+    geometry_msgs::Pose pose;
+    mark_lim.header.frame_id = frame;
+    fromEigen(box_transform, pose);
+    mark_lim.pose = pose;
     //make it red
     mark_lim.color.g = 0.0f;
     mark_lim.color.b = 0.0f;
@@ -532,6 +546,15 @@ BasicNode::publish_markers()
 void
 BasicNode::spinOnce()
 {
+    std::string  ref_frame, box_frame;
+    config->get("cropping_ref_frame", box_frame);
+    storage->readSensorFrame(ref_frame);
+    if (ref_frame.compare(box_frame) !=0){
+        tf::StampedTransform trans;
+        tf_listener.waitForTransform(ref_frame, box_frame, ros::Time(0), ros::Duration(2.0));
+        tf_listener.lookupTransform(ref_frame, box_frame, ros::Time(0), trans);
+        fromTF(trans, box_transform);
+    }
     process_scene();
     publish_scene_processed();
     publish_markers();

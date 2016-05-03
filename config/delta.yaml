@@ -1,4 +1,5 @@
 color_dist_thresh: 20.0
+cropping_ref_frame: "/delta_base"
 color_filter: false
 cropping: true
 downsampling: false

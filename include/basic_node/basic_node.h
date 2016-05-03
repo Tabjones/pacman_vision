@@ -43,6 +43,7 @@
 #include <sensor_msgs/point_cloud_conversion.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 // #include <pcl_ros/transforms.h>
 // #include <pcl_ros/point_cloud.h>
 // #include <pcl_conversions/pcl_conversions.h>
@@ -104,6 +105,10 @@ class BasicNode: public Module<BasicNode>
         double ref_L, ref_a, ref_b;
         //Message Publisher to republish processed scene
         ros::Publisher pub_scene;
+        //tf
+        tf::TransformListener tf_listener;
+        // cropbox transform
+        Eigen::Matrix4f box_transform;
         //publisher for markers
         ros::Publisher pub_markers;
         //marker to publish
