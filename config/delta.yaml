@@ -14,7 +14,7 @@ limit_xmax: 0.27
 limit_xmin: -0.27
 limit_ymax: 0.35
 limit_ymin: -0.02
-limit_zmax: 0.765
+limit_zmax: 0.762
 limit_zmin: 0.6
 listener: {geometry_scale: 1.1, listen_left_arm: false, listen_left_hand: false, listen_right_arm: false,
   listen_right_hand: false, publish_markers: true, remove_left_arm: false, remove_left_hand: false,
