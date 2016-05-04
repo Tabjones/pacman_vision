@@ -550,10 +550,18 @@ BasicNode::spinOnce()
     config->get("cropping_ref_frame", box_frame);
     storage->readSensorFrame(ref_frame);
     if (ref_frame.compare(box_frame) !=0){
-        tf::StampedTransform trans;
-        tf_listener.waitForTransform(ref_frame, box_frame, ros::Time(0), ros::Duration(2.0));
-        tf_listener.lookupTransform(ref_frame, box_frame, ros::Time(0), trans);
-        fromTF(trans, box_transform);
+        try
+        {
+            tf::StampedTransform trans;
+            tf_listener.waitForTransform(ref_frame, box_frame, ros::Time(0), ros::Duration(2.0));
+            tf_listener.lookupTransform(ref_frame, box_frame, ros::Time(0), trans);
+            fromTF(trans, box_transform);
+        }
+        catch(tf::TransformException& ex)
+        {
+            ROS_ERROR("%s", ex.what());
+            ROS_ERROR_THROTTLE(30,"[BasicNode::%s]\tCannot find Cropbox transform %s.",__func__, box_frame.c_str());
+        }
     }
     process_scene();
     publish_scene_processed();
