@@ -11,6 +11,7 @@ limit_ymax: 0.5
 limit_ymin: -0.5
 limit_zmax: 1.5
 limit_zmin: 0.3
+cropping_ref_frame: "/camera_rgb_optical_frame"
 publish_limits: true
 segmenting: false
 plane_tolerance: 0.005
