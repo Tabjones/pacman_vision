@@ -54,3 +54,7 @@ target_link_libraries(pacv_libbasicgui
     Qt4::QtGui
     Qt4::QtXml
     )
+
+install(TARGETS pacv_libbasicgui
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib)

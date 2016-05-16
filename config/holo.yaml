@@ -1,0 +1,30 @@
+color_dist_thresh: 20.0
+color_filter: false
+cropping: true
+cropping_ref_frame: /camera_rgb_optical_frame
+downsampling: false
+downsampling_leaf_size: 0.01
+estimator: {always_success: true, broadcast_tf: true, cluster_tol: 0.05, iterations: 5,
+  neighbors: 20, object_calibration: false, publish_markers: true, rmse_thresh: 0.005,
+  spawn: false}
+in_hand_modeler: {model_ds_leaf: 0.003, normals_ang_thresh: 10.0, spawn: false, use_gicp: false}
+invert_color_filter: false
+keep_organized: false
+limit_xmax: 0.05
+limit_xmin: -0.2
+limit_ymax: 0.15
+limit_ymin: -0.15
+limit_zmax: 1.25
+limit_zmin: 0.95
+listener: {geometry_scale: 1.1, listen_left_arm: false, listen_left_hand: false, listen_right_arm: false,
+  listen_right_hand: false, publish_markers: true, remove_left_arm: false, remove_left_hand: false,
+  remove_right_arm: false, remove_right_hand: false, spawn: false}
+outliers_filter: true
+outliers_mean_k: 30
+outliers_std_mul: 0.501
+plane_tolerance: 0.005
+publish_limits: true
+segmenting: false
+sensor: {broadcast_identity_tf: false, internal: false, name: kinect2_optical_frame,
+  topic: /camera/depth_registered/points}
+tracker: {broadcast_tf: true, publish_bounding_box: true, publish_markers: true, spawn: false}

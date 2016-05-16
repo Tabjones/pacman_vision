@@ -55,4 +55,7 @@ target_link_libraries(pacv_liblistenergui
     Qt4::QtGui
     Qt4::QtXml
     )
+install(TARGETS pacv_liblistenergui
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib)
 ENDIF(PACV_LISTENER_SUPPORT)

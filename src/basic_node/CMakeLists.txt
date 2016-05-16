@@ -86,3 +86,8 @@ target_link_libraries(pacv_libbasicnode
     ${PCL_SEGMENTATION_LIBRARIES}
     ${PACV_COMMON_LIB}
     ${Boost_LIBRARIES})
+
+
+install(TARGETS pacv_libbasicnode
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib)

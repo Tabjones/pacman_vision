@@ -110,4 +110,8 @@ target_link_libraries(pacv_librecognition
          COMMAND rm ${rm_comm}
          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
          )
+
+install(TARGETS pacv_librecognition
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib )
  ENDIF(PACV_RECOGNITION_SUPPORT)

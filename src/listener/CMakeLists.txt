@@ -58,3 +58,6 @@ target_link_libraries(pacv_liblistener
     ${PACV_COMMON_LIB}
     )
 
+install(TARGETS pacv_liblistener
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib)

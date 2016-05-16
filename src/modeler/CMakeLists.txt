@@ -59,3 +59,6 @@ target_link_libraries(pacv_libmodeler
     ${PACV_COMMON_LIB}
     )
 
+install(TARGETS pacv_libmodeler
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib )

@@ -238,4 +238,17 @@ target_link_libraries(pacman_vision
     # # ${EIGEN_LIBRARIES}
     Qt4::QtGui Qt4::QtXml
 )
+
+######################## Install
+
+install(TARGETS pacman_vision
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
+
+install(DIRECTORY config/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config)
 ########################################################################## DONE!

@@ -57,4 +57,7 @@ target_link_libraries(pacv_librecognitiongui
     Qt4::QtGui
     Qt4::QtXml
     )
+install(TARGETS pacv_librecognitiongui
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib)
 ENDIF(PACV_RECOGNITION_SUPPORT)

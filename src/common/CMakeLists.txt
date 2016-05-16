@@ -51,3 +51,7 @@ target_link_libraries(pacv_libcommon
     ${catkin_LIBRARIES}
     ${PCL_COMMON_LIBRARIES}
     ${PCL_FILTERS_LIBRARIES})
+
+install(TARGETS pacv_libcommon
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib)
