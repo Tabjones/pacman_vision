@@ -38,7 +38,7 @@ project(pacman_vision)
 ###########   Change these according to your will ##############################
 ################################################################################
 ## This will build estimator and tracker modules
-set (PACV_BUILD_RECOGNITION        0 )
+set (PACV_BUILD_RECOGNITION        1 )
 ## This will build vito listener module
 set (PACV_BUILD_LISTENER           0 )
 ## This will build in hand modeler module
