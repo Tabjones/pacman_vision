@@ -249,6 +249,9 @@ install(TARGETS pacman_vision
 install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
 
+install(DIRECTORY database/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/database)
+
 install(DIRECTORY config/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config)
 ########################################################################## DONE!
